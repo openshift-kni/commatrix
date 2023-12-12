@@ -25,10 +25,6 @@ type QueryParams struct {
 }
 
 func NewQuery(c client.Client) (*QueryParams, error) {
-	if c == nil {
-		return nil, fmt.Errorf("client is nil")
-	}
-
 	var (
 		epSlicesList discoveryv1.EndpointSliceList
 		servicesList corev1.ServiceList

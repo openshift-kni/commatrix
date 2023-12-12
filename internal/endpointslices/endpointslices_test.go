@@ -8,16 +8,9 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/liornoy/node-comm-lib/pkg/consts"
-	"github.com/liornoy/node-comm-lib/pkg/fakeclient"
+	"github.com/liornoy/node-comm-lib/internal/consts"
+	"github.com/liornoy/node-comm-lib/internal/fakeclient"
 )
-
-func TestNewQueryNilClient(t *testing.T) {
-	_, err := NewQuery(nil)
-	if err == nil {
-		t.Fatalf("expected error for empty client")
-	}
-}
 
 func TestNewQuery(t *testing.T) {
 	var (

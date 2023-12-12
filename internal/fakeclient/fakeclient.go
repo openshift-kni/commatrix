@@ -10,8 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-var scheme *runtime.Scheme
-
 type ClusterResources struct {
 	Pods     []corev1.Pod
 	EpSlices []discoveryv1.EndpointSlice
