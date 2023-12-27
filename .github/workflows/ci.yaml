@@ -15,6 +15,14 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - name: Run unit tests
+      - name: Install Dependencies
         run: |
-          make unit-test
+          sudo apt-get update
+          sudo apt-get install python3-pip
+          sudo pip3 install invoke
+
+      - name: Lint
+        run: invoke lint -e host
+
+      - name: Run unit tests
+        run: invoke test
