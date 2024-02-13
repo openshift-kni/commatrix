@@ -24,47 +24,48 @@ const (
 )
 
 var (
+	// TcpSSFilterFn is a function variable in Go that filters entries from the 'ss' command output.
+	// It takes an entry from the 'ss' command output and returns true if the entry represents a TCP port in the listening state.
 	tcpSSFilterFn = func(s string) bool {
 		return strings.Contains(s, "127.0.0") || !strings.Contains(s, "LISTEN")
 	}
+	// UdpSSFilterFn is a function variable in Go that filters entries from the 'ss' command output.
+	// It takes an entry from the 'ss' command output and returns true if the entry represents a UDP port in the listening state.
 	udpSSFilterFn = func(s string) bool {
 		return strings.Contains(s, "127.0.0") || !strings.Contains(s, "ESTAB")
 	}
+
 	optionalProcesses = map[string]bool{
-		"rpcbind":   false,
-		"sshd":      false,
-		"rpc.statd": false,
+		"rpcbind":   true,
+		"sshd":      true,
+		"rpc.statd": true,
 	}
+
 	hostServices = map[string]bool{
-		"rpcbind":   false,
-		"sshd":      false,
-		"rpc.statd": false,
-		"crio":      false,
-		"systemd":   false,
-		"kubelet":   false,
+		"rpcbind":   true,
+		"sshd":      true,
+		"rpc.statd": true,
+		"crio":      true,
+		"systemd":   true,
+		"kubelet":   true,
 	}
 )
 
+// FilterPorts filters a slice of comDetails into two separate slices: knownPorts and unknownPorts.
+// It identifies known ports based on well-known TCP and UDP port numbers and known service names.
 func FilterPorts(comDetails []types.ComDetails) (knownPorts []types.ComDetails, unKnownPorts []types.ComDetails) {
-	tcpHostPortsMap := make(map[string]bool)
-	udpHostPortsMap := make(map[string]bool)
-
-	for _, port := range tcpHostPorts {
-		tcpHostPortsMap[port] = true
-	}
-	for _, port := range udpHostPorts {
-		udpHostPortsMap[port] = true
-	}
+	isKnownTCPPort := getKnownTCPPorts()
+	isKnownuDPPort := getKnownUDPorts()
 
 	isKnownPort := func(cd types.ComDetails) bool {
 		res := false
-		if isHostService(cd.ServiceName) {
+		if _, ok := hostServices[cd.ServiceName]; ok {
 			res = true
 		}
-		if cd.Protocol == "TCP" && tcpHostPortsMap[cd.Port] {
+		if cd.Protocol == "TCP" && isKnownTCPPort[cd.Port] {
 			res = true
 		}
-		if cd.Protocol == "UDP" && udpHostPortsMap[cd.Port] {
+		if cd.Protocol == "UDP" && isKnownuDPPort[cd.Port] {
 			res = true
 		}
 
@@ -81,6 +82,7 @@ func FilterPorts(comDetails []types.ComDetails) (knownPorts []types.ComDetails, 
 
 	return knownPorts, unKnownPorts
 }
+
 func CreateComDetailsFromNode(cs *client.ClientSet, node *corev1.Node) ([]types.ComDetails, error) {
 	debugPod, err := debug.New(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 	if err != nil {
@@ -131,15 +133,18 @@ func toComDetails(debugPod *debug.DebugPod, ssOutput []string, protocol string, 
 	nodeRoles := nodes.GetRoles(node)
 
 	for _, ssEntry := range ssOutput {
-		comDetail, err := parseComDetail(debugPod, ssEntry)
+		cd, err := parseComDetail(debugPod, ssEntry)
 		if err != nil {
 			return nil, err
 		}
-		comDetail.Protocol = protocol
-		comDetail.NodeRole = nodeRoles
-		setRequired(comDetail, optionalProcesses)
-
-		res = append(res, *comDetail)
+		cd.Protocol = protocol
+		cd.NodeRole = nodeRoles
+		if _, ok := optionalProcesses[cd.ServiceName]; ok {
+			cd.Required = false
+		} else {
+			cd.Required = true
+		}
+		res = append(res, *cd)
 	}
 
 	return res, nil
@@ -250,7 +255,8 @@ func parseComDetail(debugPod *debug.DebugPod, ssEntry string) (*types.ComDetails
 		return nil, err
 	}
 
-	if !isHostService(serviceName) {
+	// If not an host service, extract the full service name
+	if _, ok := hostServices[serviceName]; !ok {
 		containerInfo, err := identifyContainerForPort(debugPod, ssEntry)
 		if err != nil {
 			return nil, fmt.Errorf("failed identifying container for service %s: %v", serviceName, err)
@@ -270,14 +276,6 @@ func parseComDetail(debugPod *debug.DebugPod, ssEntry string) (*types.ComDetails
 		Required:    true}, nil
 }
 
-func isHostService(service string) bool {
-	if _, ok := hostServices[service]; ok {
-		return true
-	}
-
-	return false
-}
-
 func extractServiceName(ssEntry string) (string, error) {
 	re := regexp.MustCompile(`users:\(\("(?P<servicename>[^"]+)"`)
 
@@ -290,14 +288,4 @@ func extractServiceName(ssEntry string) (string, error) {
 	serviceName := match[re.SubexpIndex("servicename")]
 
 	return serviceName, nil
-}
-
-// SetRequired takes a list of ComDetails and for each one, sets the Required field according to the given optional
-// processes map.
-func setRequired(cd *types.ComDetails, optionalProcesses map[string]bool) {
-	required := true
-	if _, ok := optionalProcesses[cd.ServiceName]; ok {
-		required = false
-	}
-	cd.Required = required
 }
