@@ -11,10 +11,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/liornoy/node-comm-lib/internal/consts"
 	"github.com/liornoy/node-comm-lib/internal/nftables"
-	"github.com/liornoy/node-comm-lib/internal/pointer"
 )
 
 type ComMatrix struct {
@@ -107,13 +107,13 @@ func (cd ComDetails) ToEndpointSlice(endpointSliceName string, namespace string,
 		},
 		Ports: []discoveryv1.EndpointPort{
 			{
-				Port:     pointer.Int32Ptr(int32(port)),
+				Port:     ptr.To[int32](int32(port)),
 				Protocol: (*corev1.Protocol)(&cd.Protocol),
 			},
 		},
 		Endpoints: []discoveryv1.Endpoint{
 			{
-				NodeName:  pointer.StrPtr(nodeName),
+				NodeName:  ptr.To(nodeName),
 				Addresses: []string{consts.PlaceHolderIPAddress},
 			},
 		},
