@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	clinetutil "github.com/liornoy/node-comm-lib/internal/client"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,84 +18,86 @@ type QueryBuilder interface {
 }
 
 type QueryParams struct {
-	client.Client
 	pods     []corev1.Pod
 	filter   []bool
 	epSlices []discoveryv1.EndpointSlice
 	services []corev1.Service
 }
 
-func NewQuery(c client.Client) (*QueryParams, error) {
+type EndpointSliceInfo struct {
+	endpointSlice discoveryv1.EndpointSlice
+	serivce       corev1.Service
+	pods          []corev1.Pod
+}
+
+func GetEndpointSliceInfo(cs *clinetutil.ClientSet) ([]EndpointSliceInfo, error) {
 	var (
 		epSlicesList discoveryv1.EndpointSliceList
 		servicesList corev1.ServiceList
 		podsList     corev1.PodList
 	)
-	err := c.List(context.TODO(), &epSlicesList, &client.ListOptions{})
+
+	err := cs.List(context.TODO(), &epSlicesList, &client.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list endpointslices: %w", err)
 	}
 
-	err = c.List(context.TODO(), &servicesList, &client.ListOptions{})
+	err = cs.List(context.TODO(), &servicesList, &client.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list services: %w", err)
 	}
 
-	err = c.List(context.TODO(), &podsList, &client.ListOptions{})
+	err = cs.List(context.TODO(), &podsList, &client.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
 
-	ret := QueryParams{
-		Client:   c,
-		epSlices: epSlicesList.Items,
-		services: servicesList.Items,
-		pods:     podsList.Items,
-		filter:   make([]bool, len(epSlicesList.Items))}
-
-	return &ret, nil
-}
-
-func (q *QueryParams) Query() []discoveryv1.EndpointSlice {
-	ret := make([]discoveryv1.EndpointSlice, 0)
-
-	for i, filter := range q.filter {
-		if filter {
-			ret = append(ret, q.epSlices[i])
-		}
+	res, err := createEndpointSliceInfo(epSlicesList, servicesList, podsList)
+	if err != nil {
+		return nil, fmt.Errorf("failed to bundle resources: %w", err)
 	}
 
-	return ret
+	return res, nil
 }
 
-func (q *QueryParams) WithLabels(labels map[string]string) QueryBuilder {
-	for i, epSlice := range q.epSlices {
-		if q.withLabels(epSlice, labels) {
-			q.filter[i] = true
+func createEndpointSliceInfo(epSlicesList discoveryv1.EndpointSliceList, servicesList corev1.ServiceList, podsList corev1.PodList) ([]EndpointSliceInfo, error) {
+	var service corev1.Service
+	var pod corev1.Pod
+	var found bool
+	res := make([]EndpointSliceInfo, len(epSlicesList.Items))
+
+	for _, epSlice := range epSlicesList.Items {
+
+		pods := make([]corev1.Pod, 1)
+
+		// Fetch info about the service behind the endpointslice.
+		for _, ownerRef := range epSlice.OwnerReferences {
+			name := ownerRef.Name
+			namespace := epSlice.Namespace
+			if service, found = getService(name, namespace, servicesList); !found {
+				return nil, fmt.Errorf("failed to get service for endpoint %s/%s", epSlice.Namespace, epSlice.Name)
+			}
 		}
+
+		// Fetch info about the pods behind the endpointslice.
+		for _, endpoint := range epSlice.Endpoints {
+			name := endpoint.TargetRef.Name
+			namespace := endpoint.TargetRef.Namespace
+
+			if pod, found = getPod(name, namespace, podsList); !found {
+				return nil, fmt.Errorf("failed to get service for endpoint %s/%s", epSlice.Namespace, epSlice.Name)
+			}
+			pods = append(pods, pod)
+		}
+
+		res = append(res, EndpointSliceInfo{
+			endpointSlice: epSlice,
+			serivce:       service,
+			pods:          pods,
+		})
 	}
 
-	return q
-}
-
-func (q *QueryParams) WithHostNetwork() QueryBuilder {
-	for i, epSlice := range q.epSlices {
-		if q.withHostNetwork(epSlice) {
-			q.filter[i] = true
-		}
-	}
-
-	return q
-}
-
-func (q *QueryParams) WithServiceType(serviceType corev1.ServiceType) QueryBuilder {
-	for i, epSlice := range q.epSlices {
-		if q.withServiceType(epSlice, serviceType) {
-			q.filter[i] = true
-		}
-	}
-
-	return q
+	return res, nil
 }
 
 func (q *QueryParams) withLabels(epSlice discoveryv1.EndpointSlice, labels map[string]string) bool {
@@ -150,22 +153,21 @@ func (q *QueryParams) withHostNetwork(epSlice discoveryv1.EndpointSlice) bool {
 	return false
 }
 
-func getPod(name, namespace string, pods []corev1.Pod) *corev1.Pod {
-	for i, p := range pods {
-		if p.Name == name && p.Namespace == namespace {
-			return &pods[i]
+func getPod(name, namespace string, podsList corev1.PodList) (corev1.Pod, bool) {
+	for _, pod := range podsList.Items {
+		if pod.Name == name && pod.Namespace == namespace {
+			return pod, true
 		}
 	}
-
-	return nil
+	return corev1.Pod{}, false
 }
 
-func getService(name, namespace string, services []corev1.Service) *corev1.Service {
-	for i, service := range services {
+func getService(name, namespace string, serviceList corev1.ServiceList) (corev1.Service, bool) {
+	for _, service := range serviceList.Items {
 		if service.Name == name && service.Namespace == namespace {
-			return &services[i]
+			return service, true
 		}
 	}
 
-	return nil
+	return corev1.Service{}, false
 }
