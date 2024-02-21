@@ -34,54 +34,7 @@ var (
 	udpSSFilterFn = func(s string) bool {
 		return strings.Contains(s, "127.0.0") || !strings.Contains(s, "ESTAB")
 	}
-
-	optionalProcesses = map[string]bool{
-		"rpcbind":   true,
-		"sshd":      true,
-		"rpc.statd": true,
-	}
-
-	hostServices = map[string]bool{
-		"rpcbind":   true,
-		"sshd":      true,
-		"rpc.statd": true,
-		"crio":      true,
-		"systemd":   true,
-		"kubelet":   true,
-	}
 )
-
-// FilterPorts filters a slice of comDetails into two separate slices: knownPorts and unknownPorts.
-// It identifies known ports based on well-known TCP and UDP port numbers and known service names.
-func FilterPorts(comDetails []types.ComDetails) (knownPorts []types.ComDetails, unKnownPorts []types.ComDetails) {
-	isKnownTCPPort := getKnownTCPPorts()
-	isKnownuDPPort := getKnownUDPorts()
-
-	isKnownPort := func(cd types.ComDetails) bool {
-		res := false
-		if _, ok := hostServices[cd.ServiceName]; ok {
-			res = true
-		}
-		if cd.Protocol == "TCP" && isKnownTCPPort[cd.Port] {
-			res = true
-		}
-		if cd.Protocol == "UDP" && isKnownuDPPort[cd.Port] {
-			res = true
-		}
-
-		return res
-	}
-
-	for _, cd := range comDetails {
-		if isKnownPort(cd) {
-			knownPorts = append(knownPorts, cd)
-		} else {
-			unKnownPorts = append(unKnownPorts, cd)
-		}
-	}
-
-	return knownPorts, unKnownPorts
-}
 
 func CreateComDetailsFromNode(cs *client.ClientSet, node *corev1.Node) ([]types.ComDetails, error) {
 	debugPod, err := debug.New(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
@@ -139,11 +92,7 @@ func toComDetails(debugPod *debug.DebugPod, ssOutput []string, protocol string, 
 		}
 		cd.Protocol = protocol
 		cd.NodeRole = nodeRoles
-		if _, ok := optionalProcesses[cd.ServiceName]; ok {
-			cd.Required = false
-		} else {
-			cd.Required = true
-		}
+		cd.Required = true
 		res = append(res, *cd)
 	}
 
@@ -195,11 +144,6 @@ func extractContainerInfo(debugPod *debug.DebugPod, containerID string) (string,
 		return "", fmt.Errorf("failed extracting pod info, got %d results expected 1. got output:\n%s", len(containerInfo.Containers), string(out))
 	}
 
-	// # Commented out logic to fetch namespace and pod details
-	// # but for the final matrix we want a readable service name.
-	//
-	// podNamespace := containerInfo.Containers[0].Labels.PodNamespace
-	// podName := containerInfo.Containers[0].Labels.PodName
 	containerName := containerInfo.Containers[0].Labels.ContainerName
 
 	return containerName, nil
@@ -253,16 +197,6 @@ func parseComDetail(debugPod *debug.DebugPod, ssEntry string) (*types.ComDetails
 	serviceName, err := extractServiceName(ssEntry)
 	if err != nil {
 		return nil, err
-	}
-
-	// If not an host service, extract the full service name
-	if _, ok := hostServices[serviceName]; !ok {
-		containerInfo, err := identifyContainerForPort(debugPod, ssEntry)
-		if err != nil {
-			return nil, fmt.Errorf("failed identifying container for service %s: %v", serviceName, err)
-		}
-
-		serviceName = containerInfo
 	}
 
 	fields := strings.Fields(ssEntry)

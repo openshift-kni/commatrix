@@ -3,57 +3,47 @@ package commatrix
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
-
 	"github.com/liornoy/node-comm-lib/internal/client"
-	"github.com/liornoy/node-comm-lib/internal/consts"
-	"github.com/liornoy/node-comm-lib/internal/customendpointslices"
 	"github.com/liornoy/node-comm-lib/internal/endpointslices"
+	"github.com/liornoy/node-comm-lib/internal/matrixcustomizer"
 	"github.com/liornoy/node-comm-lib/internal/types"
 )
 
 // New gets the kubeconfig path or consumes the KUBECONFIG env var
 // and creates Communication Matrix for given cluster.
-func New(kubeconfigPath string) (*types.ComMatrix, error) {
+func New(kubeconfigPath string, customEntriesPath string) (*types.ComMatrix, error) {
+	res := make([]types.ComDetails, 0)
+
 	cs, err := client.New(kubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating the client: %w", err)
 	}
 
-	// Temporary step: Manually creating missing endpointslices.
-	err = customendpointslices.Create(cs)
-	if err != nil {
-		return nil, fmt.Errorf("failed creating custom services: %w", err)
-	}
-
-	endpointSlices, err := getEndpointSlices(cs)
+	epSlicesInfo, err := endpointslices.GetIngressEndpointSlices(cs)
 	if err != nil {
 		return nil, fmt.Errorf("failed getting endpointslices: %w", err)
 	}
 
-	comDetailsFromEndpointSlices, err := endpointslices.ToComDetails(cs, endpointSlices)
+	epSliceComDetails, err := endpointslices.ToComDetails(cs, epSlicesInfo)
 	if err != nil {
 		return nil, err
 	}
+	res = append(res, epSliceComDetails...)
 
-	res := &types.ComMatrix{Matrix: comDetailsFromEndpointSlices}
-
-	return res, nil
-}
-
-func getEndpointSlices(cs *client.ClientSet) ([]discoveryv1.EndpointSlice, error) {
-	query, err := endpointslices.NewQuery(cs)
+	staticCustomComDetails, err := matrixcustomizer.GetStaticCustomEntries()
 	if err != nil {
-		return nil, fmt.Errorf("failed creating new query: %v", err)
+		return nil, err
+	}
+	res = append(res, staticCustomComDetails...)
+
+	if customEntriesPath != "" {
+		customComDetails, err := matrixcustomizer.AddFromFile(customEntriesPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed fetching costum entries from file %s err: %w", customEntriesPath, err)
+		}
+
+		res = append(res, customComDetails...)
 	}
 
-	res := query.
-		WithHostNetwork().
-		WithLabels(map[string]string{consts.IngressLabel: ""}).
-		WithServiceType(corev1.ServiceTypeNodePort).
-		WithServiceType(corev1.ServiceTypeLoadBalancer).
-		Query()
-
-	return res, nil
+	return &types.ComMatrix{Matrix: res}, nil
 }
