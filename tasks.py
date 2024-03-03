@@ -3,7 +3,7 @@ from invoke import run, task
 @task
 def test(ctx):
     """Run unit tests."""
-    run("go test ./internal/...")
+    run("go test ./pkg/...")
 
 @task(help={
     "env": "Specify in which environment to run the linter . Default 'container'. Supported: 'container','host'"

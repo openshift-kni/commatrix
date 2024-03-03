@@ -5,7 +5,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/liornoy/node-comm-lib/internal/consts"
+	"github.com/liornoy/node-comm-lib/pkg/consts"
 )
 
 func GetRoles(node *corev1.Node) string {

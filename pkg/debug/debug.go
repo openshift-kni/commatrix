@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 
-	"github.com/liornoy/node-comm-lib/internal/client"
+	"github.com/liornoy/node-comm-lib/pkg/client"
 )
 
 type DebugPod struct {

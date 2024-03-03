@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/liornoy/node-comm-lib/internal/types"
+	"github.com/liornoy/node-comm-lib/pkg/types"
 )
 
 func AddFromFile(fp string) ([]types.ComDetails, error) {

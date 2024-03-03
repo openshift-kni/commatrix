@@ -3,10 +3,10 @@ package commatrix
 import (
 	"fmt"
 
-	"github.com/liornoy/node-comm-lib/internal/client"
-	"github.com/liornoy/node-comm-lib/internal/endpointslices"
-	"github.com/liornoy/node-comm-lib/internal/matrixcustomizer"
-	"github.com/liornoy/node-comm-lib/internal/types"
+	"github.com/liornoy/node-comm-lib/pkg/client"
+	"github.com/liornoy/node-comm-lib/pkg/endpointslices"
+	"github.com/liornoy/node-comm-lib/pkg/matrixcustomizer"
+	"github.com/liornoy/node-comm-lib/pkg/types"
 )
 
 // New gets the kubeconfig path or consumes the KUBECONFIG env var

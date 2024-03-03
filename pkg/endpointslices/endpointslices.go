@@ -11,10 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/liornoy/node-comm-lib/internal/client"
-	"github.com/liornoy/node-comm-lib/internal/consts"
-	"github.com/liornoy/node-comm-lib/internal/nodes"
-	"github.com/liornoy/node-comm-lib/internal/types"
+	"github.com/liornoy/node-comm-lib/pkg/client"
+	"github.com/liornoy/node-comm-lib/pkg/consts"
+	"github.com/liornoy/node-comm-lib/pkg/nodes"
+	"github.com/liornoy/node-comm-lib/pkg/types"
 )
 
 type SvcInfo struct {
