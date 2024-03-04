@@ -98,7 +98,7 @@ func toComDetails(ssOutput []string, protocol string, node *corev1.Node) ([]type
 	return res, nil
 }
 
-// func identifyContainerForPort(debugPod *debug.DebugPod, ssEntry string) (string, error) {
+// Func identifyContainerForPort(debugPod *debug.DebugPod, ssEntry string) (string, error) {.
 // 	pid, err := extractPID(ssEntry)
 // 	if err != nil {
 // 		return "", err

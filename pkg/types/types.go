@@ -136,3 +136,24 @@ func RemoveDups(outPuts []ComDetails) []ComDetails {
 
 	return res
 }
+
+// Diff returns the diff ComMatrix.
+func (m ComMatrix) Diff(other ComMatrix) ComMatrix {
+	diff := []ComDetails{}
+	for _, cd1 := range m.Matrix {
+		found := false
+		strComDetail1 := fmt.Sprintf("%s-%s-%s", cd1.NodeRole, cd1.Port, cd1.Protocol)
+		for _, cd2 := range other.Matrix {
+			strComDetail2 := fmt.Sprintf("%s-%s-%s", cd2.NodeRole, cd2.Port, cd2.Protocol)
+			if strComDetail1 == strComDetail2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			diff = append(diff, cd1)
+		}
+	}
+
+	return ComMatrix{Matrix: diff}
+}

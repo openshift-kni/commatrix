@@ -84,7 +84,6 @@ func createEndpointSliceInfo(epSlicesList discoveryv1.EndpointSliceList, service
 			if pod, found = getPod(name, namespace, podsList); !found {
 				log.Printf("warning: failed to get service for endpoint %s/%s", epSlice.Namespace, epSlice.Name)
 				continue
-				//return nil, fmt.Errorf("failed to get service for endpoint %s/%s", epSlice.Namespace, epSlice.Name)
 			}
 			pods = append(pods, pod)
 		}
