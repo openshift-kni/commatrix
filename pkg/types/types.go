@@ -122,3 +122,17 @@ func (cd ComDetails) ToEndpointSlice(endpointSliceName string, namespace string,
 
 	return endpointSlice
 }
+
+func RemoveDups(outPuts []ComDetails) []ComDetails {
+	allKeys := make(map[string]bool)
+	res := []ComDetails{}
+	for _, item := range outPuts {
+		str := fmt.Sprintf("%s-%s-%s", item.NodeRole, item.Port, item.Protocol)
+		if _, value := allKeys[str]; !value {
+			allKeys[str] = true
+			res = append(res, item)
+		}
+	}
+
+	return res
+}
