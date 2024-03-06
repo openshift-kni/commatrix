@@ -4,9 +4,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-type Filter func(SvcInfo) bool
+type Filter func(EndpointSlicesInfo) bool
 
-func ApplyFilters(endpointSlicesInfo []SvcInfo, filters ...Filter) []SvcInfo {
+func ApplyFilters(endpointSlicesInfo []EndpointSlicesInfo, filters ...Filter) []EndpointSlicesInfo {
 	if len(filters) == 0 {
 		return endpointSlicesInfo
 	}
@@ -14,7 +14,7 @@ func ApplyFilters(endpointSlicesInfo []SvcInfo, filters ...Filter) []SvcInfo {
 		return nil
 	}
 
-	filteredEndpointsSlices := make([]SvcInfo, 0, len(endpointSlicesInfo))
+	filteredEndpointsSlices := make([]EndpointSlicesInfo, 0, len(endpointSlicesInfo))
 
 	for _, epInfo := range endpointSlicesInfo {
 		keep := true
@@ -35,14 +35,14 @@ func ApplyFilters(endpointSlicesInfo []SvcInfo, filters ...Filter) []SvcInfo {
 	return filteredEndpointsSlices
 }
 
-func FilterForIngressTraffic(endpointslices []SvcInfo) []SvcInfo {
-	return ApplyFilters(endpointslices,
+func FilterForIngressTraffic(epslicesInfo []EndpointSlicesInfo) []EndpointSlicesInfo {
+	return ApplyFilters(epslicesInfo,
 		FilterHostNetwork,
 		FilterServiceTypes)
 }
 
 // FilterHostNetwork checks if the pods behind the endpointSlice are host network.
-func FilterHostNetwork(epInfo SvcInfo) bool {
+func FilterHostNetwork(epInfo EndpointSlicesInfo) bool {
 	if len(epInfo.pods) == 0 {
 		return false
 	}
@@ -51,7 +51,7 @@ func FilterHostNetwork(epInfo SvcInfo) bool {
 }
 
 // FilterServiceTypes checks if the service behind the endpointSlice is of type LoadBalancer or NodePort.
-func FilterServiceTypes(epInfo SvcInfo) bool {
+func FilterServiceTypes(epInfo EndpointSlicesInfo) bool {
 	if epInfo.serivce.Spec.Type != corev1.ServiceTypeLoadBalancer &&
 		epInfo.serivce.Spec.Type != corev1.ServiceTypeNodePort {
 		return false

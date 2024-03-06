@@ -9,18 +9,21 @@ import (
 )
 
 func GetRoles(node *corev1.Node) string {
-	res := make([]string, 0)
+	res := ""
+	// Filter out user-defined roles.
 	validRoles := map[string]bool{"worker": true, "master": true}
 
 	for label := range node.Labels {
+		// Look for node-role label and extract role.
 		if after, found := strings.CutPrefix(label, consts.RoleLabel); found {
 			if !validRoles[after] {
 				continue
 			}
 
-			res = append(res, after)
+			res = after
+			break
 		}
 	}
 
-	return strings.Join(res, ",")
+	return res
 }

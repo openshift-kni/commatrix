@@ -8,7 +8,7 @@ import (
 )
 
 func TestFilterHostNetwork(t *testing.T) {
-	epInfo := SvcInfo{
+	epInfo := EndpointSlicesInfo{
 		endpointSlice: discoveryv1.EndpointSlice{},
 		pods:          []corev1.Pod{{}},
 		serivce:       corev1.Service{},
@@ -39,7 +39,7 @@ func TestFilterHostNetwork(t *testing.T) {
 }
 
 func TestFilterServiceTypes(t *testing.T) {
-	epInfo := SvcInfo{
+	epInfo := EndpointSlicesInfo{
 		endpointSlice: discoveryv1.EndpointSlice{},
 		pods:          []corev1.Pod{},
 		serivce:       corev1.Service{},

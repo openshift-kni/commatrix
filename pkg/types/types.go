@@ -8,13 +8,8 @@ import (
 	"strings"
 	"text/template"
 
-	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
-
-	"github.com/liornoy/node-comm-lib/pkg/consts"
 	"github.com/liornoy/node-comm-lib/pkg/nftables"
+	"sigs.k8s.io/yaml"
 )
 
 type ComMatrix struct {
@@ -22,12 +17,15 @@ type ComMatrix struct {
 }
 
 type ComDetails struct {
-	Direction   string `json:"direction"`
-	Protocol    string `json:"protocol"`
-	Port        string `json:"port"`
-	NodeRole    string `json:"nodeRole"`
-	ServiceName string `json:"serviceName"`
-	Required    bool   `json:"required"`
+	Direction string `json:"direction"`
+	Protocol  string `json:"protocol"`
+	Port      string `json:"port"`
+	Namespace string `json:"namespace"`
+	Service   string `json:"service"`
+	Pod       string `json:"pod"`
+	Container string `json:"container"`
+	NodeRole  string `json:"nodeRole"`
+	Optional  bool   `json:"optional"`
 }
 
 func (m *ComMatrix) ToCSV() ([]byte, error) {
@@ -49,6 +47,15 @@ func (m *ComMatrix) ToCSV() ([]byte, error) {
 
 func (m *ComMatrix) ToJSON() ([]byte, error) {
 	out, err := json.Marshal(m.Matrix)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func (m *ComMatrix) ToYAML() ([]byte, error) {
+	out, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
@@ -95,32 +102,7 @@ func (m *ComMatrix) String() string {
 }
 
 func (cd ComDetails) String() string {
-	return fmt.Sprintf("%s,%s,%s,%s,%s,%v", cd.Direction, cd.Protocol, cd.Port, cd.NodeRole, cd.ServiceName, cd.Required)
-}
-
-func (cd ComDetails) ToEndpointSlice(endpointSliceName string, namespace string, nodeName string, labels map[string]string, port int) discoveryv1.EndpointSlice {
-	endpointSlice := discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      endpointSliceName,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Ports: []discoveryv1.EndpointPort{
-			{
-				Port:     ptr.To[int32](int32(port)),
-				Protocol: (*corev1.Protocol)(&cd.Protocol),
-			},
-		},
-		Endpoints: []discoveryv1.Endpoint{
-			{
-				NodeName:  ptr.To(nodeName),
-				Addresses: []string{consts.PlaceHolderIPAddress},
-			},
-		},
-		AddressType: consts.DefaultAddressType,
-	}
-
-	return endpointSlice
+	return fmt.Sprintf("%s,%s,%s,%s,%s,%s,%s,%s,%v", cd.Direction, cd.Protocol, cd.Port, cd.Namespace, cd.Service, cd.Pod, cd.Container, cd.NodeRole, cd.Optional)
 }
 
 func RemoveDups(outPuts []ComDetails) []ComDetails {

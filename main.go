@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	customEntriesPath = flag.String("custom-entries-path", "", "specifies the path to user-defined custom entries to be added to the the communication matrix, formatted as per module specifications.")
+	customEntriesPath = flag.String("custom-entries-path", "", "specifies the path to user-defined custom entries to be added to the communication matrix, formatted as per module specifications.")
 )
 
 func main() {

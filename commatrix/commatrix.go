@@ -19,7 +19,7 @@ func New(kubeconfigPath string, customEntriesPath string) (*types.ComMatrix, err
 		return nil, fmt.Errorf("failed creating the client: %w", err)
 	}
 
-	epSlicesInfo, err := endpointslices.GetIngressEndpointSlices(cs)
+	epSlicesInfo, err := endpointslices.GetIngressEndpointSlicesInfo(cs)
 	if err != nil {
 		return nil, fmt.Errorf("failed getting endpointslices: %w", err)
 	}
@@ -39,7 +39,7 @@ func New(kubeconfigPath string, customEntriesPath string) (*types.ComMatrix, err
 	if customEntriesPath != "" {
 		customComDetails, err := matrixcustomizer.AddFromFile(customEntriesPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed fetching costum entries from file %s err: %w", customEntriesPath, err)
+			return nil, fmt.Errorf("failed fetching custom entries from file %s err: %w", customEntriesPath, err)
 		}
 
 		res = append(res, customComDetails...)

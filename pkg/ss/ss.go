@@ -91,7 +91,7 @@ func toComDetails(ssOutput []string, protocol string, node *corev1.Node) ([]type
 		}
 		cd.Protocol = protocol
 		cd.NodeRole = nodeRoles
-		cd.Required = true
+		cd.Optional = false
 		res = append(res, *cd)
 	}
 
@@ -203,10 +203,10 @@ func parseComDetail(ssEntry string) (*types.ComDetails, error) {
 	port := fields[localAddrPortFieldIdx][portIdx+1:]
 
 	return &types.ComDetails{
-		Direction:   consts.IngressLabel,
-		Port:        port,
-		ServiceName: serviceName,
-		Required:    true}, nil
+		Direction: consts.IngressLabel,
+		Port:      port,
+		Service:   serviceName,
+		Optional:  false}, nil
 }
 
 func extractServiceName(ssEntry string) (string, error) {

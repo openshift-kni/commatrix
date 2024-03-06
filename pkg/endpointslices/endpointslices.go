@@ -13,17 +13,17 @@ import (
 
 	"github.com/liornoy/node-comm-lib/pkg/client"
 	"github.com/liornoy/node-comm-lib/pkg/consts"
-	"github.com/liornoy/node-comm-lib/pkg/nodes"
+	nodesutil "github.com/liornoy/node-comm-lib/pkg/nodes"
 	"github.com/liornoy/node-comm-lib/pkg/types"
 )
 
-type SvcInfo struct {
+type EndpointSlicesInfo struct {
 	endpointSlice discoveryv1.EndpointSlice
 	serivce       corev1.Service
 	pods          []corev1.Pod
 }
 
-func GetIngressEndpointSlices(cs *client.ClientSet) ([]SvcInfo, error) {
+func GetIngressEndpointSlicesInfo(cs *client.ClientSet) ([]EndpointSlicesInfo, error) {
 	var (
 		epSlicesList discoveryv1.EndpointSliceList
 		servicesList corev1.ServiceList
@@ -45,25 +45,47 @@ func GetIngressEndpointSlices(cs *client.ClientSet) ([]SvcInfo, error) {
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
 
-	epsliceInfo, err := createEndpointSliceInfo(epSlicesList, servicesList, podsList)
+	epsliceInfos, err := createServicecInfos(&epSlicesList, &servicesList, &podsList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to bundle resources: %w", err)
 	}
 
-	res := FilterForIngressTraffic(epsliceInfo)
+	res := FilterForIngressTraffic(epsliceInfos)
 
 	return res, nil
 }
-func createEndpointSliceInfo(epSlicesList discoveryv1.EndpointSliceList, servicesList corev1.ServiceList, podsList corev1.PodList) ([]SvcInfo, error) {
-	var service corev1.Service
-	var pod corev1.Pod
-	var found bool
-	res := make([]SvcInfo, len(epSlicesList.Items))
+
+func ToComDetails(cs *client.ClientSet, epSlicesInfo []EndpointSlicesInfo) ([]types.ComDetails, error) {
+	comDetails := make([]types.ComDetails, 0)
+	nodeList, err := cs.Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, epSliceInfo := range epSlicesInfo {
+		cds, err := epSliceInfo.toComDetails(nodeList.Items)
+		if err != nil {
+			return nil, err
+		}
+
+		comDetails = append(comDetails, cds...)
+	}
+
+	cleanedComDetails := removeDups(comDetails)
+	return cleanedComDetails, nil
+}
+
+// createServiceInfos retrieves lists of EndpointSlices, Services, and Pods from the cluster and generates a slice of EndpointSlicesInfo, each representing a distinct service.
+func createServicecInfos(epSlicesList *discoveryv1.EndpointSliceList, servicesList *corev1.ServiceList, podsList *corev1.PodList) ([]EndpointSlicesInfo, error) {
+	var (
+		service corev1.Service
+		pod     corev1.Pod
+		found   bool
+		res     []EndpointSlicesInfo
+	)
+	res = make([]EndpointSlicesInfo, len(epSlicesList.Items))
 
 	for _, epSlice := range epSlicesList.Items {
-
-		pods := make([]corev1.Pod, 0)
-
 		// Fetch info about the service behind the endpointslice.
 		for _, ownerRef := range epSlice.OwnerReferences {
 			name := ownerRef.Name
@@ -74,6 +96,7 @@ func createEndpointSliceInfo(epSlicesList discoveryv1.EndpointSliceList, service
 		}
 
 		// Fetch info about the pods behind the endpointslice.
+		pods := make([]corev1.Pod, 0)
 		for _, endpoint := range epSlice.Endpoints {
 			if endpoint.TargetRef == nil {
 				continue
@@ -88,7 +111,7 @@ func createEndpointSliceInfo(epSlicesList discoveryv1.EndpointSliceList, service
 			pods = append(pods, pod)
 		}
 
-		res = append(res, SvcInfo{
+		res = append(res, EndpointSlicesInfo{
 			endpointSlice: epSlice,
 			serivce:       service,
 			pods:          pods,
@@ -97,7 +120,8 @@ func createEndpointSliceInfo(epSlicesList discoveryv1.EndpointSliceList, service
 
 	return res, nil
 }
-func getPod(name, namespace string, podsList corev1.PodList) (corev1.Pod, bool) {
+
+func getPod(name, namespace string, podsList *corev1.PodList) (corev1.Pod, bool) {
 	for _, pod := range podsList.Items {
 		if pod.Name == name && pod.Namespace == namespace {
 			return pod, true
@@ -106,7 +130,7 @@ func getPod(name, namespace string, podsList corev1.PodList) (corev1.Pod, bool) 
 	return corev1.Pod{}, false
 }
 
-func getService(name, namespace string, serviceList corev1.ServiceList) (corev1.Service, bool) {
+func getService(name, namespace string, serviceList *corev1.ServiceList) (corev1.Service, bool) {
 	for _, service := range serviceList.Items {
 		if service.Name == name && service.Namespace == namespace {
 			return service, true
@@ -116,43 +140,120 @@ func getService(name, namespace string, serviceList corev1.ServiceList) (corev1.
 	return corev1.Service{}, false
 }
 
-func toComDetails(cs *client.ClientSet, epSlice discoveryv1.EndpointSlice) ([]types.ComDetails, error) {
-	res := make([]types.ComDetails, 0)
-	roles := make(map[string]bool)
-
-	nodeList, err := cs.Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	for _, endpoint := range epSlice.Endpoints {
-		node := corev1.Node{}
-		found := false
-		for _, n := range nodeList.Items {
-			if n.Name == *endpoint.NodeName {
-				node = n
-				found = true
+// getEndpointSliceNodeRoles gets endpointslice Info struct and returns which node roles the services are on.
+func getEndpointSliceNodeRoles(epSliceInfo *EndpointSlicesInfo, nodes []corev1.Node) []string {
+	// map to prevent duplications
+	rolesMap := make(map[string]bool)
+	for _, endpoint := range epSliceInfo.endpointSlice.Endpoints {
+		nodeName := endpoint.NodeName
+		for _, node := range nodes {
+			if node.Name == *nodeName {
+				role := nodesutil.GetRoles(&node)
+				rolesMap[role] = true
 			}
 		}
-		if !found {
-			return nil, fmt.Errorf("failed creating ComDetails: node %s not found", *endpoint.NodeName)
-		}
-		nodeRole := nodes.GetRoles(&node)
-		roles[nodeRole] = true
 	}
 
-	required := isRequired(epSlice)
+	roles := []string{}
+	for k, _ := range rolesMap {
+		roles = append(roles, k)
+	}
+
+	return roles
+}
+
+func getContainerName(portNum int, pods []corev1.Pod) (string, error) {
+	res := ""
+	pod := pods[0]
+	found := false
+
+	if len(pods) == 0 {
+		return "", fmt.Errorf("got empty pods slice")
+	}
+
+	for i := 0; i <= len(pod.Spec.Containers); i++ {
+		container := pod.Spec.Containers[i]
+
+		if found {
+			break
+		}
+
+		for _, port := range container.Ports {
+			if port.ContainerPort == int32(portNum) {
+				res = container.Name
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		return "", fmt.Errorf("couldn't find port %d in pods: %+v", portNum, pods)
+	}
+
+	return res, nil
+}
+
+func (epSliceinfo *EndpointSlicesInfo) toComDetails(nodes []corev1.Node) ([]types.ComDetails, error) {
+	// Each EndpointSlice:
+	// endpoints: get the roles (master / worker or both.)
+	// ownerReferences = services. (could be >1)
+	// Each service: - under the service metadata - pod's namespace (same as pods)
+	//                                              pod's name: labels: app: <name>
+	// Ports - (could be >1)
+	// Need to fetch container name from pods.
+
+	// Get roles (from endpointslice.Endpoints.addresses.nodeName)
+	// Get pod name (service.metadata.labels: app)
+	// Get pod namespace (service.metadata.namespace)
+
+	// Role(s)
+	// (service) Namespace
+	// (pod) Name
+	// (pod) Container(s)
+	// (pod) port(s)
+
+	// 1 endpointslice can have 4 ComDetails:
+	// 2 roles. 2 ports. for example:
+
+	// port num ||role || serviceName || namespace || podname	||	 containername	||
+	// ==============================================================================
+	//  9103, 	master, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-node
+	//  9105, 	worker, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-ovn-metrics
+	//  9103, 	master, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-node
+	//  9105, 	worker, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-ovn-metrics
+
+	res := make([]types.ComDetails, 0)
+
+	// Get the Namespace and Pod's name from the service.
+	namespace := epSliceinfo.serivce.Namespace
+	name := epSliceinfo.serivce.Labels["app"]
+
+	// Get the node roles of this endpointslice. (master or worker or both).
+	roles := getEndpointSliceNodeRoles(epSliceinfo, nodes)
+
+	epSlice := epSliceinfo.endpointSlice
+
+	optional := isOptional(epSlice)
 	service := epSlice.Labels["kubernetes.io/service-name"]
 
-	for role := range roles {
-		for _, p := range epSlice.Ports {
+	for _, role := range roles {
+		for _, port := range epSlice.Ports {
+			containerName, err := getContainerName(int(*port.Port), epSliceinfo.pods)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get container name: %w", err)
+			}
+
 			res = append(res, types.ComDetails{
-				Direction:   consts.IngressLabel,
-				Protocol:    fmt.Sprint(*p.Protocol),
-				Port:        fmt.Sprint(*p.Port),
-				NodeRole:    role,
-				ServiceName: service,
-				Required:    required,
+				Direction: consts.IngressLabel,
+				Protocol:  fmt.Sprint(port.Protocol),
+				Port:      fmt.Sprint(port.Port),
+				Namespace: namespace,
+				Pod:       name,
+				Container: containerName,
+				NodeRole:  role,
+				Service:   service,
+				Optional:  optional,
 			})
 		}
 	}
@@ -160,26 +261,13 @@ func toComDetails(cs *client.ClientSet, epSlice discoveryv1.EndpointSlice) ([]ty
 	return res, nil
 }
 
-func ToComDetails(cs *client.ClientSet, epSlicesInfo []SvcInfo) ([]types.ComDetails, error) {
-	ComDetails := make([]types.ComDetails, 0)
-	for _, epSliceInfo := range epSlicesInfo {
-		cds, err := toComDetails(cs, epSliceInfo.endpointSlice)
-		if err != nil {
-			return nil, err
-		}
-		ComDetails = append(ComDetails, cds...)
-	}
-
-	cleanedComDetails := removeDups(ComDetails)
-	return cleanedComDetails, nil
-}
-func isRequired(epSlice discoveryv1.EndpointSlice) bool {
-	required := true
+func isOptional(epSlice discoveryv1.EndpointSlice) bool {
+	optional := false
 	if _, ok := epSlice.Labels[consts.OptionalLabel]; ok {
-		required = false
+		optional = true
 	}
 
-	return required
+	return optional
 }
 
 func removeDups(comDetails []types.ComDetails) []types.ComDetails {
