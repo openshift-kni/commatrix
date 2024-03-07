@@ -3,8 +3,8 @@ package endpointslices
 import (
 	"context"
 	"fmt"
-	"log"
 
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,9 +18,9 @@ import (
 )
 
 type EndpointSlicesInfo struct {
-	endpointSlice discoveryv1.EndpointSlice
-	serivce       corev1.Service
-	pods          []corev1.Pod
+	EndpointSlice discoveryv1.EndpointSlice
+	Serivce       corev1.Service
+	Pods          []corev1.Pod
 }
 
 func GetIngressEndpointSlicesInfo(cs *client.ClientSet) ([]EndpointSlicesInfo, error) {
@@ -34,24 +34,28 @@ func GetIngressEndpointSlicesInfo(cs *client.ClientSet) ([]EndpointSlicesInfo, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to list endpointslices: %w", err)
 	}
+	log.Debugf("len of EndpointSlices: %d", len(epSlicesList.Items))
 
 	err = cs.List(context.TODO(), &servicesList, &rtclient.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list services: %w", err)
 	}
+	log.Debugf("len of Services: %d", len(servicesList.Items))
 
 	err = cs.List(context.TODO(), &podsList, &rtclient.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
+	log.Debug("len of Pods: ", len(podsList.Items))
 
-	epsliceInfos, err := createServicecInfos(&epSlicesList, &servicesList, &podsList)
+	epsliceInfos, err := createEPSliceInfos(&epSlicesList, &servicesList, &podsList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to bundle resources: %w", err)
 	}
-
+	log.Debug("len of epsliceInfos: ", len(epsliceInfos))
 	res := FilterForIngressTraffic(epsliceInfos)
 
+	log.Debug("len after filter: ", len(res))
 	return res, nil
 }
 
@@ -75,47 +79,51 @@ func ToComDetails(cs *client.ClientSet, epSlicesInfo []EndpointSlicesInfo) ([]ty
 	return cleanedComDetails, nil
 }
 
-// createServiceInfos retrieves lists of EndpointSlices, Services, and Pods from the cluster and generates a slice of EndpointSlicesInfo, each representing a distinct service.
-func createServicecInfos(epSlicesList *discoveryv1.EndpointSliceList, servicesList *corev1.ServiceList, podsList *corev1.PodList) ([]EndpointSlicesInfo, error) {
-	var (
-		service corev1.Service
-		pod     corev1.Pod
-		found   bool
-		res     []EndpointSlicesInfo
-	)
-	res = make([]EndpointSlicesInfo, len(epSlicesList.Items))
+// createEPSliceInfos retrieves lists of EndpointSlices, Services, and Pods from the cluster and generates
+// a slice of EndpointSlicesInfo, each representing a distinct service.
+func createEPSliceInfos(epSlicesList *discoveryv1.EndpointSliceList, servicesList *corev1.ServiceList, podsList *corev1.PodList) ([]EndpointSlicesInfo, error) {
+	var service *corev1.Service
+	var pod corev1.Pod
+	found := false
+	res := make([]EndpointSlicesInfo, 0)
 
 	for _, epSlice := range epSlicesList.Items {
 		// Fetch info about the service behind the endpointslice.
-		for _, ownerRef := range epSlice.OwnerReferences {
-			name := ownerRef.Name
-			namespace := epSlice.Namespace
-			if service, found = getService(name, namespace, servicesList); !found {
-				return nil, fmt.Errorf("failed to get service for endpoint %s/%s", epSlice.Namespace, epSlice.Name)
-			}
+		if len(epSlice.OwnerReferences) == 0 {
+			log.Warnf("warning: empty OwnerReferences in EndpointSlice %s/%s. skipping", epSlice.Namespace, epSlice.Name)
+			continue
+		}
+
+		ownerRef := epSlice.OwnerReferences[0]
+		name := ownerRef.Name
+		namespace := epSlice.Namespace
+		if service, found = getService(name, namespace, servicesList); !found {
+			return nil, fmt.Errorf("failed to get service for endpoint %s/%s", epSlice.Namespace, epSlice.Name)
 		}
 
 		// Fetch info about the pods behind the endpointslice.
 		pods := make([]corev1.Pod, 0)
 		for _, endpoint := range epSlice.Endpoints {
 			if endpoint.TargetRef == nil {
+				log.Warnf("warning: empty TargetRef for endpoint %s in EndpointSlice %s. skipping", *endpoint.NodeName, epSlice.Name)
 				continue
 			}
 			name := endpoint.TargetRef.Name
 			namespace := endpoint.TargetRef.Namespace
 
 			if pod, found = getPod(name, namespace, podsList); !found {
-				log.Printf("warning: failed to get service for endpoint %s/%s", epSlice.Namespace, epSlice.Name)
+				log.Warn("warning: failed to get pod %s/%s for endpoint in EndpointSlice %s. skipping", namespace, name, epSlice.Name)
 				continue
 			}
-			pods = append(pods, pod)
-		}
 
-		res = append(res, EndpointSlicesInfo{
-			endpointSlice: epSlice,
-			serivce:       service,
-			pods:          pods,
-		})
+			pods = append(pods, pod)
+			log.Infof("Added a new endpointSliceInfo with pods len: %d", len(pods))
+			res = append(res, EndpointSlicesInfo{
+				EndpointSlice: epSlice,
+				Serivce:       *service,
+				Pods:          pods,
+			})
+		}
 	}
 
 	return res, nil
@@ -130,32 +138,33 @@ func getPod(name, namespace string, podsList *corev1.PodList) (corev1.Pod, bool)
 	return corev1.Pod{}, false
 }
 
-func getService(name, namespace string, serviceList *corev1.ServiceList) (corev1.Service, bool) {
+func getService(name, namespace string, serviceList *corev1.ServiceList) (*corev1.Service, bool) {
 	for _, service := range serviceList.Items {
 		if service.Name == name && service.Namespace == namespace {
-			return service, true
+			return &service, true
 		}
 	}
 
-	return corev1.Service{}, false
+	return nil, false
 }
 
 // getEndpointSliceNodeRoles gets endpointslice Info struct and returns which node roles the services are on.
 func getEndpointSliceNodeRoles(epSliceInfo *EndpointSlicesInfo, nodes []corev1.Node) []string {
 	// map to prevent duplications
 	rolesMap := make(map[string]bool)
-	for _, endpoint := range epSliceInfo.endpointSlice.Endpoints {
+	for _, endpoint := range epSliceInfo.EndpointSlice.Endpoints {
 		nodeName := endpoint.NodeName
 		for _, node := range nodes {
 			if node.Name == *nodeName {
 				role := nodesutil.GetRoles(&node)
 				rolesMap[role] = true
+				log.Debug("found node, role is:", role)
 			}
 		}
 	}
 
 	roles := []string{}
-	for k, _ := range rolesMap {
+	for k := range rolesMap {
 		roles = append(roles, k)
 	}
 
@@ -171,7 +180,7 @@ func getContainerName(portNum int, pods []corev1.Pod) (string, error) {
 		return "", fmt.Errorf("got empty pods slice")
 	}
 
-	for i := 0; i <= len(pod.Spec.Containers); i++ {
+	for i := 0; i < len(pod.Spec.Containers); i++ {
 		container := pod.Spec.Containers[i]
 
 		if found {
@@ -188,66 +197,43 @@ func getContainerName(portNum int, pods []corev1.Pod) (string, error) {
 	}
 
 	if !found {
-		return "", fmt.Errorf("couldn't find port %d in pods: %+v", portNum, pods)
+		return "", fmt.Errorf("couldn't find port %d in pods", portNum)
 	}
 
 	return res, nil
 }
 
 func (epSliceinfo *EndpointSlicesInfo) toComDetails(nodes []corev1.Node) ([]types.ComDetails, error) {
-	// Each EndpointSlice:
-	// endpoints: get the roles (master / worker or both.)
-	// ownerReferences = services. (could be >1)
-	// Each service: - under the service metadata - pod's namespace (same as pods)
-	//                                              pod's name: labels: app: <name>
-	// Ports - (could be >1)
-	// Need to fetch container name from pods.
-
-	// Get roles (from endpointslice.Endpoints.addresses.nodeName)
-	// Get pod name (service.metadata.labels: app)
-	// Get pod namespace (service.metadata.namespace)
-
-	// Role(s)
-	// (service) Namespace
-	// (pod) Name
-	// (pod) Container(s)
-	// (pod) port(s)
-
-	// 1 endpointslice can have 4 ComDetails:
-	// 2 roles. 2 ports. for example:
-
-	// port num ||role || serviceName || namespace || podname	||	 containername	||
-	// ==============================================================================
-	//  9103, 	master, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-node
-	//  9105, 	worker, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-ovn-metrics
-	//  9103, 	master, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-node
-	//  9105, 	worker, ovn-kubernetes-node, openshift-ovn-kubernetes,ovnkube-node, kube-rbac-proxy-ovn-metrics
+	if len(epSliceinfo.EndpointSlice.OwnerReferences) == 0 {
+		return nil, fmt.Errorf("empty OwnerReferences in EndpointSlice %s/%s. skipping", epSliceinfo.EndpointSlice.Namespace, epSliceinfo.EndpointSlice.Name)
+	}
 
 	res := make([]types.ComDetails, 0)
 
 	// Get the Namespace and Pod's name from the service.
-	namespace := epSliceinfo.serivce.Namespace
-	name := epSliceinfo.serivce.Labels["app"]
+	namespace := epSliceinfo.Serivce.Namespace
+	name := epSliceinfo.EndpointSlice.OwnerReferences[0].Name
 
 	// Get the node roles of this endpointslice. (master or worker or both).
 	roles := getEndpointSliceNodeRoles(epSliceinfo, nodes)
 
-	epSlice := epSliceinfo.endpointSlice
+	epSlice := epSliceinfo.EndpointSlice
 
 	optional := isOptional(epSlice)
 	service := epSlice.Labels["kubernetes.io/service-name"]
 
 	for _, role := range roles {
 		for _, port := range epSlice.Ports {
-			containerName, err := getContainerName(int(*port.Port), epSliceinfo.pods)
+			containerName, err := getContainerName(int(*port.Port), epSliceinfo.Pods)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get container name: %w", err)
+				log.Warningf("failed to get container name for EndpointSlice %s/%s: %s", namespace, name, err)
+				continue
 			}
 
 			res = append(res, types.ComDetails{
 				Direction: consts.IngressLabel,
-				Protocol:  fmt.Sprint(port.Protocol),
-				Port:      fmt.Sprint(port.Port),
+				Protocol:  string(*port.Protocol),
+				Port:      fmt.Sprint(int(*port.Port)),
 				Namespace: namespace,
 				Pod:       name,
 				Container: containerName,

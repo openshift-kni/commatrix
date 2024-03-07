@@ -1,6 +1,7 @@
 package endpointslices
 
 import (
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -17,12 +18,12 @@ func ApplyFilters(endpointSlicesInfo []EndpointSlicesInfo, filters ...Filter) []
 	filteredEndpointsSlices := make([]EndpointSlicesInfo, 0, len(endpointSlicesInfo))
 
 	for _, epInfo := range endpointSlicesInfo {
-		keep := true
+		keep := false
 
 		for _, f := range filters {
 			ret := f(epInfo)
-			if !ret {
-				keep = false
+			if ret {
+				keep = true
 				break
 			}
 		}
@@ -43,17 +44,24 @@ func FilterForIngressTraffic(epslicesInfo []EndpointSlicesInfo) []EndpointSlices
 
 // FilterHostNetwork checks if the pods behind the endpointSlice are host network.
 func FilterHostNetwork(epInfo EndpointSlicesInfo) bool {
-	if len(epInfo.pods) == 0 {
+	if len(epInfo.Pods) == 0 {
+		log.Debugf("EndpointSliceInfo %s, got no pods", epInfo.Serivce.Name)
 		return false
 	}
 	// Assuming all pods in an EndpointSlice are uniformly on host network or not, we only check the first one.
-	return epInfo.pods[0].Spec.HostNetwork
+	if !epInfo.Pods[0].Spec.HostNetwork {
+		log.Debugf("EndpointSliceInfo %s, is not hostNetwork", epInfo.Serivce.Name)
+		return false
+	}
+
+	return true
 }
 
 // FilterServiceTypes checks if the service behind the endpointSlice is of type LoadBalancer or NodePort.
 func FilterServiceTypes(epInfo EndpointSlicesInfo) bool {
-	if epInfo.serivce.Spec.Type != corev1.ServiceTypeLoadBalancer &&
-		epInfo.serivce.Spec.Type != corev1.ServiceTypeNodePort {
+	if epInfo.Serivce.Spec.Type != corev1.ServiceTypeLoadBalancer &&
+		epInfo.Serivce.Spec.Type != corev1.ServiceTypeNodePort {
+		log.Debugf("EndpointSliceInfo %s, is not Loadbalancer not NodePort ", epInfo.Serivce.Name)
 		return false
 	}
 
