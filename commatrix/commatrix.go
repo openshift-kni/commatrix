@@ -37,6 +37,13 @@ func New(kubeconfigPath string, customEntriesPath string) (*types.ComMatrix, err
 	}
 	res = append(res, epSliceComDetails...)
 
+	staticEntries, err := getStaticEntries()
+	if err != nil {
+		return nil, err
+	}
+
+	res = append(res, staticEntries...)
+
 	if customEntriesPath != "" {
 		customComDetails, err := addFromFile(customEntriesPath)
 		if err != nil {
@@ -64,6 +71,17 @@ func addFromFile(fp string) ([]types.ComDetails, error) {
 	err = json.Unmarshal(raw, &res)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
+	}
+
+	return res, nil
+}
+
+func getStaticEntries() ([]types.ComDetails, error) {
+	var res []types.ComDetails
+
+	err := json.Unmarshal([]byte(staticEntries), &res)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal static entries: %v", err)
 	}
 
 	return res, nil

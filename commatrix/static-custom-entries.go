@@ -1,3 +1,6 @@
+package commatrix
+
+var staticEntries = `
 [
     {
         "direction": "ingress",
@@ -293,7 +296,7 @@
         "service": "openshift-kni-infra-haproxy-haproxy",
         "namespace": "openshift-kni-infra",
         "pod": "haproxy",
-        "container": "hapro`xy",
+        "container": "haproxy",
         "optional": false
     },
     {
@@ -407,3 +410,4 @@
         "optional": false
     }
 ]
+`
