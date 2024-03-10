@@ -161,7 +161,7 @@ var staticEntries = `
         "protocol": "TCP",
         "port": "10250",
         "nodeRole": "master",
-        "service": "",
+        "service": "kubelet",
         "namespace": "",
         "pod": "",
         "container": "",
