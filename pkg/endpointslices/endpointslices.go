@@ -34,28 +34,28 @@ func GetIngressEndpointSlicesInfo(cs *client.ClientSet) ([]EndpointSlicesInfo, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to list endpointslices: %w", err)
 	}
-	log.Debugf("len of EndpointSlices: %d", len(epSlicesList.Items))
+	log.Debugf("amount of EndpointSlices in the cluster: %d", len(epSlicesList.Items))
 
 	err = cs.List(context.TODO(), &servicesList, &rtclient.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list services: %w", err)
 	}
-	log.Debugf("len of Services: %d", len(servicesList.Items))
+	log.Debugf("amount of Services in the cluster: %d", len(servicesList.Items))
 
 	err = cs.List(context.TODO(), &podsList, &rtclient.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
-	log.Debug("len of Pods: ", len(podsList.Items))
+	log.Debug("amount of Pods in the cluster: ", len(podsList.Items))
 
 	epsliceInfos, err := createEPSliceInfos(&epSlicesList, &servicesList, &podsList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to bundle resources: %w", err)
 	}
-	log.Debug("len of epsliceInfos: ", len(epsliceInfos))
+	log.Debug("length of the creaed epsliceInfos slice: ", len(epsliceInfos))
 	res := FilterForIngressTraffic(epsliceInfos)
 
-	log.Debug("len after filter: ", len(res))
+	log.Debug("length of the slice after filter: ", len(res))
 	return res, nil
 }
 
@@ -112,12 +112,12 @@ func createEPSliceInfos(epSlicesList *discoveryv1.EndpointSliceList, servicesLis
 			namespace := endpoint.TargetRef.Namespace
 
 			if pod, found = getPod(name, namespace, podsList); !found {
-				log.Warn("warning: failed to get pod %s/%s for endpoint in EndpointSlice %s. skipping", namespace, name, epSlice.Name)
+				log.Warnf("warning: failed to get pod %s/%s for endpoint in EndpointSlice %s. skipping", namespace, name, epSlice.Name)
 				continue
 			}
 
 			pods = append(pods, pod)
-			log.Infof("Added a new endpointSliceInfo with pods len: %d", len(pods))
+			log.Debugf("Added a new endpointSliceInfo with pods len: %d", len(pods))
 			res = append(res, EndpointSlicesInfo{
 				EndpointSlice: epSlice,
 				Serivce:       *service,
