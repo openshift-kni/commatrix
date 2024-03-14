@@ -1,29 +1,7 @@
 package commatrix
 
-var staticEntries = `
+var generalStaticEntries = `
 [
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
-        "port": "18080",
-        "service": "openshift-kni-infra-coredns",
-        "nodeRole": "worker",
-        "namespace": "openshift-kni-infra",
-        "pod": "coredns",
-        "container": "coredns",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
-        "port": "53",
-        "nodeRole": "worker",
-        "service": "none",
-        "namespace": "openshift-dns",
-        "pod": "dnf-default",
-        "container": "dns",
-        "optional": false
-    },
     {
         "direction": "ingress",
         "protocol": "TCP",
@@ -34,6 +12,28 @@ var staticEntries = `
         "pod": "system",
         "container": "system",
         "optional": true
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "9637",
+        "nodeRole": "master",
+        "service": "kube-rbac-proxy",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "9637",
+        "nodeRole": "worker",
+        "service": "kube-rbac-proxy",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
     },
     {
         "direction": "ingress",
@@ -104,17 +104,6 @@ var staticEntries = `
     {
         "direction": "ingress",
         "protocol": "TCP",
-        "port": "9447",
-        "nodeRole": "master",
-        "service": "baremetal-operator-webhook-baremetal provisioning",
-        "namespace": "",
-        "pod": "",
-        "container": "",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
         "port": "9537",
         "nodeRole": "master",
         "service": "crio-metrics",
@@ -132,28 +121,6 @@ var staticEntries = `
         "namespace": "",
         "pod": "",
         "container": "",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
-        "port": "53",
-        "nodeRole": "master",
-        "service": "dns-default",
-        "namespace": "openshift-dns",
-        "pod": "dnf-default",
-        "container": "dns",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
-        "port": "18080",
-        "nodeRole": "master",
-        "service": "openshift-kni-infra-coredns",
-        "namespace": "openshift-kni-infra",
-        "pod": "corend",
-        "container": "coredns",
         "optional": false
     },
     {
@@ -199,17 +166,6 @@ var staticEntries = `
         "pod": "system",
         "container": "system",
         "optional": true
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
-        "port": "9191",
-        "nodeRole": "master",
-        "service": "machine-approver",
-        "namespace": "machine-approver",
-        "pod": "machine-approver",
-        "container": "machine-approver-controller",
-        "optional": false
     },
     {
         "direction": "ingress",
@@ -280,28 +236,6 @@ var staticEntries = `
     {
         "direction": "ingress",
         "protocol": "TCP",
-        "port": "9445",
-        "nodeRole": "master",
-        "service": "haproxy-openshift-dsn-internal-loadbalancer",
-        "namespace": "",
-        "pod": "",
-        "container": "",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
-        "port": "9444",
-        "nodeRole": "master",
-        "service": "openshift-kni-infra-haproxy-haproxy",
-        "namespace": "openshift-kni-infra",
-        "pod": "haproxy",
-        "container": "haproxy",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
         "port": "10357",
         "nodeRole": "master",
         "service": "cluster-policy-controller-apiserver-healthz",
@@ -346,17 +280,6 @@ var staticEntries = `
     {
         "direction": "ingress",
         "protocol": "TCP",
-        "port": "5050",
-        "nodeRole": "master",
-        "service": "metal3",
-        "namespace": "openshift-machine-api",
-        "pod": "ironic-proxy",
-        "container": "ironic-proxy",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
         "port": "6080",
         "nodeRole": "master",
         "service": "no-service",
@@ -386,6 +309,88 @@ var staticEntries = `
         "pod": "",
         "container": "",
         "optional": false
+    }
+]
+`
+
+var baremetalStaticEntries = `
+[
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "53",
+        "nodeRole": "master",
+        "service": "dns-default",
+        "namespace": "openshift-dns",
+        "pod": "dnf-default",
+        "container": "dns",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "53",
+        "nodeRole": "worker",
+        "service": "none",
+        "namespace": "openshift-dns",
+        "pod": "dnf-default",
+        "container": "dns",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "5050",
+        "nodeRole": "master",
+        "service": "metal3",
+        "namespace": "openshift-machine-api",
+        "pod": "ironic-proxy",
+        "container": "ironic-proxy",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "9444",
+        "nodeRole": "master",
+        "service": "openshift-kni-infra-haproxy-haproxy",
+        "namespace": "openshift-kni-infra",
+        "pod": "haproxy",
+        "container": "haproxy",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "9445",
+        "nodeRole": "master",
+        "service": "haproxy-openshift-dsn-internal-loadbalancer",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "9191",
+        "nodeRole": "master",
+        "service": "machine-approver",
+        "namespace": "machine-approver",
+        "pod": "machine-approver",
+        "container": "machine-approver-controller",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "6385",
+        "nodeRole": "master",
+        "service": "no-service",
+        "namespace": "openshift-machine-api",
+        "pod": "ironic-proxy",
+        "container": "ironic-proxy",
+        "optional": false
     },
     {
         "direction": "ingress",
@@ -401,12 +406,116 @@ var staticEntries = `
     {
         "direction": "ingress",
         "protocol": "TCP",
-        "port": "6385",
+        "port": "18080",
+        "service": "openshift-kni-infra-coredns",
+        "nodeRole": "worker",
+        "namespace": "openshift-kni-infra",
+        "pod": "coredns",
+        "container": "coredns",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "18080",
         "nodeRole": "master",
-        "service": "no-service",
-        "namespace": "openshift-machine-api",
-        "pod": "ironic-proxy",
-        "container": "ironic-proxy",
+        "service": "openshift-kni-infra-coredns",
+        "namespace": "openshift-kni-infra",
+        "pod": "corend",
+        "container": "coredns",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "9447",
+        "nodeRole": "master",
+        "service": "baremetal-operator-webhook-baremetal provisioning",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    }
+]
+`
+
+var awsCloudStaticEntries = `
+[
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "8080",
+        "nodeRole": "master",
+        "service": "cluster-network",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "10260",
+        "nodeRole": "master",
+        "service": "aws-cloud-controller",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "10258",
+        "nodeRole": "master",
+        "service": "aws-cloud-controller",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "10304",
+        "nodeRole": "master",
+        "service": "csi-node-driver",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "10304",
+        "nodeRole": "worker",
+        "service": "csi-node-driver",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "10300",
+        "nodeRole": "master",
+        "service": "csi-livenessprobe",
+        "namespace": "",
+        "pod": "",
+        "container": "",
+        "optional": false
+    },
+    {
+        "direction": "ingress",
+        "protocol": "TCP",
+        "port": "10300",
+        "nodeRole": "worker",
+        "service": "csi-livenessprobe",
+        "namespace": "",
+        "pod": "",
+        "container": "",
         "optional": false
     }
 ]

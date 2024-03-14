@@ -30,7 +30,7 @@ func main() {
 		panic("must set the KUBECONFIG environment variable")
 	}
 
-	res, err := commatrix.New(kubeconfig, *customEntriesPath)
+	res, err := commatrix.New(kubeconfig, *customEntriesPath, commatrix.Baremetal)
 	if err != nil {
 		panic(err)
 	}
