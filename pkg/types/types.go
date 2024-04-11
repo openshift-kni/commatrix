@@ -29,9 +29,13 @@ type ComDetails struct {
 }
 
 func (m *ComMatrix) ToCSV() ([]byte, error) {
+	var header = "direction,protocol,port,namespace,service,pod,container,nodeRole,optional"
+
 	out := make([]byte, 0)
 	w := bytes.NewBuffer(out)
 	csvwriter := csv.NewWriter(w)
+
+	csvwriter.Write(strings.Split(header, ","))
 
 	for _, cd := range m.Matrix {
 		record := strings.Split(cd.String(), ",")
