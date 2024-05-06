@@ -22,19 +22,21 @@ import (
 
 func main() {
 	var (
-		destDir           string
-		format            string
-		envStr            string
-		deploymentStr     string
-		customEntriesPath string
-		printFn           func(m types.ComMatrix) ([]byte, error)
+		destDir             string
+		format              string
+		envStr              string
+		deploymentStr       string
+		customEntriesPath   string
+		customEntriesFormat string
+		printFn             func(m types.ComMatrix) ([]byte, error)
 	)
 
 	flag.StringVar(&destDir, "destDir", "communication-matrix", "Output files dir")
 	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv)")
 	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/aws)")
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
-	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a JSON file to the matrix")
+	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
+	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 
 	flag.Parse()
 
@@ -74,7 +76,11 @@ func main() {
 		panic(fmt.Sprintf("invalid deployment type: %s", deploymentStr))
 	}
 
-	mat, err := commatrix.New(kubeconfig, customEntriesPath, env, deployment)
+	if customEntriesPath != "" && customEntriesFormat == "" {
+		panic("error, variable customEntriesFormat is not set")
+	}
+
+	mat, err := commatrix.New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create the communication matrix: %s", err))
 	}

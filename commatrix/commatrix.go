@@ -7,6 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/gocarina/gocsv"
+	"sigs.k8s.io/yaml"
+
 	"github.com/openshift-kni/commatrix/client"
 	"github.com/openshift-kni/commatrix/endpointslices"
 	"github.com/openshift-kni/commatrix/types"
@@ -34,7 +37,7 @@ const (
 // Custom entries from a JSON file can be added to the matrix by setting `customEntriesPath`.
 // Returns a pointer to ComMatrix and error. Entries include traffic direction, protocol,
 // port number, namespace, service name, pod, container, node role, and flow optionality for OpenShift.
-func New(kubeconfigPath string, customEntriesPath string, e Env, d Deployment) (*types.ComMatrix, error) {
+func New(kubeconfigPath string, customEntriesPath string, customEntriesFormat string, e Env, d Deployment) (*types.ComMatrix, error) {
 	res := make([]types.ComDetails, 0)
 
 	cs, err := client.New(kubeconfigPath)
@@ -55,15 +58,19 @@ func New(kubeconfigPath string, customEntriesPath string, e Env, d Deployment) (
 
 	staticEntries, err := getStaticEntries(e, d)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed adding static entries: %s", err)
 	}
 
 	res = append(res, staticEntries...)
 
 	if customEntriesPath != "" {
-		customComDetails, err := addFromFile(customEntriesPath)
+		inputFormat, err := parseFormat(customEntriesFormat)
 		if err != nil {
-			return nil, fmt.Errorf("failed fetching custom entries from file %s err: %w", customEntriesPath, err)
+			return nil, fmt.Errorf("failed adding custom entries: %s", err)
+		}
+		customComDetails, err := addFromFile(customEntriesPath, inputFormat)
+		if err != nil {
+			return nil, fmt.Errorf("failed adding custom entries: %s", err)
 		}
 
 		res = append(res, customComDetails...)
@@ -74,7 +81,7 @@ func New(kubeconfigPath string, customEntriesPath string, e Env, d Deployment) (
 	return &types.ComMatrix{Matrix: cleanedComDetails}, nil
 }
 
-func addFromFile(fp string) ([]types.ComDetails, error) {
+func addFromFile(fp string, format types.Format) ([]types.ComDetails, error) {
 	var res []types.ComDetails
 	f, err := os.Open(filepath.Clean(fp))
 	if err != nil {
@@ -85,10 +92,24 @@ func addFromFile(fp string) ([]types.ComDetails, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s: %v", fp, err)
 	}
-
-	err = json.Unmarshal(raw, &res)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
+	switch format {
+	case types.JSON:
+		err = json.Unmarshal(raw, &res)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
+		}
+	case types.YAML:
+		err = yaml.Unmarshal(raw, &res)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
+		}
+	case types.CSV:
+		err = gocsv.UnmarshalBytes(raw, &res)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
+		}
+	default:
+		return nil, fmt.Errorf("invalid value for format must be (json,yaml,csv)")
 	}
 
 	return res, nil
@@ -123,4 +144,17 @@ func getStaticEntries(e Env, d Deployment) ([]types.ComDetails, error) {
 	comDetails = append(comDetails, generalStaticEntriesWorker...)
 
 	return comDetails, nil
+}
+
+func parseFormat(format string) (types.Format, error) {
+	switch format {
+	case types.FormatJSON:
+		return types.JSON, nil
+	case types.FormatYAML:
+		return types.YAML, nil
+	case types.FormatCSV:
+		return types.CSV, nil
+	}
+
+	return types.FormatErr, fmt.Errorf("failed to parse format: %s. options are: (json/yaml/csv)", format)
 }
