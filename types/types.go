@@ -84,6 +84,49 @@ func ToYAML(m ComMatrix) ([]byte, error) {
 	return out, nil
 }
 
+func ToNFTables(m ComMatrix, role string) []byte {
+	tcp := ""
+	udp := ""
+
+	for _, cd := range m.Matrix {
+		if cd.NodeRole != role {
+			continue
+		}
+		if cd.Protocol == "TCP" {
+			tcp += fmt.Sprint(cd.Port) + ", "
+		}
+		if cd.Protocol == "UDP" {
+			udp += fmt.Sprint(cd.Port) + ", "
+		}
+	}
+
+	// Remove the trailing ", " substring
+	tcpPorts := tcp[:len(tcp)-2]
+	udpPorts := udp[:len(udp)-2]
+
+	result := fmt.Sprintf(`sudo nft add chain ip filter FIREWALL
+	
+# Allow loopback traffic
+sudo nft add rule ip filter FIREWALL iif lo accept
+
+# Allow established and related traffic
+sudo nft add rule ip filter FIREWALL ct state established,related accept
+
+# Allow SSH, DHCP, ICMP
+sudo nft add rule ip filter FIREWALL tcp dport { 22 }  accept
+sudo nft add rule ip filter FIREWALL udp dport { 67, 68 }  accept
+sudo nft add rule ip filter FIREWALL ip protocol icmp accept
+
+sudo nft add rule ip filter FIREWALL tcp dport { %s } accept
+sudo nft add rule ip filter FIREWALL udp dport { %s } accept
+
+sudo nft add rule ip filter FIREWALL log prefix firewall drop
+
+sudo nft add rule ip filter INPUT jump FIREWALL`, tcpPorts, udpPorts)
+
+	return []byte(result)
+}
+
 func (m *ComMatrix) String() string {
 	var result strings.Builder
 	for _, details := range m.Matrix {
