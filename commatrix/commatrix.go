@@ -18,7 +18,7 @@ type Env int
 
 const (
 	Baremetal Env = iota
-	AWS
+	Cloud
 )
 
 type Deployment int
@@ -104,12 +104,12 @@ func getStaticEntries(e Env, d Deployment) ([]types.ComDetails, error) {
 			break
 		}
 		comDetails = append(comDetails, baremetalStaticEntriesWorker...)
-	case AWS:
-		comDetails = append(comDetails, awsCloudStaticEntriesMaster...)
+	case Cloud:
+		comDetails = append(comDetails, cloudStaticEntriesMaster...)
 		if d == SNO {
 			break
 		}
-		comDetails = append(comDetails, awsCloudStaticEntriesWorker...)
+		comDetails = append(comDetails, cloudStaticEntriesWorker...)
 	default:
 		return nil, fmt.Errorf("invalid value for cluster environment")
 	}

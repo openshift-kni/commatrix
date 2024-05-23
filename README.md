@@ -28,7 +28,7 @@ Use the `generate` Makefile target to create the matrix.
 The following environment variables are used to configure:
 ```
 FORMAT (csv/json/yaml)
-CLUSTER_ENV (baremetal/aws)
+CLUSTER_ENV (baremetal/cloud)
 DEST_DIR (path to the directory containing the artifacts)
 DEPLOYMENT (mno/sno)
 ```
