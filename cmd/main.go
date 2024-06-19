@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -171,7 +173,10 @@ func main() {
 		panic(err)
 	}
 
-	diff := buildMatrixDiff(*mat, ssComMat)
+	diff, err := buildMatrixDiff(cs, *mat, ssComMat)
+	if err != nil {
+		panic(err)
+	}
 
 	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"),
 		[]byte(diff),
@@ -181,9 +186,24 @@ func main() {
 	}
 }
 
-func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
+func buildMatrixDiff(cs *clientutil.ClientSet, mat1 types.ComMatrix, mat2 types.ComMatrix) (string, error) {
 	diff := consts.CSVHeaders + "\n"
+
+	nodePortMin, nodePortMax, err := getNodePortRange(cs)
+	if err != nil {
+		return "", err
+	}
+
+	skipCondition := func(cd types.ComDetails) bool {
+		// Skip "rpc.statd" ports, these are randomly open ports on the node.
+		// Skip ovnkube NodePort dynamic ports.
+		return cd.Service == "rpc.statd" || (cd.Service == "ovenkube" && cd.Port > nodePortMin && cd.Port < nodePortMax)
+	}
+
 	for _, cd := range mat1.Matrix {
+		if skipCondition(cd) {
+			continue
+		}
 		if mat2.Contains(cd) {
 			diff += fmt.Sprintf("%s\n", cd)
 			continue
@@ -193,16 +213,44 @@ func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
 	}
 
 	for _, cd := range mat2.Matrix {
-		// Skip "rpc.statd" ports, these are randomly open ports on the node,
-		// no need to mention them in the matrix diff
-		if cd.Service == "rpc.statd" {
+		if skipCondition(cd) {
 			continue
 		}
-
 		if !mat1.Contains(cd) {
 			diff += fmt.Sprintf("- %s\n", cd)
 		}
 	}
 
-	return diff
+	return diff, nil
+}
+
+func getNodePortRange(cs *clientutil.ClientSet) (int, int, error) {
+	const (
+		serviceNodePortMin = 30000
+		serviceNodePortMax = 32767
+	)
+
+	nodePortMin := serviceNodePortMin
+	nodePortMax := serviceNodePortMax
+
+	clusterNetwork, err := cs.ConfigV1Interface.Networks().Get(context.TODO(), "cluster", metav1.GetOptions{})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	serviceNodePortRange := clusterNetwork.Spec.ServiceNodePortRange
+	if serviceNodePortRange != "" {
+		rangeStr := strings.Split(serviceNodePortRange, "-")
+		nodePortMin, err = strconv.Atoi(rangeStr[0])
+		if err != nil {
+			return 0, 0, err
+		}
+
+		nodePortMax, err = strconv.Atoi(rangeStr[1])
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	return nodePortMin, nodePortMax, nil
 }
