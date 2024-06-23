@@ -13,20 +13,35 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+type Format int
+
+const (
+	FormatErr        = -1
+	JSON      Format = iota
+	YAML
+	CSV
+)
+
+const (
+	FormatJSON = "json"
+	FormatYAML = "yaml"
+	FormatCSV  = "csv"
+)
+
 type ComMatrix struct {
 	Matrix []ComDetails
 }
 
 type ComDetails struct {
-	Direction string `json:"direction"`
-	Protocol  string `json:"protocol"`
-	Port      int    `json:"port"`
-	Namespace string `json:"namespace"`
-	Service   string `json:"service"`
-	Pod       string `json:"pod"`
-	Container string `json:"container"`
-	NodeRole  string `json:"nodeRole"`
-	Optional  bool   `json:"optional"`
+	Direction string `json:"direction" yaml:"direction"`
+	Protocol  string `json:"protocol" yaml:"protocol"`
+	Port      int    `json:"port" yaml:"port"`
+	Namespace string `json:"namespace" yaml:"namespace"`
+	Service   string `json:"service" yaml:"service"`
+	Pod       string `json:"pod" yaml:"pod"`
+	Container string `json:"container" yaml:"container"`
+	NodeRole  string `json:"nodeRole" yaml:"nodeRole"`
+	Optional  bool   `json:"optional" yaml:"optional"`
 }
 
 func ToCSV(m ComMatrix) ([]byte, error) {
@@ -52,7 +67,7 @@ func ToCSV(m ComMatrix) ([]byte, error) {
 }
 
 func ToJSON(m ComMatrix) ([]byte, error) {
-	out, err := json.Marshal(m.Matrix)
+	out, err := json.MarshalIndent(m.Matrix, "", "    ")
 	if err != nil {
 		return nil, err
 	}

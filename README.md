@@ -25,12 +25,18 @@ the `ss` command on each node, and converts the output into a corresponding ComD
 ### Communication Matrix Creation Guide
 
 Use the `generate` Makefile target to create the matrix.
+Add additional entires to the matrix via a custom file, using
+the variables `CUSTOM_ENTRIES_PATH` and `CUSTOM_ENTRIES_FORMAT`.
+Examples are available in the `example-custom-entries` files.
+
 The following environment variables are used to configure:
 ```
 FORMAT (csv/json/yaml)
 CLUSTER_ENV (baremetal/aws)
 DEST_DIR (path to the directory containing the artifacts)
 DEPLOYMENT (mno/sno)
+CUSTOM_ENTRIES_PATH (path to the file containing custom entries to add to the matrix)
+CUSTOM_ENTRIES_FORMAT (the format of the custom entries file (json,yaml,csv))
 ```
 
 The generated artifcats are:

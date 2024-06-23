@@ -3,6 +3,7 @@ module github.com/openshift-kni/commatrix
 go 1.21
 
 require (
+	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
 	github.com/openshift/client-go v0.0.0-20240415214935-be70f772f157
 	github.com/sirupsen/logrus v1.9.3
 	k8s.io/api v0.29.3
