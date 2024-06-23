@@ -1,6 +1,7 @@
 package commatrix
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,10 +9,15 @@ import (
 	"path/filepath"
 
 	"github.com/gocarina/gocsv"
+	"golang.org/x/sync/errgroup"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/openshift-kni/commatrix/client"
+	"github.com/openshift-kni/commatrix/consts"
+	"github.com/openshift-kni/commatrix/debug"
 	"github.com/openshift-kni/commatrix/endpointslices"
+	nodesutil "github.com/openshift-kni/commatrix/nodes"
 	"github.com/openshift-kni/commatrix/types"
 )
 
@@ -79,6 +85,106 @@ func New(kubeconfigPath string, customEntriesPath string, customEntriesFormat st
 	cleanedComDetails := types.CleanComDetails(res)
 
 	return &types.ComMatrix{Matrix: cleanedComDetails}, nil
+}
+
+func ApplyFireWallRules(cs *client.ClientSet, m *types.ComMatrix, role string) error {
+	tcp := ""
+	udp := ""
+
+	for _, cd := range m.Matrix {
+		if cd.NodeRole != role {
+			continue
+		}
+		if cd.Protocol == "TCP" {
+			tcp += fmt.Sprint(cd.Port) + ", "
+		}
+		if cd.Protocol == "UDP" {
+			udp += fmt.Sprint(cd.Port) + ", "
+		}
+	}
+
+	// Remove the trailing ", " substring
+	tcpPorts := tcp[:len(tcp)-2]
+	udpPorts := udp[:len(udp)-2]
+
+	nodesList, err := cs.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	g := new(errgroup.Group)
+	for _, n := range nodesList.Items {
+		node := n
+		nodeRole := nodesutil.GetRole(&node)
+		if nodeRole != role {
+			continue
+		}
+
+		g.Go(func() error {
+			debugPod, err := debug.New(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err := debugPod.Clean()
+				if err != nil {
+					fmt.Printf("failed cleaning debug pod %s: %v", debugPod, err)
+				}
+			}()
+			_, err = debugPod.Exec("sudo nft add chain ip filter FIREWALL")
+			if err != nil {
+				return err
+			}
+			_, err = debugPod.Exec("sudo nft add rule ip filter FIREWALL iif lo accept")
+			if err != nil {
+				return err
+			}
+			_, err = debugPod.Exec("sudo nft add rule ip filter FIREWALL ct state established,related accept")
+			if err != nil {
+				return err
+			}
+			_, err = debugPod.Exec("sudo nft add rule ip filter FIREWALL tcp dport { 22 } accept")
+			if err != nil {
+				return err
+			}
+
+			_, err = debugPod.Exec("sudo nft add rule ip filter FIREWALL udp dport { 67, 68 }  accept")
+			if err != nil {
+				return err
+			}
+
+			_, err = debugPod.Exec("sudo nft add rule ip filter FIREWALL ip protocol icmp accept")
+			if err != nil {
+				return err
+			}
+
+			_, err = debugPod.Exec(fmt.Sprintf("sudo nft add rule ip filter FIREWALL tcp dport { %s } accept", tcpPorts))
+			if err != nil {
+				return err
+			}
+
+			_, err = debugPod.Exec(fmt.Sprintf("sudo nft add rule ip filter FIREWALL udp dport { %s } accept", udpPorts))
+			if err != nil {
+				return err
+			}
+			_, err = debugPod.Exec("sudo nft add rule ip filter FIREWALL log prefix firewall drop")
+			if err != nil {
+				return err
+			}
+			_, err = debugPod.Exec("sudo nft add rule ip filter INPUT jump FIREWALL")
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+	}
+
+	err = g.Wait()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func addFromFile(fp string, format types.Format) ([]types.ComDetails, error) {
