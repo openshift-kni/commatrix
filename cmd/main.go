@@ -33,7 +33,7 @@ func main() {
 
 	flag.StringVar(&destDir, "destDir", "communication-matrix", "Output files dir")
 	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv)")
-	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/aws)")
+	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/cloud)")
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
@@ -60,8 +60,8 @@ func main() {
 	switch envStr {
 	case "baremetal":
 		env = commatrix.Baremetal
-	case "aws":
-		env = commatrix.AWS
+	case "cloud":
+		env = commatrix.Cloud
 	default:
 		panic(fmt.Sprintf("invalid cluster environment: %s", envStr))
 	}
