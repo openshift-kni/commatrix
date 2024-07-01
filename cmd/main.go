@@ -185,6 +185,28 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = commatrix.ApplyFireWallRules(cs, mat, "master")
+	if err != nil {
+		panic(err)
+	}
+
+	err = commatrix.ApplyFireWallRules(cs, mat, "worker")
+	if err != nil {
+		panic(err)
+	}
+
+	nftWorker := types.ToNFTables(*mat, "worker")
+	err = os.WriteFile(filepath.Join(destDir, "nft-file-worker"), nftWorker, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	nftMaster := types.ToNFTables(*mat, "master")
+	err = os.WriteFile(filepath.Join(destDir, "nft-file-master"), nftMaster, 0644)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
