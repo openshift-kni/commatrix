@@ -1,17 +1,25 @@
 package commatrix
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/gocarina/gocsv"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/openshift-kni/commatrix/client"
+	"github.com/openshift-kni/commatrix/consts"
+	"github.com/openshift-kni/commatrix/debug"
 	"github.com/openshift-kni/commatrix/endpointslices"
+	nodesutil "github.com/openshift-kni/commatrix/nodes"
 	"github.com/openshift-kni/commatrix/types"
 )
 
@@ -157,4 +165,79 @@ func parseFormat(format string) (types.Format, error) {
 	}
 
 	return types.FormatErr, fmt.Errorf("failed to parse format: %s. options are: (json/yaml/csv)", format)
+}
+
+func ApplyFireWallRules(cs *client.ClientSet, m *types.ComMatrix, role string) error {
+	var tcpPorts []string
+	var udpPorts []string
+
+	for _, line := range m.Matrix {
+		if line.NodeRole != role {
+			continue
+		}
+		if line.Protocol == "TCP" {
+			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
+		} else if line.Protocol == "UDP" {
+			udpPorts = append(udpPorts, fmt.Sprint(line.Port))
+		}
+	}
+
+	tcpPortsStr := strings.Join(tcpPorts, ", ")
+	udpPortsStr := strings.Join(udpPorts, ", ")
+
+	nodesList, err := cs.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list nodes: %w", err)
+	}
+
+	g := new(errgroup.Group)
+	for _, n := range nodesList.Items {
+		node := n
+		nodeRole := nodesutil.GetRole(&node)
+		if nodeRole != role {
+			continue
+		}
+
+		g.Go(func() error {
+			return applyRulesToNode(cs, node.Name, tcpPortsStr, udpPortsStr)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("failed to apply firewall rules: %w", err)
+	}
+
+	return nil
+
+}
+
+func applyRulesToNode(cs *client.ClientSet, nodeName, tcpPortsStr, udpPortsStr string) error {
+	debugPod, err := debug.New(cs, nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+	if err != nil {
+		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
+	}
+	defer func() {
+		err := debugPod.Clean()
+		if err != nil {
+			fmt.Printf("failed cleaning debug pod %s: %v", debugPod, err)
+		}
+	}()
+	rules := []string{
+		"sudo nft add chain ip filter FIREWALL",
+		"sudo nft add rule ip filter FIREWALL iif lo accept",
+		"sudo nft add rule ip filter FIREWALL ct state established,related accept",
+		"sudo nft add rule ip filter FIREWALL tcp dport { 22 } accept",
+		"sudo nft add rule ip filter FIREWALL udp dport { 67, 68 } accept",
+		"sudo nft add rule ip filter FIREWALL ip protocol icmp accept",
+		fmt.Sprintf("sudo nft add rule ip filter FIREWALL tcp dport { %s } accept", tcpPortsStr),
+		fmt.Sprintf("sudo nft add rule ip filter FIREWALL udp dport { %s } accept", udpPortsStr),
+		"sudo nft add rule ip filter FIREWALL log prefix firewall drop",
+		"sudo nft add rule ip filter INPUT jump FIREWALL",
+	}
+	for _, rule := range rules {
+		_, err = debugPod.Exec(rule)
+		if err != nil {
+			return fmt.Errorf("failed to execute rule %q on node %s: %w", rule, nodeName, err)
+		}
+	}
+	return nil
 }

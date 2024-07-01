@@ -160,3 +160,42 @@ func (m ComMatrix) Contains(cd ComDetails) bool {
 
 	return false
 }
+func ToNFTables(m ComMatrix, role string) []byte {
+	var tcpPorts []string
+	var udpPorts []string
+	for _, line := range m.Matrix {
+		if line.NodeRole != role {
+			continue
+		}
+		if line.Protocol == "TCP" {
+			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
+		} else if line.Protocol == "UDP" {
+			udpPorts = append(udpPorts, fmt.Sprint(line.Port))
+		}
+	}
+
+	tcpPortsStr := strings.Join(tcpPorts, ", ")
+	udpPortsStr := strings.Join(udpPorts, ", ")
+
+	result := fmt.Sprintf(`sudo nft add chain ip filter FIREWALL
+    
+# Allow loopback traffic
+sudo nft add rule ip filter FIREWALL iif lo accept
+
+# Allow established and related traffic
+sudo nft add rule ip filter FIREWALL ct state established,related accept
+
+# Allow SSH, DHCP, ICMP
+sudo nft add rule ip filter FIREWALL tcp dport { 22 }  accept
+sudo nft add rule ip filter FIREWALL udp dport { 67, 68 }  accept
+sudo nft add rule ip filter FIREWALL ip protocol icmp accept
+
+sudo nft add rule ip filter FIREWALL tcp dport { %s } accept
+sudo nft add rule ip filter FIREWALL udp dport { %s } accept
+
+sudo nft add rule ip filter FIREWALL log prefix firewall drop
+
+sudo nft add rule ip filter INPUT jump FIREWALL`, tcpPortsStr, udpPortsStr)
+
+	return []byte(result)
+}
