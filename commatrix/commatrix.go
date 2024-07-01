@@ -207,7 +207,6 @@ func ApplyFireWallRules(cs *client.ClientSet, m *types.ComMatrix, role string) e
 	}
 
 	return nil
-
 }
 
 func applyRulesToNode(cs *client.ClientSet, nodeName, tcpPortsStr, udpPortsStr string) error {
