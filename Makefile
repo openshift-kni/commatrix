@@ -32,5 +32,8 @@ generate: oc build
 	mkdir -p $(DEST_DIR)/communication-matrix
 	./$(EXECUTABLE) -format=$(FORMAT) -env=$(CLUSTER_ENV) -destDir=$(DEST_DIR)/communication-matrix -deployment=$(DEPLOYMENT) -customEntriesPath=$(CUSTOM_ENTRIES_PATH) -customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT)
 
+apply-firewall: build
+	./$(EXECUTABLE) -applyFirewall -format=$(FORMAT) -env=$(CLUSTER_ENV) -destDir=$(DEST_DIR)/communication-matrix -deployment=$(DEPLOYMENT)
+
 clean:
 	@rm -f $(EXECUTABLE)
