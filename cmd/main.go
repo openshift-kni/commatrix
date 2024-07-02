@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/openshift-kni/commatrix/cmd/applyFirewall"
-	"github.com/openshift-kni/commatrix/cmd/generateMatrix"
+	"github.com/openshift-kni/commatrix/cmd/apply-firewall"
+	"github.com/openshift-kni/commatrix/cmd/generate-matrix"
 	"github.com/openshift-kni/commatrix/commatrix"
 	"github.com/openshift-kni/commatrix/types"
 )
