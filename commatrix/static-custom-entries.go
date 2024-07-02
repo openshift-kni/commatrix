@@ -98,7 +98,7 @@ var generalStaticEntriesMaster = []types.ComDetails{
 		Container: "network-operator",
 		Optional:  false,
 	}, {
-		Direction: "ingress",
+		Direction: "Ingress",
 		Protocol:  "TCP",
 		Port:      9637,
 		NodeRole:  "master",
@@ -458,7 +458,7 @@ var cloudStaticEntriesMaster = []types.ComDetails{
 		Protocol:  "TCP",
 		Port:      10300,
 		NodeRole:  "master",
-		Service:   "csi-drivers-livenessprobe",
+		Service:   "csi-livenessprobe",
 		Namespace: "openshift-cluster-csi-drivers",
 		Pod:       "csi-driver-node",
 		Container: "csi-driver",
@@ -468,7 +468,7 @@ var cloudStaticEntriesMaster = []types.ComDetails{
 
 var MNOStaticEntries = []types.ComDetails{
 	{
-		Direction: "ingress",
+		Direction: "Ingress",
 		Protocol:  "UDP",
 		Port:      6081,
 		NodeRole:  "worker",
@@ -478,7 +478,7 @@ var MNOStaticEntries = []types.ComDetails{
 		Container: "",
 		Optional:  false,
 	}, {
-		Direction: "ingress",
+		Direction: "Ingress",
 		Protocol:  "UDP",
 		Port:      6081,
 		NodeRole:  "master",
