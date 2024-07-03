@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -20,7 +19,7 @@ import (
 	"github.com/openshift-kni/commatrix/types"
 )
 
-func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env commatrix.Env, deployment commatrix.Deployment, printFn func(m types.ComMatrix, role string) ([]byte, error), destDir string) {
+func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env commatrix.Env, deployment commatrix.Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
 	mat, err := commatrix.New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create the communication matrix: %s", err))
@@ -109,13 +108,21 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 	}
 }
 
-func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployment commatrix.Deployment, printFn func(m types.ComMatrix, role string) ([]byte, error), destDir string) {
-	nodeRole := "" //needed for nft table file
+func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployment commatrix.Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+
 	if format == types.FormatNFT {
-		nodeRole = "master"
-		fileName = fileName + "-master"
+		masterMatrix, workerMatrix := types.SeparateMatrixByRole(mat)
+		writeMatrixToFile(masterMatrix, fileName+"-master", format, printFn, destDir)
+		if deployment == commatrix.MNO {
+			writeMatrixToFile(workerMatrix, fileName+"-worker", format, printFn, destDir)
+		}
+	} else {
+		writeMatrixToFile(mat, fileName, format, printFn, destDir)
 	}
-	res, err := printFn(mat, nodeRole)
+}
+
+func writeMatrixToFile(matrix types.ComMatrix, fileName, format string, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+	res, err := printFn(matrix)
 	if err != nil {
 		panic(err)
 	}
@@ -124,21 +131,6 @@ func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployme
 	err = os.WriteFile(comMatrixFileName, res, 0644)
 	if err != nil {
 		panic(err)
-	}
-
-	if deployment == commatrix.MNO && format == types.FormatNFT {
-		nodeRole = "worker"
-		fileName = strings.Replace(fileName, "master", "worker", 1)
-		res, err := printFn(mat, nodeRole)
-		if err != nil {
-			panic(err)
-		}
-
-		comMatrixFileName := filepath.Join(destDir, fmt.Sprintf("%s.%s", fileName, format))
-		err = os.WriteFile(comMatrixFileName, res, 0644)
-		if err != nil {
-			panic(err)
-		}
 	}
 }
 

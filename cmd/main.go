@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/openshift-kni/commatrix/cmd/apply-firewall"
-	"github.com/openshift-kni/commatrix/cmd/generate-matrix"
+	generateMatrix "github.com/openshift-kni/commatrix/cmd/generate-matrix"
 	"github.com/openshift-kni/commatrix/commatrix"
 	"github.com/openshift-kni/commatrix/types"
 )
@@ -19,7 +18,7 @@ var (
 	customEntriesPath   string
 	customEntriesFormat string
 	applyFirewallFlag   bool
-	printFn             func(m types.ComMatrix, role string) ([]byte, error)
+	printFn             func(m types.ComMatrix) ([]byte, error)
 )
 
 func init() {
@@ -29,7 +28,6 @@ func init() {
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
-	flag.BoolVar(&applyFirewallFlag, "applyFirewall", false, "Apply firewall rules")
 
 	flag.Parse()
 
@@ -77,9 +75,5 @@ func main() {
 		panic("error, variable customEntriesFormat is not set")
 	}
 
-	if applyFirewallFlag {
-		applyFirewall.ApplyFirewallRules(kubeconfig, destDir, env, deployment)
-	} else {
-		generateMatrix.GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
-	}
+	generateMatrix.GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
 }

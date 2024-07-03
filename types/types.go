@@ -45,7 +45,7 @@ type ComDetails struct {
 	Optional  bool   `json:"optional" yaml:"optional"`
 }
 
-func ToCSV(m ComMatrix, role string) ([]byte, error) {
+func ToCSV(m ComMatrix) ([]byte, error) {
 	out := make([]byte, 0)
 	w := bytes.NewBuffer(out)
 	csvwriter := csv.NewWriter(w)
@@ -67,7 +67,7 @@ func ToCSV(m ComMatrix, role string) ([]byte, error) {
 	return w.Bytes(), nil
 }
 
-func ToJSON(m ComMatrix, role string) ([]byte, error) {
+func ToJSON(m ComMatrix) ([]byte, error) {
 	out, err := json.MarshalIndent(m.Matrix, "", "    ")
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func ToJSON(m ComMatrix, role string) ([]byte, error) {
 	return out, nil
 }
 
-func ToYAML(m ComMatrix, role string) ([]byte, error) {
+func ToYAML(m ComMatrix) ([]byte, error) {
 	out, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -162,13 +162,10 @@ func (m ComMatrix) Contains(cd ComDetails) bool {
 	return false
 }
 
-func ToNFTables(m ComMatrix, role string) ([]byte, error) {
+func ToNFTables(m ComMatrix) ([]byte, error) {
 	var tcpPorts []string
 	var udpPorts []string
 	for _, line := range m.Matrix {
-		if line.NodeRole != role {
-			continue
-		}
 		if line.Protocol == "TCP" {
 			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
 		} else if line.Protocol == "UDP" {
@@ -210,4 +207,18 @@ func ToNFTables(m ComMatrix, role string) ([]byte, error) {
 	}`, tcpPortsStr, udpPortsStr)
 
 	return []byte(result), nil
+}
+
+func SeparateMatrixByRole(matrix ComMatrix) (ComMatrix, ComMatrix) {
+	var masterMatrix, workerMatrix ComMatrix
+
+	for _, entry := range matrix.Matrix {
+		if entry.NodeRole == "master" {
+			masterMatrix.Matrix = append(masterMatrix.Matrix, entry)
+		} else if entry.NodeRole == "worker" {
+			workerMatrix.Matrix = append(workerMatrix.Matrix, entry)
+		}
+	}
+
+	return masterMatrix, workerMatrix
 }
