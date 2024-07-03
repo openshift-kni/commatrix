@@ -128,7 +128,7 @@ func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployme
 
 	if deployment == commatrix.MNO && format == types.FormatNFT {
 		nodeRole = "worker"
-		fileName = strings.Replace(fileName, "master", "-worker", 1)
+		fileName = strings.Replace(fileName, "master", "worker", 1)
 		res, err := printFn(mat, nodeRole)
 		if err != nil {
 			panic(err)
