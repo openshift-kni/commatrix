@@ -31,7 +31,6 @@ Examples are available in the `example-custom-entries` files.
 
 The following environment variables are used to configure:
 ```
-
 FORMAT (csv/json/yaml/nft)
 CLUSTER_ENV (baremetal/cloud)
 DEST_DIR (path to the directory containing the artifacts)
