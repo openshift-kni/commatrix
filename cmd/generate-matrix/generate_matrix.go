@@ -6,13 +6,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	clientutil "github.com/openshift-kni/commatrix/client"
-	"github.com/openshift-kni/commatrix/cmd/apply-firewall"
 	"github.com/openshift-kni/commatrix/commatrix"
 	"github.com/openshift-kni/commatrix/consts"
 	"github.com/openshift-kni/commatrix/debug"
@@ -20,22 +20,13 @@ import (
 	"github.com/openshift-kni/commatrix/types"
 )
 
-func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env commatrix.Env, deployment commatrix.Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env commatrix.Env, deployment commatrix.Deployment, printFn func(m types.ComMatrix, role string) ([]byte, error), destDir string) {
 	mat, err := commatrix.New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create the communication matrix: %s", err))
 	}
 
-	res, err := printFn(*mat)
-	if err != nil {
-		panic(err)
-	}
-
-	comMatrixFileName := filepath.Join(destDir, fmt.Sprintf("communication-matrix.%s", format))
-	err = os.WriteFile(comMatrixFileName, res, 0644)
-	if err != nil {
-		panic(err)
-	}
+	writeCommatrixToFile(*mat, "communication-matrix", format, deployment, printFn, destDir)
 
 	cs, err := clientutil.New(kubeconfig)
 	if err != nil {
@@ -106,17 +97,7 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 
 	cleanedComDetails := types.CleanComDetails(nodesComDetails)
 	ssComMat := types.ComMatrix{Matrix: cleanedComDetails}
-
-	res, err = printFn(ssComMat)
-	if err != nil {
-		panic(err)
-	}
-
-	ssMatrixFileName := filepath.Join(destDir, fmt.Sprintf("ss-generated-matrix.%s", format))
-	err = os.WriteFile(ssMatrixFileName, res, 0644)
-	if err != nil {
-		panic(err)
-	}
+	writeCommatrixToFile(ssComMat, "ss-generated-matrix", format, deployment, printFn, destDir)
 
 	diff := buildMatrixDiff(*mat, ssComMat)
 
@@ -126,7 +107,39 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 	if err != nil {
 		panic(err)
 	}
-	applyFirewall.CreateNFTtable(destDir, mat, deployment)
+}
+
+func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployment commatrix.Deployment, printFn func(m types.ComMatrix, role string) ([]byte, error), destDir string) {
+	nodeRole := "" //needed for nft table file
+	if format == types.FormatNFT {
+		nodeRole = "master"
+		fileName = fileName + "-master"
+	}
+	res, err := printFn(mat, nodeRole)
+	if err != nil {
+		panic(err)
+	}
+
+	comMatrixFileName := filepath.Join(destDir, fmt.Sprintf("%s.%s", fileName, format))
+	err = os.WriteFile(comMatrixFileName, res, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	if deployment == commatrix.MNO && format == types.FormatNFT {
+		nodeRole = "worker"
+		fileName = strings.Replace(fileName, "master", "-worker", 1)
+		res, err := printFn(mat, nodeRole)
+		if err != nil {
+			panic(err)
+		}
+
+		comMatrixFileName := filepath.Join(destDir, fmt.Sprintf("%s.%s", fileName, format))
+		err = os.WriteFile(comMatrixFileName, res, 0644)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {

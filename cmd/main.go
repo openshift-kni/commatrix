@@ -19,12 +19,12 @@ var (
 	customEntriesPath   string
 	customEntriesFormat string
 	applyFirewallFlag   bool
-	printFn             func(m types.ComMatrix) ([]byte, error)
+	printFn             func(m types.ComMatrix, role string) ([]byte, error)
 )
 
 func init() {
 	flag.StringVar(&destDir, "destDir", "communication-matrix", "Output files dir")
-	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv)")
+	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv,nft)")
 	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/aws)")
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
@@ -40,6 +40,8 @@ func init() {
 		printFn = types.ToCSV
 	case "yaml":
 		printFn = types.ToYAML
+	case "nft":
+		printFn = types.ToNFTables
 	default:
 		panic(fmt.Sprintf("invalid format: %s. Please specify json, csv, or yaml.", format))
 	}

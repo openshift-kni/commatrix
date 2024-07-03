@@ -26,6 +26,7 @@ const (
 	FormatJSON = "json"
 	FormatYAML = "yaml"
 	FormatCSV  = "csv"
+	FormatNFT  = "nft"
 )
 
 type ComMatrix struct {
@@ -44,7 +45,7 @@ type ComDetails struct {
 	Optional  bool   `json:"optional" yaml:"optional"`
 }
 
-func ToCSV(m ComMatrix) ([]byte, error) {
+func ToCSV(m ComMatrix, role string) ([]byte, error) {
 	out := make([]byte, 0)
 	w := bytes.NewBuffer(out)
 	csvwriter := csv.NewWriter(w)
@@ -66,7 +67,7 @@ func ToCSV(m ComMatrix) ([]byte, error) {
 	return w.Bytes(), nil
 }
 
-func ToJSON(m ComMatrix) ([]byte, error) {
+func ToJSON(m ComMatrix, role string) ([]byte, error) {
 	out, err := json.MarshalIndent(m.Matrix, "", "    ")
 	if err != nil {
 		return nil, err
@@ -75,7 +76,7 @@ func ToJSON(m ComMatrix) ([]byte, error) {
 	return out, nil
 }
 
-func ToYAML(m ComMatrix) ([]byte, error) {
+func ToYAML(m ComMatrix, role string) ([]byte, error) {
 	out, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
@@ -160,7 +161,8 @@ func (m ComMatrix) Contains(cd ComDetails) bool {
 
 	return false
 }
-func ToNFTables(m ComMatrix, role string) []byte {
+
+func ToNFTables(m ComMatrix, role string) ([]byte, error) {
 	var tcpPorts []string
 	var udpPorts []string
 	for _, line := range m.Matrix {
@@ -207,5 +209,5 @@ func ToNFTables(m ComMatrix, role string) []byte {
 		}
 	}`, tcpPortsStr, udpPortsStr)
 
-	return []byte(result)
+	return []byte(result), nil
 }
