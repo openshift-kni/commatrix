@@ -177,25 +177,35 @@ func ToNFTables(m ComMatrix, role string) []byte {
 	tcpPortsStr := strings.Join(tcpPorts, ", ")
 	udpPortsStr := strings.Join(udpPorts, ", ")
 
-	result := fmt.Sprintf(`sudo nft add chain ip filter FIREWALL
-    
-# Allow loopback traffic
-sudo nft add rule ip filter FIREWALL iif lo accept
+	result := fmt.Sprintf(`#!/usr/sbin/nft -f
 
-# Allow established and related traffic
-sudo nft add rule ip filter FIREWALL ct state established,related accept
+	table ip filter {
+		chain FIREWALL {
+			# Allow loopback traffic
+			type filter hook input priority 0; policy accept;
+			iif lo accept
+	
+			# Allow established and related traffic
+			ct state established,related accept
+	
+			# Allow SSH, DHCP, ICMP
+			tcp dport { 22 } accept
+			udp dport { 67, 68 } accept
+			ip protocol icmp accept
 
-# Allow SSH, DHCP, ICMP
-sudo nft add rule ip filter FIREWALL tcp dport { 22 }  accept
-sudo nft add rule ip filter FIREWALL udp dport { 67, 68 }  accept
-sudo nft add rule ip filter FIREWALL ip protocol icmp accept
+			# Allow specific TCP and UDP ports
+			tcp dport  { %s } accept
+			udp dport { %s } accept
 
-sudo nft add rule ip filter FIREWALL tcp dport { %s } accept
-sudo nft add rule ip filter FIREWALL udp dport { %s } accept
-
-sudo nft add rule ip filter FIREWALL log prefix firewall drop
-
-sudo nft add rule ip filter INPUT jump FIREWALL`, tcpPortsStr, udpPortsStr)
+			# Logging and default drop
+			log prefix "firewall " drop
+		}
+	
+		chain INPUT {
+			type filter hook input priority 0; policy accept;
+			jump FIREWALL
+		}
+	}`, tcpPortsStr, udpPortsStr)
 
 	return []byte(result)
 }

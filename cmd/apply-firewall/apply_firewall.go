@@ -36,20 +36,23 @@ func ApplyFirewallRules(kubeconfig, destDir string, env commatrix.Env, deploymen
 	if err != nil {
 		panic(err)
 	}
-	nftMaster := types.ToNFTables(*mat, "master")
-	err = os.WriteFile(filepath.Join(destDir, "nft-file-master"), nftMaster, 0644)
-	if err != nil {
-		panic(err)
-	}
-
 	if deployment == commatrix.MNO {
 		err = commatrix.ApplyFireWallRules(cs, mat, "worker")
 		if err != nil {
 			panic(err)
 		}
+	}
+}
+func CreateNFTtable(destDir string, mat *types.ComMatrix, deployment commatrix.Deployment) {
+	nftMaster := types.ToNFTables(*mat, "master")
+	err := os.WriteFile(filepath.Join(destDir, "nft-file-master.nft"), nftMaster, 0644)
+	if err != nil {
+		panic(err)
+	}
 
+	if deployment == commatrix.MNO {
 		nftWorker := types.ToNFTables(*mat, "worker")
-		err = os.WriteFile(filepath.Join(destDir, "nft-file-worker"), nftWorker, 0644)
+		err = os.WriteFile(filepath.Join(destDir, "nft-file-worker.nft"), nftWorker, 0644)
 		if err != nil {
 			panic(err)
 		}

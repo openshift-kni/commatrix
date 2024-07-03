@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	clientutil "github.com/openshift-kni/commatrix/client"
+	"github.com/openshift-kni/commatrix/cmd/apply-firewall"
 	"github.com/openshift-kni/commatrix/commatrix"
 	"github.com/openshift-kni/commatrix/consts"
 	"github.com/openshift-kni/commatrix/debug"
@@ -125,6 +126,7 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 	if err != nil {
 		panic(err)
 	}
+	applyFirewall.CreateNFTtable(destDir, mat, deployment)
 }
 
 func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
