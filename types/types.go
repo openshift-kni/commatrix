@@ -26,6 +26,7 @@ const (
 	FormatJSON = "json"
 	FormatYAML = "yaml"
 	FormatCSV  = "csv"
+	FormatNFT  = "nft"
 )
 
 type ComMatrix struct {
@@ -160,13 +161,11 @@ func (m ComMatrix) Contains(cd ComDetails) bool {
 
 	return false
 }
-func ToNFTables(m ComMatrix, role string) []byte {
+
+func ToNFTables(m ComMatrix) ([]byte, error) {
 	var tcpPorts []string
 	var udpPorts []string
 	for _, line := range m.Matrix {
-		if line.NodeRole != role {
-			continue
-		}
 		if line.Protocol == "TCP" {
 			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
 		} else if line.Protocol == "UDP" {
@@ -188,9 +187,7 @@ func ToNFTables(m ComMatrix, role string) []byte {
 			# Allow established and related traffic
 			ct state established,related accept
 	
-			# Allow SSH, DHCP, ICMP
-			tcp dport { 22 } accept
-			udp dport { 67, 68 } accept
+			# Allow ICMP
 			ip protocol icmp accept
 
 			# Allow specific TCP and UDP ports
@@ -207,5 +204,5 @@ func ToNFTables(m ComMatrix, role string) []byte {
 		}
 	}`, tcpPortsStr, udpPortsStr)
 
-	return []byte(result)
+	return []byte(result), nil
 }

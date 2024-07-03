@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/openshift-kni/commatrix/cmd/apply-firewall"
-	"github.com/openshift-kni/commatrix/cmd/generate-matrix"
 	"github.com/openshift-kni/commatrix/commatrix"
 	"github.com/openshift-kni/commatrix/types"
 )
@@ -18,18 +16,16 @@ var (
 	deploymentStr       string
 	customEntriesPath   string
 	customEntriesFormat string
-	applyFirewallFlag   bool
 	printFn             func(m types.ComMatrix) ([]byte, error)
 )
 
 func init() {
 	flag.StringVar(&destDir, "destDir", "communication-matrix", "Output files dir")
-	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv)")
+	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv,nft)")
 	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/cloud)")
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
-	flag.BoolVar(&applyFirewallFlag, "applyFirewall", false, "Apply firewall rules")
 
 	flag.Parse()
 
@@ -40,6 +36,8 @@ func init() {
 		printFn = types.ToCSV
 	case "yaml":
 		printFn = types.ToYAML
+	case "nft":
+		printFn = types.ToNFTables
 	default:
 		panic(fmt.Sprintf("invalid format: %s. Please specify json, csv, or yaml.", format))
 	}
@@ -75,9 +73,5 @@ func main() {
 		panic("error, variable customEntriesFormat is not set")
 	}
 
-	if applyFirewallFlag {
-		applyFirewall.ApplyFirewallRules(kubeconfig, destDir, env, deployment)
-	} else {
-		generateMatrix.GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
-	}
+	commatrix.GenerateCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
 }
