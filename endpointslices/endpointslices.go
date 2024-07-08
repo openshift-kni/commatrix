@@ -220,6 +220,8 @@ func extractPodName(pod *corev1.Pod) (string, error) {
 		return ownerRefName, nil
 	case "StatefulSet":
 		return ownerRefName, nil
+	case "ReplicationController":
+		return ownerRefName, nil
 	}
 
 	return "", fmt.Errorf("failed to extract pod name for %s", pod.Name)
