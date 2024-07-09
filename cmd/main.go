@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	generateMatrix "github.com/openshift-kni/commatrix/cmd/generate-matrix"
 	"github.com/openshift-kni/commatrix/commatrix"
 	"github.com/openshift-kni/commatrix/types"
 )
@@ -74,5 +73,5 @@ func main() {
 		panic("error, variable customEntriesFormat is not set")
 	}
 
-	generateMatrix.GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
+	commatrix.GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
 }

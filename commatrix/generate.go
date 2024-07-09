@@ -1,4 +1,4 @@
-package generateMatrix
+package commatrix
 
 import (
 	"context"
@@ -12,15 +12,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	clientutil "github.com/openshift-kni/commatrix/client"
-	"github.com/openshift-kni/commatrix/commatrix"
 	"github.com/openshift-kni/commatrix/consts"
 	"github.com/openshift-kni/commatrix/debug"
 	"github.com/openshift-kni/commatrix/ss"
 	"github.com/openshift-kni/commatrix/types"
 )
 
-func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env commatrix.Env, deployment commatrix.Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
-	mat, err := commatrix.New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
+// generate relevant matrix and diff files
+func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env Env, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+	mat, err := New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create the communication matrix: %s", err))
 	}
@@ -108,12 +108,12 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 	}
 }
 
-func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployment commatrix.Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
 
 	if format == types.FormatNFT {
 		masterMatrix, workerMatrix := types.SeparateMatrixByRole(mat)
 		writeMatrixToFile(masterMatrix, fileName+"-master", format, printFn, destDir)
-		if deployment == commatrix.MNO {
+		if deployment == MNO {
 			writeMatrixToFile(workerMatrix, fileName+"-worker", format, printFn, destDir)
 		}
 	} else {
