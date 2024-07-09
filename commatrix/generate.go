@@ -111,7 +111,7 @@ func GenerateCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, forma
 func writeMatrixToFile(mat types.ComMatrix, fileName, format string, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
 
 	if format == types.FormatNFT {
-		masterMatrix, workerMatrix := SeparateMatrixByRole(mat)
+		masterMatrix, workerMatrix := separateMatrixByRole(mat)
 		writeMatrixToFileByType(masterMatrix, fileName+"-master", format, printFn, destDir)
 		if deployment == MNO {
 			writeMatrixToFileByType(workerMatrix, fileName+"-worker", format, printFn, destDir)
@@ -160,7 +160,7 @@ func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
 	return diff
 }
 
-func SeparateMatrixByRole(matrix types.ComMatrix) (types.ComMatrix, types.ComMatrix) {
+func separateMatrixByRole(matrix types.ComMatrix) (types.ComMatrix, types.ComMatrix) {
 	var masterMatrix, workerMatrix types.ComMatrix
 
 	for _, entry := range matrix.Matrix {
