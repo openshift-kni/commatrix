@@ -208,17 +208,3 @@ func ToNFTables(m ComMatrix) ([]byte, error) {
 
 	return []byte(result), nil
 }
-
-func SeparateMatrixByRole(matrix ComMatrix) (ComMatrix, ComMatrix) {
-	var masterMatrix, workerMatrix ComMatrix
-
-	for _, entry := range matrix.Matrix {
-		if entry.NodeRole == "master" {
-			masterMatrix.Matrix = append(masterMatrix.Matrix, entry)
-		} else if entry.NodeRole == "worker" {
-			workerMatrix.Matrix = append(workerMatrix.Matrix, entry)
-		}
-	}
-
-	return masterMatrix, workerMatrix
-}

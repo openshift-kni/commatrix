@@ -25,7 +25,7 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 		panic(fmt.Sprintf("failed to create the communication matrix: %s", err))
 	}
 
-	writeCommatrixToFile(*mat, "communication-matrix", format, deployment, printFn, destDir)
+	writeMatrixToFile(*mat, "communication-matrix", format, deployment, printFn, destDir)
 
 	cs, err := clientutil.New(kubeconfig)
 	if err != nil {
@@ -96,7 +96,7 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 
 	cleanedComDetails := types.CleanComDetails(nodesComDetails)
 	ssComMat := types.ComMatrix{Matrix: cleanedComDetails}
-	writeCommatrixToFile(ssComMat, "ss-generated-matrix", format, deployment, printFn, destDir)
+	writeMatrixToFile(ssComMat, "ss-generated-matrix", format, deployment, printFn, destDir)
 
 	diff := buildMatrixDiff(*mat, ssComMat)
 
@@ -108,20 +108,20 @@ func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format
 	}
 }
 
-func writeCommatrixToFile(mat types.ComMatrix, fileName, format string, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+func writeMatrixToFile(mat types.ComMatrix, fileName, format string, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
 
 	if format == types.FormatNFT {
-		masterMatrix, workerMatrix := types.SeparateMatrixByRole(mat)
-		writeMatrixToFile(masterMatrix, fileName+"-master", format, printFn, destDir)
+		masterMatrix, workerMatrix := SeparateMatrixByRole(mat)
+		writeMatrixToFileByType(masterMatrix, fileName+"-master", format, printFn, destDir)
 		if deployment == MNO {
-			writeMatrixToFile(workerMatrix, fileName+"-worker", format, printFn, destDir)
+			writeMatrixToFileByType(workerMatrix, fileName+"-worker", format, printFn, destDir)
 		}
 	} else {
-		writeMatrixToFile(mat, fileName, format, printFn, destDir)
+		writeMatrixToFileByType(mat, fileName, format, printFn, destDir)
 	}
 }
 
-func writeMatrixToFile(matrix types.ComMatrix, fileName, format string, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+func writeMatrixToFileByType(matrix types.ComMatrix, fileName, format string, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
 	res, err := printFn(matrix)
 	if err != nil {
 		panic(err)
