@@ -17,7 +17,6 @@ var (
 	deploymentStr       string
 	customEntriesPath   string
 	customEntriesFormat string
-	applyFirewallFlag   bool
 	printFn             func(m types.ComMatrix) ([]byte, error)
 )
 
