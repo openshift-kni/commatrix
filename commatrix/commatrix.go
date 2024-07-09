@@ -158,17 +158,3 @@ func parseFormat(format string) (types.Format, error) {
 
 	return types.FormatErr, fmt.Errorf("failed to parse format: %s. options are: (json/yaml/csv)", format)
 }
-
-func SeparateMatrixByRole(matrix types.ComMatrix) (types.ComMatrix, types.ComMatrix) {
-	var masterMatrix, workerMatrix types.ComMatrix
-
-	for _, entry := range matrix.Matrix {
-		if entry.NodeRole == "master" {
-			masterMatrix.Matrix = append(masterMatrix.Matrix, entry)
-		} else if entry.NodeRole == "worker" {
-			workerMatrix.Matrix = append(workerMatrix.Matrix, entry)
-		}
-	}
-
-	return masterMatrix, workerMatrix
-}

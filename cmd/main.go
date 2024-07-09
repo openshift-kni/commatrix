@@ -73,5 +73,5 @@ func main() {
 		panic("error, variable customEntriesFormat is not set")
 	}
 
-	commatrix.GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
+	commatrix.GenerateCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
 }

@@ -19,7 +19,7 @@ import (
 )
 
 // generate relevant matrix and diff files
-func GeneratCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env Env, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
+func GenerateCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env Env, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) {
 	mat, err := New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create the communication matrix: %s", err))
@@ -158,4 +158,18 @@ func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
 	}
 
 	return diff
+}
+
+func SeparateMatrixByRole(matrix types.ComMatrix) (types.ComMatrix, types.ComMatrix) {
+	var masterMatrix, workerMatrix types.ComMatrix
+
+	for _, entry := range matrix.Matrix {
+		if entry.NodeRole == "master" {
+			masterMatrix.Matrix = append(masterMatrix.Matrix, entry)
+		} else if entry.NodeRole == "worker" {
+			workerMatrix.Matrix = append(workerMatrix.Matrix, entry)
+		}
+	}
+
+	return masterMatrix, workerMatrix
 }
