@@ -28,19 +28,6 @@ func init() {
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 
 	flag.Parse()
-
-	switch format {
-	case "json":
-		printFn = types.ToJSON
-	case "csv":
-		printFn = types.ToCSV
-	case "yaml":
-		printFn = types.ToYAML
-	case "nft":
-		printFn = types.ToNFTables
-	default:
-		panic(fmt.Sprintf("invalid format: %s. Please specify json, csv, or yaml.", format))
-	}
 }
 
 func main() {
@@ -73,5 +60,8 @@ func main() {
 		panic("error, variable customEntriesFormat is not set")
 	}
 
-	commatrix.GenerateCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
+	err := commatrix.GenerateAndWriteMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
+	if err != nil {
+		panic(err)
+	}
 }
