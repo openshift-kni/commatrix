@@ -47,7 +47,6 @@ func GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format s
 		return nil, nil, err
 	}
 	return mat, ssComMat, err
-
 }
 
 // WriteMatsToFiles write all data to files(ss and endpoint slice matrix and the diff matrix).
