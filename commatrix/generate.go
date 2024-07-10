@@ -19,16 +19,42 @@ import (
 	"github.com/openshift-kni/commatrix/types"
 )
 
-// GenerateCommatrix generates the communication matrix and diff files.
-func GenerateAndWriteMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env Env, deployment Deployment, destDir string) error {
+func GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format string, env Env, deployment Deployment, destDir string) (m1, m2 *types.ComMatrix, err error) {
+	mat, err := New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create the communication matrix: %s", err)
+	}
+
+	cs, err := clientutil.New(kubeconfig)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tcpFile, udpFile, err := createOutputFiles(destDir)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tcpFile.Close()
+	defer udpFile.Close()
+
+	nodesList, err := cs.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ssComMat, err := getSSmatrix(cs, nodesList, tcpFile, udpFile)
+	if err != nil {
+		return nil, nil, err
+	}
+	return mat, ssComMat, err
+
+}
+
+// WriteMatsToFiles write all data to files(ss and endpoint slice matrix and the diff matrix).
+func WriteMatsToFiles(mat, ssComMat *types.ComMatrix, format string, env Env, deployment Deployment, destDir string) error {
 	printFn, err := getPrintFunction(format)
 	if err != nil {
 		return err
-	}
-
-	mat, err := New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
-	if err != nil {
-		return fmt.Errorf("failed to create the communication matrix: %s", err)
 	}
 
 	err = writeMatrixToFileByType(*mat, "communication-matrix", format, deployment, printFn, destDir)
@@ -36,34 +62,12 @@ func GenerateAndWriteMatrix(kubeconfig, customEntriesPath, customEntriesFormat, 
 		return err
 	}
 
-	cs, err := clientutil.New(kubeconfig)
+	err = writeMatrixToFileByType(*ssComMat, "ss-generated-matrix", format, deployment, printFn, destDir)
 	if err != nil {
 		return err
 	}
 
-	tcpFile, udpFile, err := createOutputFiles(destDir)
-	if err != nil {
-		return err
-	}
-	defer tcpFile.Close()
-	defer udpFile.Close()
-
-	nodesList, err := cs.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	nodesComDetails, err := getNodesComDetails(cs, nodesList, tcpFile, udpFile)
-	if err != nil {
-		return err
-	}
-
-	err = writeSSGeneratedMatrix(nodesComDetails, "ss-generated-matrix", format, deployment, printFn, destDir)
-	if err != nil {
-		return err
-	}
-
-	return writeMatrixDiff(*mat, nodesComDetails, "matrix-diff-ss", destDir)
+	return writeMatrixDiff(*mat, *ssComMat, "matrix-diff-ss", destDir)
 }
 
 func getPrintFunction(format string) (func(m types.ComMatrix) ([]byte, error), error) {
@@ -96,7 +100,7 @@ func createOutputFiles(destDir string) (*os.File, *os.File, error) {
 	return tcpFile, udpFile, nil
 }
 
-func getNodesComDetails(cs *clientutil.ClientSet, nodesList *v1.NodeList, tcpFile, udpFile *os.File) ([]types.ComDetails, error) {
+func getSSmatrix(cs *clientutil.ClientSet, nodesList *v1.NodeList, tcpFile, udpFile *os.File) (*types.ComMatrix, error) {
 	nodesComDetails := []types.ComDetails{}
 
 	err := debug.CreateNamespace(cs, consts.DefaultDebugNamespace)
@@ -141,21 +145,13 @@ func getNodesComDetails(cs *clientutil.ClientSet, nodesList *v1.NodeList, tcpFil
 	if err != nil {
 		return nil, err
 	}
-
-	return nodesComDetails, nil
-}
-
-func writeSSGeneratedMatrix(nodesComDetails []types.ComDetails, fileName, format string, deployment Deployment, printFn func(m types.ComMatrix) ([]byte, error), destDir string) error {
 	cleanedComDetails := types.CleanComDetails(nodesComDetails)
 	ssComMat := types.ComMatrix{Matrix: cleanedComDetails}
-	return writeMatrixToFileByType(ssComMat, fileName, format, deployment, printFn, destDir)
+	return &ssComMat, nil
 }
 
-func writeMatrixDiff(mat types.ComMatrix, nodesComDetails []types.ComDetails, fileName, destDir string) error {
-	cleanedComDetails := types.CleanComDetails(nodesComDetails)
-	ssComMat := types.ComMatrix{Matrix: cleanedComDetails}
+func writeMatrixDiff(mat types.ComMatrix, ssComMat types.ComMatrix, fileName, destDir string) error {
 	diff := buildMatrixDiff(mat, ssComMat)
-
 	return os.WriteFile(filepath.Join(destDir, fileName), []byte(diff), 0644)
 }
 

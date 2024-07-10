@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/openshift-kni/commatrix/commatrix"
-	"github.com/openshift-kni/commatrix/types"
 )
 
 var (
@@ -16,7 +15,6 @@ var (
 	deploymentStr       string
 	customEntriesPath   string
 	customEntriesFormat string
-	printFn             func(m types.ComMatrix) ([]byte, error)
 )
 
 func init() {
@@ -60,8 +58,13 @@ func main() {
 		panic("error, variable customEntriesFormat is not set")
 	}
 
-	err := commatrix.GenerateAndWriteMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
+	ssComMat, endMat, err := commatrix.GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Error while generating matrix %v", err))
+	}
+
+	err = commatrix.WriteMatsToFiles(ssComMat, endMat, format, env, deployment, destDir)
+	if err != nil {
+		panic(fmt.Sprintf("Error while writing matrix to file %v", err))
 	}
 }
