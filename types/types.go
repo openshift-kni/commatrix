@@ -178,10 +178,9 @@ func ToNFTables(m ComMatrix) ([]byte, error) {
 
 	result := fmt.Sprintf(`#!/usr/sbin/nft -f
 
-	table ip filter {
-		chain FIREWALL {
+	table ip openshift_filter {
+		chain OPENSHIFT {
 			# Allow loopback traffic
-			type filter hook input priority 0; policy accept;
 			iif lo accept
 	
 			# Allow established and related traffic
@@ -199,8 +198,8 @@ func ToNFTables(m ComMatrix) ([]byte, error) {
 		}
 	
 		chain INPUT {
-			type filter hook input priority 0; policy accept;
-			jump FIREWALL
+			type filter hook input priority 1; policy accept;
+			jump OPENSHIFT
 		}
 	}`, tcpPortsStr, udpPortsStr)
 

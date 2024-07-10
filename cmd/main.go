@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/openshift-kni/commatrix/commatrix"
-	"github.com/openshift-kni/commatrix/types"
 )
 
 var (
@@ -16,7 +16,6 @@ var (
 	deploymentStr       string
 	customEntriesPath   string
 	customEntriesFormat string
-	printFn             func(m types.ComMatrix) ([]byte, error)
 )
 
 func init() {
@@ -26,21 +25,7 @@ func init() {
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
-
 	flag.Parse()
-
-	switch format {
-	case "json":
-		printFn = types.ToJSON
-	case "csv":
-		printFn = types.ToCSV
-	case "yaml":
-		printFn = types.ToYAML
-	case "nft":
-		printFn = types.ToNFTables
-	default:
-		panic(fmt.Sprintf("invalid format: %s. Please specify json, csv, or yaml.", format))
-	}
 }
 
 func main() {
@@ -72,6 +57,37 @@ func main() {
 	if customEntriesPath != "" && customEntriesFormat == "" {
 		panic("error, variable customEntriesFormat is not set")
 	}
+	// generate the endpointslice matrix
+	mat, err := commatrix.New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
+	if err != nil {
+		panic(fmt.Errorf("failed to create the communication matrix: %s", err))
+	}
+	// write the endpoint slice matrix to file
+	err = commatrix.WriteMatrixToFileByType(*mat, "communication-matrix", format, deployment, destDir)
+	if err != nil {
+		panic(fmt.Sprintf("Error while the endpoint slice matrix to file :%v", err))
+	}
+	// generate the ss matrix and ss raws
+	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
+	if err != nil {
+		panic(fmt.Sprintf("Error while generating the ss matrix and ss raws :%v", err))
+	}
+	// write ss raw files
+	err = commatrix.WriteSSRawFiles(destDir, ssOutTCP, ssOutUDP)
+	if err != nil {
+		panic(fmt.Sprintf("Error while write the ss raw files :%v", err))
+	}
+	// write the ss matrix to file
+	err = commatrix.WriteMatrixToFileByType(*ssMat, "ss-generated-matrix", format, deployment, destDir)
+	if err != nil {
+		panic(fmt.Sprintf("Error while writing ss matrix to file :%v", err))
+	}
+	// generate the diff matrix between the enpointslice and the ss matrix
+	diff := commatrix.GenerateMatrixDiff(*mat, *ssMat)
 
-	commatrix.GenerateCommatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, printFn, destDir)
+	// write the diff matrix between the enpointslice and the ss matrix to file
+	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff), 0644)
+	if err != nil {
+		panic(fmt.Sprintf("Error writing the diff matrix :%v", err))
+	}
 }
