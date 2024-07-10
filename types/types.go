@@ -181,7 +181,6 @@ func ToNFTables(m ComMatrix) ([]byte, error) {
 	table ip filter {
 		chain FIREWALL {
 			# Allow loopback traffic
-			type filter hook input priority 0; policy accept;
 			iif lo accept
 	
 			# Allow established and related traffic
