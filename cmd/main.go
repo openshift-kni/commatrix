@@ -60,11 +60,11 @@ func main() {
 
 	ssComMat, endMat, err := commatrix.GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
 	if err != nil {
-		panic(fmt.Sprintf("Error while generating matrix %v", err))
+		panic(fmt.Sprintf("Error while generating matrix :%v", err))
 	}
 
 	err = commatrix.WriteMatsToFiles(ssComMat, endMat, format, env, deployment, destDir)
 	if err != nil {
-		panic(fmt.Sprintf("Error while writing matrix to file %v", err))
+		panic(fmt.Sprintf("Error while writing matrix to file: %v", err))
 	}
 }
