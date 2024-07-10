@@ -187,9 +187,7 @@ func ToNFTables(m ComMatrix) ([]byte, error) {
 			# Allow established and related traffic
 			ct state established,related accept
 	
-			# Allow SSH, DHCP, ICMP
-			tcp dport { 22 } accept
-			udp dport { 67, 68 } accept
+			# Allow ICMP
 			ip protocol icmp accept
 
 			# Allow specific TCP and UDP ports
