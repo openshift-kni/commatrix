@@ -58,12 +58,12 @@ func main() {
 		panic("error, variable customEntriesFormat is not set")
 	}
 
-	endSliceMat, ssComMat, err := commatrix.GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
+	mat, ssMat, err := commatrix.GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
 	if err != nil {
 		panic(fmt.Sprintf("Error while generating matrix :%v", err))
 	}
 
-	err = commatrix.WriteMatsToFiles(endSliceMat, ssComMat, format, env, deployment, destDir)
+	err = commatrix.WriteMatsToFiles(mat, ssMat, format, env, deployment, destDir)
 	if err != nil {
 		panic(fmt.Sprintf("Error while writing matrix to file: %v", err))
 	}
