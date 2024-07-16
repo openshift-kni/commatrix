@@ -15,10 +15,10 @@ func TestGetPrintFunction(t *testing.T) {
 		expectedFnType string
 		expectedErr    bool
 	}{
-		{"json", "func(types.ComMatrix) ([]byte, error)", false},
-		{"csv", "func(types.ComMatrix) ([]byte, error)", false},
-		{"yaml", "func(types.ComMatrix) ([]byte, error)", false},
-		{"nft", "func(types.ComMatrix) ([]byte, error)", false},
+		{"json", "func(types.ComMatrix) ([]uint8, error)", false},
+		{"csv", "func(types.ComMatrix) ([]uint8, error)", false},
+		{"yaml", "func(types.ComMatrix) ([]uint8, error)", false},
+		{"nft", "func(types.ComMatrix) ([]uint8, error)", false},
 		{"invalid", "", true},
 	}
 
@@ -38,7 +38,7 @@ func TestGetPrintFunction(t *testing.T) {
 func TestCreateOutputFiles(t *testing.T) {
 	destDir := t.TempDir()
 
-	tcpFile, udpFile, err := createOutputFiles(destDir)
+	tcpFile, udpFile, err := createSSOutputFiles(destDir)
 	assert.NoError(t, err)
 	defer tcpFile.Close()
 	defer udpFile.Close()
