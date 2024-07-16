@@ -34,6 +34,7 @@ func TestGetPrintFunction(t *testing.T) {
 		})
 	}
 }
+
 func TestCreateOutputFiles(t *testing.T) {
 	destDir := t.TempDir()
 

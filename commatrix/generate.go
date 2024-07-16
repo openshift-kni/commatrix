@@ -30,7 +30,7 @@ func GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format s
 		return nil, nil, err
 	}
 
-	tcpFile, udpFile, err := createOutputFiles(destDir)
+	tcpFile, udpFile, err := createSSOutputFiles(destDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,7 +42,7 @@ func GenerateMatrix(kubeconfig, customEntriesPath, customEntriesFormat, format s
 		return nil, nil, err
 	}
 
-	ssComMat, err := getSSmatrix(cs, nodesList, tcpFile, udpFile)
+	ssComMat, err := generateSSmatrix(cs, nodesList, tcpFile, udpFile)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -84,7 +84,7 @@ func getPrintFunction(format string) (func(m types.ComMatrix) ([]byte, error), e
 	}
 }
 
-func createOutputFiles(destDir string) (*os.File, *os.File, error) {
+func createSSOutputFiles(destDir string) (*os.File, *os.File, error) {
 	tcpFile, err := os.OpenFile(path.Join(destDir, "raw-ss-tcp"), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, nil, err
@@ -99,7 +99,7 @@ func createOutputFiles(destDir string) (*os.File, *os.File, error) {
 	return tcpFile, udpFile, nil
 }
 
-func getSSmatrix(cs *clientutil.ClientSet, nodesList *v1.NodeList, tcpFile, udpFile *os.File) (*types.ComMatrix, error) {
+func generateSSmatrix(cs *clientutil.ClientSet, nodesList *v1.NodeList, tcpFile, udpFile *os.File) (*types.ComMatrix, error) {
 	nodesComDetails := []types.ComDetails{}
 
 	err := debug.CreateNamespace(cs, consts.DefaultDebugNamespace)
