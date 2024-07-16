@@ -161,7 +161,7 @@ func (m ComMatrix) Contains(cd ComDetails) bool {
 	return false
 }
 
-// Returns True if both ComMatrixes have exactly the same ComMatrix details
+// Returns True if both ComMatrixes have exactly the same ComMatrix details.
 func (m ComMatrix) Equals(other ComMatrix) bool {
 	// Check if all of "m" commatrix details are in "other" commartix
 	for _, cd1 := range m.Matrix {
