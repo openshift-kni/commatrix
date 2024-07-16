@@ -26,6 +26,7 @@ const (
 	FormatJSON = "json"
 	FormatYAML = "yaml"
 	FormatCSV  = "csv"
+	FormatNFT  = "nft"
 )
 
 type ComMatrix struct {
@@ -159,4 +160,48 @@ func (m ComMatrix) Contains(cd ComDetails) bool {
 	}
 
 	return false
+}
+
+func ToNFTables(m ComMatrix) ([]byte, error) {
+	var tcpPorts []string
+	var udpPorts []string
+	for _, line := range m.Matrix {
+		if line.Protocol == "TCP" {
+			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
+		} else if line.Protocol == "UDP" {
+			udpPorts = append(udpPorts, fmt.Sprint(line.Port))
+		}
+	}
+
+	tcpPortsStr := strings.Join(tcpPorts, ", ")
+	udpPortsStr := strings.Join(udpPorts, ", ")
+
+	result := fmt.Sprintf(`#!/usr/sbin/nft -f
+
+	table ip filter {
+		chain FIREWALL {
+			# Allow loopback traffic
+			iif lo accept
+	
+			# Allow established and related traffic
+			ct state established,related accept
+	
+			# Allow ICMP
+			ip protocol icmp accept
+
+			# Allow specific TCP and UDP ports
+			tcp dport  { %s } accept
+			udp dport { %s } accept
+
+			# Logging and default drop
+			log prefix "firewall " drop
+		}
+	
+		chain INPUT {
+			type filter hook input priority 0; policy accept;
+			jump FIREWALL
+		}
+	}`, tcpPortsStr, udpPortsStr)
+
+	return []byte(result), nil
 }

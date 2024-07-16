@@ -6,6 +6,7 @@ require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
 	github.com/openshift/client-go v0.0.0-20240415214935-be70f772f157
 	github.com/sirupsen/logrus v1.9.3
+	github.com/stretchr/testify v1.8.4
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
@@ -14,7 +15,10 @@ require (
 	sigs.k8s.io/yaml v1.4.0
 )
 
-require github.com/openshift/api v0.0.0-20240415161129-d7aff303fa1a // indirect
+require (
+	github.com/openshift/api v0.0.0-20240415161129-d7aff303fa1a // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
