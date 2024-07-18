@@ -77,6 +77,7 @@ func GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format strin
 	if err != nil {
 		return nil, nil, nil, err
 	}
+
 	cleanedComDetails := types.CleanComDetails(nodesComDetails)
 	ssComMat := types.ComMatrix{Matrix: cleanedComDetails}
 	return &ssComMat, ssOutTCP, ssOutUDP, nil
@@ -97,32 +98,26 @@ func getPrintFunction(format string) (func(m types.ComMatrix) ([]byte, error), e
 	}
 }
 
-func createSSOutputFiles(destDir string) (*os.File, *os.File, error) {
+func WriteSSRawFiles(destDir string, ssOutTCP, ssOutUDP []byte) error {
 	tcpFile, err := os.OpenFile(path.Join(destDir, "raw-ss-tcp"), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	udpFile, err := os.OpenFile(path.Join(destDir, "raw-ss-udp"), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		tcpFile.Close()
-		return nil, nil, err
-	}
-
-	return tcpFile, udpFile, nil
-}
-
-func WriteSSRawFiles(destDir string, ssOutTCP, ssOutUDP []byte) error {
-	tcpFile, udpFile, err := createSSOutputFiles(destDir)
-	if err != nil {
 		return err
 	}
+
 	defer tcpFile.Close()
 	defer udpFile.Close()
+
 	_, err = tcpFile.Write([]byte(string(ssOutTCP)))
 	if err != nil {
 		return fmt.Errorf("failed writing to file: %s", err)
 	}
+
 	_, err = udpFile.Write([]byte(string(ssOutUDP)))
 	if err != nil {
 		return fmt.Errorf("failed writing to file: %s", err)
@@ -136,6 +131,7 @@ func WriteMatrixToFileByType(mat types.ComMatrix, fileNamePrefix, format string,
 	if err != nil {
 		return err
 	}
+
 	if format == types.FormatNFT {
 		masterMatrix, workerMatrix := separateMatrixByRole(mat)
 		err := writeMatrixToFile(masterMatrix, fileNamePrefix+"-master", format, printFn, destDir)
@@ -154,6 +150,7 @@ func WriteMatrixToFileByType(mat types.ComMatrix, fileNamePrefix, format string,
 			return err
 		}
 	}
+
 	return nil
 }
 

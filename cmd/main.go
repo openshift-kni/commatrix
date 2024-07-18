@@ -65,7 +65,7 @@ func main() {
 	// write the endpoint slice matrix to file
 	err = commatrix.WriteMatrixToFileByType(*mat, "communication-matrix", format, deployment, destDir)
 	if err != nil {
-		panic(fmt.Sprintf("Error while the endpoint slice matrix to file :%v", err))
+		panic(fmt.Sprintf("Error while writing the endpoint slice matrix to file :%v", err))
 	}
 	// generate the ss matrix and ss raws
 	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)

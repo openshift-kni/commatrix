@@ -178,16 +178,20 @@ func ToNFTables(m ComMatrix) ([]byte, error) {
 
 	result := fmt.Sprintf(`#!/usr/sbin/nft -f
 
-	table ip openshift_filter {
+	table inet openshift_filter {
 		chain OPENSHIFT {
+			type filter hook input priority 1; policy accept;
+
 			# Allow loopback traffic
 			iif lo accept
 	
 			# Allow established and related traffic
 			ct state established,related accept
 	
-			# Allow ICMP
+			# Allow ICMP on ipv4
 			ip protocol icmp accept
+			# Allow ICMP on ipv6
+			ip6 nexthdr ipv6-icmp accept
 
 			# Allow specific TCP and UDP ports
 			tcp dport  { %s } accept
@@ -195,11 +199,6 @@ func ToNFTables(m ComMatrix) ([]byte, error) {
 
 			# Logging and default drop
 			log prefix "firewall " drop
-		}
-	
-		chain INPUT {
-			type filter hook input priority 1; policy accept;
-			jump OPENSHIFT
 		}
 	}`, tcpPortsStr, udpPortsStr)
 
