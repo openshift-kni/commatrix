@@ -160,36 +160,3 @@ func (m ComMatrix) Contains(cd ComDetails) bool {
 
 	return false
 }
-
-// Returns True if both ComMatrixes have exactly the same ComMatrix details.
-func (m ComMatrix) Equals(other ComMatrix) bool {
-	// Check if all of "m" commatrix details are in "other" commartix
-	for _, cd1 := range m.Matrix {
-		found := false
-		for _, cd2 := range other.Matrix {
-			if cd1.Equals(cd2) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-
-	// Check if all of "other" commatrix details are in "m" commartix
-	for _, cd2 := range other.Matrix {
-		found := false
-		for _, cd1 := range m.Matrix {
-			if cd2.Equals(cd1) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-
-	return true
-}
