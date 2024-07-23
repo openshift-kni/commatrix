@@ -3,7 +3,6 @@ package ss
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,23 +23,14 @@ const (
 	duration              = time.Second * 5
 )
 
-func CreateComDetailsFromNode(debugPod *debug.DebugPod, node *corev1.Node, tcpFile, udpFile *os.File) ([]types.ComDetails, error) {
-	ssOutTCP, err := debugPod.ExecWithRetry("ss -anpltH", interval, duration)
+func CreateSSOutputFromNode(debugPod *debug.DebugPod, node *corev1.Node) (res []types.ComDetails, ssOutTCP, ssOutUDP []byte, err error) {
+	ssOutTCP, err = debugPod.ExecWithRetry("ss -anpltH", interval, duration)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	ssOutUDP, err := debugPod.ExecWithRetry("ss -anpluH", interval, duration)
+	ssOutUDP, err = debugPod.ExecWithRetry("ss -anpluH", interval, duration)
 	if err != nil {
-		return nil, err
-	}
-
-	_, err = tcpFile.Write([]byte(fmt.Sprintf("node: %s\n%s\n", node.Name, string(ssOutTCP))))
-	if err != nil {
-		return nil, fmt.Errorf("failed writing to file: %s", err)
-	}
-	_, err = udpFile.Write([]byte(fmt.Sprintf("node: %s\n%s\n", node.Name, string(ssOutUDP))))
-	if err != nil {
-		return nil, fmt.Errorf("failed writing to file: %s", err)
+		return nil, nil, nil, err
 	}
 
 	ssOutFilteredTCP := filterEntries(splitByLines(ssOutTCP))
@@ -49,11 +39,11 @@ func CreateComDetailsFromNode(debugPod *debug.DebugPod, node *corev1.Node, tcpFi
 	tcpComDetails := toComDetails(debugPod, ssOutFilteredTCP, "TCP", node)
 	udpComDetails := toComDetails(debugPod, ssOutFilteredUDP, "UDP", node)
 
-	res := []types.ComDetails{}
+	res = []types.ComDetails{}
 	res = append(res, udpComDetails...)
 	res = append(res, tcpComDetails...)
 
-	return res, nil
+	return res, ssOutTCP, ssOutUDP, nil
 }
 
 func splitByLines(bytes []byte) []string {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/openshift-kni/commatrix/types"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -15,7 +16,6 @@ import (
 	"github.com/openshift-kni/commatrix/client"
 	"github.com/openshift-kni/commatrix/consts"
 	nodesutil "github.com/openshift-kni/commatrix/nodes"
-	"github.com/openshift-kni/commatrix/types"
 )
 
 type EndpointSlicesInfo struct {

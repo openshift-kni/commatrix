@@ -1,56 +1,34 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"sync"
 
-	"golang.org/x/sync/errgroup"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	clientutil "github.com/openshift-kni/commatrix/client"
 	"github.com/openshift-kni/commatrix/commatrix"
-	"github.com/openshift-kni/commatrix/consts"
-	"github.com/openshift-kni/commatrix/debug"
-	"github.com/openshift-kni/commatrix/ss"
-	"github.com/openshift-kni/commatrix/types"
 )
 
-func main() {
-	var (
-		destDir             string
-		format              string
-		envStr              string
-		deploymentStr       string
-		customEntriesPath   string
-		customEntriesFormat string
-		printFn             func(m types.ComMatrix) ([]byte, error)
-	)
+var (
+	destDir             string
+	format              string
+	envStr              string
+	deploymentStr       string
+	customEntriesPath   string
+	customEntriesFormat string
+)
 
+func init() {
 	flag.StringVar(&destDir, "destDir", "communication-matrix", "Output files dir")
-	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv)")
+	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv,nft)")
 	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/cloud)")
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
-
 	flag.Parse()
+}
 
-	switch format {
-	case "json":
-		printFn = types.ToJSON
-	case "csv":
-		printFn = types.ToCSV
-	case "yaml":
-		printFn = types.ToYAML
-	default:
-		panic(fmt.Sprintf("invalid format: %s. Please specify json, csv, or yaml.", format))
-	}
-
+func main() {
 	kubeconfig, ok := os.LookupEnv("KUBECONFIG")
 	if !ok {
 		panic("must set the KUBECONFIG environment variable")
@@ -79,136 +57,37 @@ func main() {
 	if customEntriesPath != "" && customEntriesFormat == "" {
 		panic("error, variable customEntriesFormat is not set")
 	}
-
+	// generate the endpointslice matrix
 	mat, err := commatrix.New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
 	if err != nil {
-		panic(fmt.Sprintf("failed to create the communication matrix: %s", err))
+		panic(fmt.Errorf("failed to create the communication matrix: %s", err))
 	}
-
-	res, err := printFn(*mat)
+	// write the endpoint slice matrix to file
+	err = commatrix.WriteMatrixToFileByType(*mat, "communication-matrix", format, deployment, destDir)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Error while writing the endpoint slice matrix to file :%v", err))
 	}
-
-	comMatrixFileName := filepath.Join(destDir, fmt.Sprintf("communication-matrix.%s", format))
-	err = os.WriteFile(comMatrixFileName, res, 0644)
+	// generate the ss matrix and ss raws
+	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Error while generating the ss matrix and ss raws :%v", err))
 	}
-
-	cs, err := clientutil.New(kubeconfig)
+	// write ss raw files
+	err = commatrix.WriteSSRawFiles(destDir, ssOutTCP, ssOutUDP)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Error while writing the ss raw files :%v", err))
 	}
-
-	tcpFile, err := os.OpenFile(path.Join(destDir, "raw-ss-tcp"), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+	// write the ss matrix to file
+	err = commatrix.WriteMatrixToFileByType(*ssMat, "ss-generated-matrix", format, deployment, destDir)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Error while writing ss matrix to file :%v", err))
 	}
-	defer tcpFile.Close()
+	// generate the diff matrix between the enpointslice and the ss matrix
+	diff := commatrix.GenerateMatrixDiff(*mat, *ssMat)
 
-	udpFile, err := os.OpenFile(path.Join(destDir, "raw-ss-udp"), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
+	// write the diff matrix between the enpointslice and the ss matrix to file
+	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff), 0644)
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("Error writing the diff matrix :%v", err))
 	}
-	defer udpFile.Close()
-
-	nodesList, err := cs.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		panic(err)
-	}
-
-	nodesComDetails := []types.ComDetails{}
-
-	err = debug.CreateNamespace(cs, consts.DefaultDebugNamespace)
-	if err != nil {
-		panic(err)
-	}
-	defer func() {
-		err := debug.DeleteNamespace(cs, consts.DefaultDebugNamespace)
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	nLock := &sync.Mutex{}
-	g := new(errgroup.Group)
-	for _, n := range nodesList.Items {
-		node := n
-		g.Go(func() error {
-			debugPod, err := debug.New(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err := debugPod.Clean()
-				if err != nil {
-					fmt.Printf("failed cleaning debug pod %s: %v", debugPod, err)
-				}
-			}()
-
-			cds, err := ss.CreateComDetailsFromNode(debugPod, &node, tcpFile, udpFile)
-			if err != nil {
-				return err
-			}
-			nLock.Lock()
-			nodesComDetails = append(nodesComDetails, cds...)
-			nLock.Unlock()
-			return nil
-		})
-	}
-
-	err = g.Wait()
-	if err != nil {
-		panic(err)
-	}
-
-	cleanedComDetails := types.CleanComDetails(nodesComDetails)
-	ssComMat := types.ComMatrix{Matrix: cleanedComDetails}
-
-	res, err = printFn(ssComMat)
-	if err != nil {
-		panic(err)
-	}
-
-	ssMatrixFileName := filepath.Join(destDir, fmt.Sprintf("ss-generated-matrix.%s", format))
-	err = os.WriteFile(ssMatrixFileName, res, 0644)
-	if err != nil {
-		panic(err)
-	}
-
-	diff := buildMatrixDiff(*mat, ssComMat)
-
-	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"),
-		[]byte(diff),
-		0644)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func buildMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
-	diff := consts.CSVHeaders + "\n"
-	for _, cd := range mat1.Matrix {
-		if mat2.Contains(cd) {
-			diff += fmt.Sprintf("%s\n", cd)
-			continue
-		}
-
-		diff += fmt.Sprintf("+ %s\n", cd)
-	}
-
-	for _, cd := range mat2.Matrix {
-		// Skip "rpc.statd" ports, these are randomly open ports on the node,
-		// no need to mention them in the matrix diff
-		if cd.Service == "rpc.statd" {
-			continue
-		}
-
-		if !mat1.Contains(cd) {
-			diff += fmt.Sprintf("- %s\n", cd)
-		}
-	}
-
-	return diff
 }
