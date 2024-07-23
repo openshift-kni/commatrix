@@ -75,7 +75,7 @@ func main() {
 	// write ss raw files
 	err = commatrix.WriteSSRawFiles(destDir, ssOutTCP, ssOutUDP)
 	if err != nil {
-		panic(fmt.Sprintf("Error while write the ss raw files :%v", err))
+		panic(fmt.Sprintf("Error while writing the ss raw files :%v", err))
 	}
 	// write the ss matrix to file
 	err = commatrix.WriteMatrixToFileByType(*ssMat, "ss-generated-matrix", format, deployment, destDir)
