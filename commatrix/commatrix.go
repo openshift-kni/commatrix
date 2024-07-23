@@ -68,7 +68,7 @@ func New(kubeconfigPath string, customEntriesPath string, customEntriesFormat st
 		if err != nil {
 			return nil, fmt.Errorf("failed adding custom entries: %s", err)
 		}
-		customComDetails, err := addFromFile(customEntriesPath, inputFormat)
+		customComDetails, err := GetComDetailsListFromFile(customEntriesPath, inputFormat)
 		if err != nil {
 			return nil, fmt.Errorf("failed adding custom entries: %s", err)
 		}
@@ -81,7 +81,7 @@ func New(kubeconfigPath string, customEntriesPath string, customEntriesFormat st
 	return &types.ComMatrix{Matrix: cleanedComDetails}, nil
 }
 
-func addFromFile(fp string, format types.Format) ([]types.ComDetails, error) {
+func GetComDetailsListFromFile(fp string, format types.Format) ([]types.ComDetails, error) {
 	var res []types.ComDetails
 	f, err := os.Open(filepath.Clean(fp))
 	if err != nil {
