@@ -2,7 +2,7 @@
     {
         "direction": "ingress",
         "protocol": "TCP",
-        "port": "9050",
+        "port": 9050,
         "namespace": "example-namespace",
         "service": "example-service",
         "pod": "example-pod",
@@ -13,7 +13,7 @@
     {
         "direction": "ingress",
         "protocol": "UDP",
-        "port": "9051",
+        "port": 9051,
         "namespace": "example-namespace2",
         "service": "example-service2",
         "pod": "example-pod2",
