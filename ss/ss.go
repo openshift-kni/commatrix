@@ -17,10 +17,6 @@ import (
 	"github.com/openshift-kni/commatrix/types"
 )
 
-//type SSGenerator interface {
-//	CreateSSOutputFromNode(debugPod debug.DebugPodInterface, node *corev1.Node) ([]types.ComDetails, []byte, []byte, error)
-//}
-
 const (
 	localAddrPortFieldIdx = 3
 	interval              = time.Millisecond * 500

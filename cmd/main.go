@@ -38,8 +38,8 @@ func main() {
 	cs, err := clientutil.New(kubeconfig)
 	if err != nil {
 		panic("must set the KUBECONFIG environment variable")
-
 	}
+
 	var env commatrix.Env
 	switch envStr {
 	case "baremetal":

@@ -17,7 +17,6 @@ import (
 	"github.com/openshift-kni/commatrix/client"
 )
 
-// DebugPodInterface defines the methods of DebugPod that we need to mock
 type DebugPodInterface interface {
 	ExecWithRetry(command string, interval time.Duration, duration time.Duration) ([]byte, error)
 	Clean() error
