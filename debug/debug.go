@@ -17,10 +17,21 @@ import (
 	"github.com/openshift-kni/commatrix/client"
 )
 
+// DebugPodInterface defines the methods of DebugPod that we need to mock
+type DebugPodInterface interface {
+	ExecWithRetry(command string, interval time.Duration, duration time.Duration) ([]byte, error)
+	Clean() error
+	GetNodeName() string
+}
+
 type DebugPod struct {
 	Name      string
 	Namespace string
 	NodeName  string
+}
+
+func (dp *DebugPod) GetNodeName() string {
+	return dp.NodeName
 }
 
 const (
@@ -28,9 +39,11 @@ const (
 	timeout  = 2 * time.Minute
 )
 
+var _ DebugPodInterface = (*DebugPod)(nil)
+
 // New creates debug pod on the given node, puts it in infinite sleep,
 // and returns the DebugPod object. Use the Clean() method to delete it.
-func New(cs *client.ClientSet, node string, namespace string, image string) (*DebugPod, error) {
+var New = func(cs *client.ClientSet, node string, namespace string, image string) (DebugPodInterface, error) {
 	if namespace == "" {
 		return nil, errors.New("failed creating new debug pod: got empty namespace")
 	}

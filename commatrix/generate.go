@@ -18,11 +18,7 @@ import (
 	"github.com/openshift-kni/commatrix/types"
 )
 
-func GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format string, env Env, deployment Deployment, destDir string) (ssMat *types.ComMatrix, ssOutTCP, ssOutUDP []byte, err error) {
-	cs, err := clientutil.New(kubeconfig)
-	if err != nil {
-		return nil, nil, nil, err
-	}
+func GenerateSS(cs *clientutil.ClientSet) (ssMat *types.ComMatrix, ssOutTCP, ssOutUDP []byte, err error) {
 
 	nodesList, err := cs.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {

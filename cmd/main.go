@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	clientutil "github.com/openshift-kni/commatrix/client"
+
 	"github.com/openshift-kni/commatrix/commatrix"
 )
 
@@ -33,7 +35,11 @@ func main() {
 	if !ok {
 		panic("must set the KUBECONFIG environment variable")
 	}
+	cs, err := clientutil.New(kubeconfig)
+	if err != nil {
+		panic("must set the KUBECONFIG environment variable")
 
+	}
 	var env commatrix.Env
 	switch envStr {
 	case "baremetal":
@@ -68,7 +74,7 @@ func main() {
 		panic(fmt.Sprintf("Error while writing the endpoint slice matrix to file :%v", err))
 	}
 	// generate the ss matrix and ss raws
-	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
+	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(cs)
 	if err != nil {
 		panic(fmt.Sprintf("Error while generating the ss matrix and ss raws :%v", err))
 	}
