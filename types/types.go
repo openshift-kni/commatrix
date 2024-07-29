@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/openshift-kni/commatrix/consts"
+	"github.com/gocarina/gocsv"
 	"sigs.k8s.io/yaml"
 )
 
@@ -50,18 +50,11 @@ func ToCSV(m ComMatrix) ([]byte, error) {
 	w := bytes.NewBuffer(out)
 	csvwriter := csv.NewWriter(w)
 
-	err := csvwriter.Write(strings.Split(consts.CSVHeaders, ","))
+	err := gocsv.MarshalCSV(&m.Matrix, csvwriter)
 	if err != nil {
-		return nil, fmt.Errorf("failed to write to CSV: %w", err)
+		return nil, err
 	}
 
-	for _, cd := range m.Matrix {
-		record := strings.Split(cd.String(), ",")
-		err := csvwriter.Write(record)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert to CSV foramt: %w", err)
-		}
-	}
 	csvwriter.Flush()
 
 	return w.Bytes(), nil

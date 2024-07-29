@@ -164,15 +164,19 @@ func writeMatrixToFile(matrix types.ComMatrix, fileName, format string, printFn 
 	return os.WriteFile(comMatrixFileName, res, 0644)
 }
 
-func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
-	diff := consts.CSVHeaders + "\n"
+// GenerateMatrixDiff generates a new matrix demonstrating the diff between mat2 to mat1
+func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) types.ComMatrix {
+	diffMatrix := []types.ComDetails{}
 	for _, cd := range mat1.Matrix {
 		if mat2.Contains(cd) {
-			diff += fmt.Sprintf("%s\n", cd)
+			diffMatrix = append(diffMatrix, cd)
 			continue
 		}
 
-		diff += fmt.Sprintf("+ %s\n", cd)
+		// add "+" before cd's mat1 contains but mat2 doesn't
+		newCd := cd
+		newCd.Direction = fmt.Sprintf("+ %s", newCd.Direction)
+		diffMatrix = append(diffMatrix, newCd)
 	}
 
 	for _, cd := range mat2.Matrix {
@@ -183,11 +187,14 @@ func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) string {
 		}
 
 		if !mat1.Contains(cd) {
-			diff += fmt.Sprintf("- %s\n", cd)
+			// add "-" before cd's mat1 doesn't contain but mat2 does
+			missingCd := cd
+			missingCd.Direction = fmt.Sprintf("- %s", missingCd.Direction)
+			diffMatrix = append(diffMatrix, missingCd)
 		}
 	}
 
-	return diff
+	return types.ComMatrix{Matrix: diffMatrix}
 }
 
 func separateMatrixByRole(matrix types.ComMatrix) (types.ComMatrix, types.ComMatrix) {
