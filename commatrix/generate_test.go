@@ -2,11 +2,14 @@ package commatrix
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	gomock "github.com/golang/mock/gomock"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -19,7 +22,11 @@ import (
 func TestGenerateSS(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
-	mockDebugPod := new(debug.MockDebugPodInterface)
+	ctrlTest := gomock.NewController(t)
+	defer ctrlTest.Finish()
+
+	mockDebugPod := debug.NewMockDebugPodInterface(ctrlTest)
+
 	tcpOutput := []byte(`LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
 LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
 LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=4147,fd=3))`)
@@ -28,22 +35,28 @@ LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=41
 UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1015,fd=5))                        
 UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21))`)
 	Output := []byte(`1: /system.slice/containerd.service
-2: /system.slice/kubelet.service
-3: /system.slice/sshd.service`)
-	mockDebugPod.On("ExecWithRetry", mock.MatchedBy(func(cmd string) bool {
-		return strings.HasPrefix(cmd, "cat /proc/") && strings.Contains(cmd, "/cgroup")
-	}), mock.Anything, mock.Anything).Return(
-		Output, nil,
-	)
+	2: /system.slice/kubelet.service
+	3: /system.slice/sshd.service`)
 
-	mockDebugPod.On("ExecWithRetry", "ss -anpltH", mock.Anything, mock.Anything).Return(
-		tcpOutput, nil,
-	)
-	mockDebugPod.On("ExecWithRetry", "ss -anpluH", mock.Anything, mock.Anything).Return(
-		udpOutput, nil,
-	)
-	mockDebugPod.On("Clean").Return(nil)
-	mockDebugPod.On("GetNodeName").Return("test-node")
+	// Set up the expectations
+	mockDebugPod.EXPECT().ExecWithRetry(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(cmd string, interval, duration time.Duration) ([]byte, error) {
+			if strings.HasPrefix(cmd, "cat /proc/") && strings.Contains(cmd, "/cgroup") {
+				return Output, nil
+			}
+			if cmd == "ss -anpltH" {
+				return tcpOutput, nil
+			}
+			if cmd == "ss -anpluH" {
+				return udpOutput, nil
+			}
+			return nil, fmt.Errorf("unknown command")
+		},
+	).AnyTimes()
+
+	mockDebugPod.EXPECT().Clean().Return(nil).AnyTimes()
+
+	mockDebugPod.EXPECT().GetNodeName().Return("test-node").AnyTimes()
 
 	// Mock the New function
 	debug.New = func(cs *clientutil.ClientSet, node string, namespace string, image string) (debug.DebugPodInterface, error) {
