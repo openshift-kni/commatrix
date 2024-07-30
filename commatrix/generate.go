@@ -206,12 +206,12 @@ func getComMatrixColTagsByFormat(format string) string {
 
 	var tagsList []string
 	for i := 0; i < typ.NumField(); i++ {
-        field := typ.Field(i)
-        tag := field.Tag.Get(format)
-        if tag != "" {
-            tagsList = append(tagsList, tag)
-        }
-    }
+		field := typ.Field(i)
+		tag := field.Tag.Get(format)
+		if tag != "" {
+			tagsList = append(tagsList, tag)
+		}
+	}
 
 	return strings.Join(tagsList, ",")
 }
