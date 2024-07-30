@@ -19,7 +19,7 @@ import (
 func TestGenerateSS(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
 
-	mockDebugPod := new(debug.MockDebugPod)
+	mockDebugPod := new(debug.MockDebugPodInterface)
 	tcpOutput := []byte(`LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
 LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
 LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=4147,fd=3))`)

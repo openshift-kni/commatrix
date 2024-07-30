@@ -4,7 +4,6 @@ go 1.21
 
 require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
-	github.com/golang/mock v1.6.0
 	github.com/openshift/client-go v0.0.0-20240415214935-be70f772f157
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
