@@ -6,6 +6,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -165,18 +167,22 @@ func writeMatrixToFile(matrix types.ComMatrix, fileName, format string, printFn 
 }
 
 // GenerateMatrixDiff generates a new matrix demonstrating the diff between mat2 to mat1.
-func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) types.ComMatrix {
-	diffMatrix := []types.ComDetails{}
+func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) (string, error) {
+	colNames := getComMatrixColTagsByFormat(types.FormatCSV)
+	if colNames == "" {
+		return "", fmt.Errorf("error getting commatrix CSV tags")
+	}
+
+	diff := colNames + "\n"
+
 	for _, cd := range mat1.Matrix {
 		if mat2.Contains(cd) {
-			diffMatrix = append(diffMatrix, cd)
+			diff += fmt.Sprintf("%s\n", cd)
 			continue
 		}
 
 		// add "+" before cd's mat1 contains but mat2 doesn't
-		newCd := cd
-		newCd.Direction = fmt.Sprintf("+ %s", newCd.Direction)
-		diffMatrix = append(diffMatrix, newCd)
+		diff += fmt.Sprintf("+ %s\n", cd)
 	}
 
 	for _, cd := range mat2.Matrix {
@@ -188,13 +194,26 @@ func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) types.ComMat
 
 		if !mat1.Contains(cd) {
 			// add "-" before cd's mat1 doesn't contain but mat2 does
-			missingCd := cd
-			missingCd.Direction = fmt.Sprintf("- %s", missingCd.Direction)
-			diffMatrix = append(diffMatrix, missingCd)
+			diff += fmt.Sprintf("- %s\n", cd)
 		}
 	}
 
-	return types.ComMatrix{Matrix: diffMatrix}
+	return diff, nil
+}
+
+func getComMatrixColTagsByFormat(format string) string {
+	typ := reflect.TypeOf(types.ComDetails{})
+
+	var tagsList []string
+	for i := 0; i < typ.NumField(); i++ {
+        field := typ.Field(i)
+        tag := field.Tag.Get(format)
+        if tag != "" {
+            tagsList = append(tagsList, tag)
+        }
+    }
+
+	return strings.Join(tagsList, ",")
 }
 
 func separateMatrixByRole(matrix types.ComMatrix) (types.ComMatrix, types.ComMatrix) {

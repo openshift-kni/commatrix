@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/openshift-kni/commatrix/commatrix"
-	"github.com/openshift-kni/commatrix/types"
 )
 
 var (
@@ -83,10 +83,13 @@ func main() {
 		panic(fmt.Sprintf("Error while writing ss matrix to file :%v", err))
 	}
 	// generate the diff matrix between the ss and the enpointslice matrix
-	diffCommatrix := commatrix.GenerateMatrixDiff(*mat, *ssMat)
+	diff, err := commatrix.GenerateMatrixDiff(*mat, *ssMat)
+	if err != nil {
+		panic(fmt.Sprintf("Error while writing matrix diff file :%v", err))
+	}
 
 	// write the diff matrix between the ss and the enpointslice matrix to a csv file
-	err = commatrix.WriteMatrixToFileByType(diffCommatrix, "matrix-diff-ss", types.FormatCSV, deployment, destDir)
+	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff), 0644)
 	if err != nil {
 		panic(fmt.Sprintf("Error writing the diff matrix :%v", err))
 	}
