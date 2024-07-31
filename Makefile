@@ -10,8 +10,9 @@ EXECUTABLE := commatrix-gen
 .DEFAULT_GOAL := run
 
 build:
-	go build -o $(EXECUTABLE) $(GO_SRC) 
-
+	go build -o $(EXECUTABLE) $(GO_SRC)
+	mockgen -source=debug/debug.go -destination=debug/debug_mock.go -package=debug
+	
 oc:
 ifeq (, $(shell which oc))
 	@{ \

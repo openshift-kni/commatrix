@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
