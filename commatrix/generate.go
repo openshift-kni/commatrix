@@ -41,7 +41,7 @@ func GenerateSS(cs *clientutil.ClientSet) (ssMat *types.ComMatrix, ssOutTCP, ssO
 	for _, n := range nodesList.Items {
 		node := n
 		g.Go(func() error {
-			debugPod, err := debug.New(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+			debugPod, err := debug.NewDebugPod(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 			if err != nil {
 				return err
 			}

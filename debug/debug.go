@@ -40,11 +40,11 @@ const (
 	timeout  = 2 * time.Minute
 )
 
-var _ DebugPodInterface = (*DebugPod)(nil)
+var NewDebugPod = New
 
 // New creates debug pod on the given node, puts it in infinite sleep,
 // and returns the DebugPod object. Use the Clean() method to delete it.
-var New = func(cs *client.ClientSet, node string, namespace string, image string) (DebugPodInterface, error) {
+func New(cs *client.ClientSet, node string, namespace string, image string) (DebugPodInterface, error) {
 	if namespace == "" {
 		return nil, errors.New("failed creating new debug pod: got empty namespace")
 	}

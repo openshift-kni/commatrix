@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"github.com/openshift-kni/commatrix/client"
 	clientutil "github.com/openshift-kni/commatrix/client"
 	"github.com/openshift-kni/commatrix/debug"
 	"github.com/openshift-kni/commatrix/types"
@@ -101,10 +102,11 @@ UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21
 
 	mockDebugPod.EXPECT().GetNodeName().Return("test-node").AnyTimes()
 
-	// Mock the New function
-	debug.New = func(cs *clientutil.ClientSet, node string, namespace string, image string) (debug.DebugPodInterface, error) {
+	originalNew := debug.NewDebugPod
+	debug.NewDebugPod = func(cs *client.ClientSet, node string, namespace string, image string) (debug.DebugPodInterface, error) {
 		return mockDebugPod, nil
 	}
+	defer func() { debug.NewDebugPod = originalNew }()
 
 	cs := &clientutil.ClientSet{
 		CoreV1Interface: clientset.CoreV1(),
