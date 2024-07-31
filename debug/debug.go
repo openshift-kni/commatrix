@@ -1,4 +1,8 @@
+// debug/debug.go
+
 package debug
+
+//go:generate mockgen -destination=debug_mock.go -package=debug . DebugPodInterface
 
 import (
 	"context"

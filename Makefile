@@ -11,8 +11,10 @@ EXECUTABLE := commatrix-gen
 
 build:
 	go build -o $(EXECUTABLE) $(GO_SRC)
-	mockgen -source=debug/debug.go -destination=debug/debug_mock.go -package=debug
-	
+
+mock-generate:
+	go generate ./...
+
 oc:
 ifeq (, $(shell which oc))
 	@{ \
