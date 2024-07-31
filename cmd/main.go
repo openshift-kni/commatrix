@@ -85,12 +85,12 @@ func main() {
 	// generate the diff matrix between the enpointslice and the ss matrix
 	diff, err := commatrix.GenerateMatrixDiff(*mat, *ssMat)
 	if err != nil {
-		panic(fmt.Sprintf("Error while writing matrix diff file :%v", err))
+		panic(fmt.Sprintf("Error while generating matrix diff :%v", err))
 	}
 
 	// write the diff matrix between the enpointslice and the ss matrix to file
 	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff), 0644)
 	if err != nil {
-		panic(fmt.Sprintf("Error writing the diff matrix :%v", err))
+		panic(fmt.Sprintf("Error writing the diff matrix file :%v", err))
 	}
 }
