@@ -166,7 +166,7 @@ func writeMatrixToFile(matrix types.ComMatrix, fileName, format string, printFn 
 	return os.WriteFile(comMatrixFileName, res, 0644)
 }
 
-// GenerateMatrixDiff generates a new matrix demonstrating the diff between mat2 to mat1.
+// GenerateMatrixDiff generates a new matrix demonstrating the diff between mat1 to mat2.
 func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) (string, error) {
 	colNames := getComMatrixColTagsByFormat(types.FormatCSV)
 	if colNames == "" {
