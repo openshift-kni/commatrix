@@ -63,12 +63,16 @@ func TestWriteMatrixToFile(t *testing.T) {
 }
 
 func TestGenerateSS(t *testing.T) {
-	clientset := fake.NewSimpleClientset()
+	fakeClientset := fake.NewSimpleClientset()
+	clientset := &clientutil.ClientSet{
+		CoreV1Interface: fakeClientset.CoreV1(),
+	}
 
 	ctrlTest := gomock.NewController(t)
 	defer ctrlTest.Finish()
 
 	mockDebugPod := debug.NewMockDebugPodInterface(ctrlTest)
+	NewmockDebugPod := debug.NewMockNewDebugPodInterface(ctrlTest)
 
 	tcpOutput := []byte(`LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
 LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
@@ -98,27 +102,20 @@ UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21
 	).AnyTimes()
 
 	mockDebugPod.EXPECT().Clean().Return(nil).AnyTimes()
-
 	mockDebugPod.EXPECT().GetNodeName().Return("test-node").AnyTimes()
 
-	originalNew := debug.NewDebugPod
-	debug.NewDebugPod = func(cs *clientutil.ClientSet, node string, namespace string, image string) (debug.DebugPodInterface, error) {
-		return mockDebugPod, nil
-	}
-	defer func() { debug.NewDebugPod = originalNew }()
+	NewmockDebugPod.EXPECT().New(clientset, "test-node", "openshift-commatrix-debug", "quay.io/openshift-release-dev/ocp-release:4.15.12-multi").Return(mockDebugPod, nil)
 
-	cs := &clientutil.ClientSet{
-		CoreV1Interface: clientset.CoreV1(),
-	}
 	testNode := &v1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-node",
 		},
 	}
+	_, _ = clientset.CoreV1Interface.Nodes().Create(context.TODO(), testNode, metav1.CreateOptions{})
 
-	_, _ = clientset.CoreV1().Nodes().Create(context.TODO(), testNode, metav1.CreateOptions{})
+	ssMat, ssOutTCP, ssOutUDP, err := GenerateSS(clientset, NewmockDebugPod)
 
-	ssMat, ssOutTCP, ssOutUDP, err := GenerateSS(cs)
+	// Pass the expected ClientSet to GenerateSS
 	expectedSSMat := &types.ComMatrix{
 		Matrix: []types.ComDetails{
 			{Direction: "Ingress", Protocol: "UDP", Port: 111, Namespace: "", Service: "rpcbind", Pod: "", Container: "", NodeRole: "", Optional: false},

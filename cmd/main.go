@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/openshift-kni/commatrix/debug"
+
 	clientutil "github.com/openshift-kni/commatrix/client"
 
 	"github.com/openshift-kni/commatrix/commatrix"
@@ -74,7 +76,8 @@ func main() {
 		panic(fmt.Sprintf("Error while writing the endpoint slice matrix to file :%v", err))
 	}
 	// generate the ss matrix and ss raws
-	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(cs)
+	newDebugPod := &debug.NewDebugPod{}
+	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(cs, newDebugPod)
 	if err != nil {
 		panic(fmt.Sprintf("Error while generating the ss matrix and ss raws :%v", err))
 	}
