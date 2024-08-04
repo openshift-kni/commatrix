@@ -106,7 +106,7 @@ UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21
 
 	NewmockDebugPod.EXPECT().New(clientset, "test-node", "openshift-commatrix-debug", "quay.io/openshift-release-dev/ocp-release:4.15.12-multi").Return(mockDebugPod, nil)
 
-	testNode := &v1.Node{
+	testNode := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-node",
 		},
