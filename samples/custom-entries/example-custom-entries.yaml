@@ -4,7 +4,7 @@
   nodeRole: master
   optional: false
   pod: example-pod
-  port: "9050"
+  port: 9050
   protocol: TCP
   service: example-service
 - container: example-container2
@@ -13,6 +13,6 @@
   nodeRole: worker
   optional: false
   pod: example-pod2
-  port: "9051"
+  port: 9051
   protocol: UDP
   service: example-service2
