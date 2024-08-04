@@ -209,7 +209,7 @@ func getComMatrixHeadersByFormat(format string) (string, error) {
 		field := typ.Field(i)
 		tag := field.Tag.Get(format)
 		if tag == "" {
-			return "", fmt.Errorf("field %v has not tag of format %s", field, format)
+			return "", fmt.Errorf("field %v has no tag of format %s", field, format)
 		}
 		tagsList = append(tagsList, tag)
 	}
