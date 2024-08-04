@@ -168,9 +168,9 @@ func writeMatrixToFile(matrix types.ComMatrix, fileName, format string, printFn 
 
 // GenerateMatrixDiff generates the diff between mat1 to mat2.
 func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) (string, error) {
-	colNames := getComMatrixHeadersByFormat(types.FormatCSV)
-	if colNames == "" {
-		return "", fmt.Errorf("error getting commatrix CSV tags")
+	colNames, err := getComMatrixHeadersByFormat(types.FormatCSV)
+	if err != nil {
+		return "", fmt.Errorf("error getting commatrix CSV tags: %v", err)
 	}
 
 	diff := colNames + "\n"
@@ -201,19 +201,20 @@ func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) (string, err
 	return diff, nil
 }
 
-func getComMatrixHeadersByFormat(format string) string {
+func getComMatrixHeadersByFormat(format string) (string, error) {
 	typ := reflect.TypeOf(types.ComDetails{})
 
 	var tagsList []string
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
 		tag := field.Tag.Get(format)
-		if tag != "" {
-			tagsList = append(tagsList, tag)
+		if tag == "" {
+			return "", fmt.Errorf("field %v has not tag of format %s", field, format)
 		}
+		tagsList = append(tagsList, tag)
 	}
 
-	return strings.Join(tagsList, ",")
+	return strings.Join(tagsList, ","), nil
 }
 
 func separateMatrixByRole(matrix types.ComMatrix) (types.ComMatrix, types.ComMatrix) {

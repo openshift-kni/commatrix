@@ -91,6 +91,6 @@ func main() {
 	// write the diff matrix between the enpointslice and the ss matrix to file
 	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff), 0644)
 	if err != nil {
-		panic(fmt.Sprintf("Error writing the diff matrix file :%v", err))
+		panic(fmt.Sprintf("Error writing the diff matrix file: %v", err))
 	}
 }
