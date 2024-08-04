@@ -167,7 +167,7 @@ func writeMatrixToFile(matrix types.ComMatrix, fileName, format string, printFn 
 }
 
 // GenerateMatrixDiff generates the diff between mat1 to mat2.
-func GenerateMatrixDiff(mat1 types.ComMatrix, mat2 types.ComMatrix) (string, error) {
+func GenerateMatrixDiff(mat1, mat2 types.ComMatrix) (string, error) {
 	colNames, err := getComMatrixHeadersByFormat(types.FormatCSV)
 	if err != nil {
 		return "", fmt.Errorf("error getting commatrix CSV tags: %v", err)
