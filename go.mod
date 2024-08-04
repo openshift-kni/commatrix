@@ -4,9 +4,11 @@ go 1.21
 
 require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
+	github.com/golang/mock v1.6.0
 	github.com/openshift/client-go v0.0.0-20240415214935-be70f772f157
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
+	go.uber.org/mock v0.4.0
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
@@ -16,6 +18,7 @@ require (
 )
 
 require (
+	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/openshift/api v0.0.0-20240415161129-d7aff303fa1a // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 )

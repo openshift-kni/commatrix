@@ -1,5 +1,8 @@
 package debug
 
+//go:generate mockgen -destination=debug_mock.go -package=debug . DebugPodInterface
+//go:generate mockgen -destination=new_debug_mock.go -package=debug . NewDebugPodInterface
+
 import (
 	"context"
 	"errors"
@@ -17,10 +20,26 @@ import (
 	"github.com/openshift-kni/commatrix/client"
 )
 
+type DebugPodInterface interface {
+	ExecWithRetry(command string, interval time.Duration, duration time.Duration) ([]byte, error)
+	Clean() error
+	GetNodeName() string
+}
+
+type NewDebugPodInterface interface {
+	New(cs *client.ClientSet, node string, namespace string, image string) (DebugPodInterface, error)
+}
+
+type NewDebugPod struct{}
+
 type DebugPod struct {
 	Name      string
 	Namespace string
 	NodeName  string
+}
+
+func (dp *DebugPod) GetNodeName() string {
+	return dp.NodeName
 }
 
 const (
@@ -30,7 +49,7 @@ const (
 
 // New creates debug pod on the given node, puts it in infinite sleep,
 // and returns the DebugPod object. Use the Clean() method to delete it.
-func New(cs *client.ClientSet, node string, namespace string, image string) (*DebugPod, error) {
+func (n *NewDebugPod) New(cs *client.ClientSet, node string, namespace string, image string) (DebugPodInterface, error) {
 	if namespace == "" {
 		return nil, errors.New("failed creating new debug pod: got empty namespace")
 	}

@@ -6,6 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/openshift-kni/commatrix/debug"
+
+	clientutil "github.com/openshift-kni/commatrix/client"
+
 	"github.com/openshift-kni/commatrix/commatrix"
 )
 
@@ -31,6 +35,10 @@ func init() {
 func main() {
 	kubeconfig, ok := os.LookupEnv("KUBECONFIG")
 	if !ok {
+		panic("must set the KUBECONFIG environment variable")
+	}
+	cs, err := clientutil.New(kubeconfig)
+	if err != nil {
 		panic("must set the KUBECONFIG environment variable")
 	}
 
@@ -68,7 +76,8 @@ func main() {
 		panic(fmt.Sprintf("Error while writing the endpoint slice matrix to file :%v", err))
 	}
 	// generate the ss matrix and ss raws
-	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
+	newDebugPod := &debug.NewDebugPod{}
+	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(cs, newDebugPod)
 	if err != nil {
 		panic(fmt.Sprintf("Error while generating the ss matrix and ss raws :%v", err))
 	}

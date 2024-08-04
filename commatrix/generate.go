@@ -20,12 +20,7 @@ import (
 	"github.com/openshift-kni/commatrix/types"
 )
 
-func GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format string, env Env, deployment Deployment, destDir string) (ssMat *types.ComMatrix, ssOutTCP, ssOutUDP []byte, err error) {
-	cs, err := clientutil.New(kubeconfig)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
+func GenerateSS(cs *clientutil.ClientSet, debugPod debug.NewDebugPodInterface) (ssMat *types.ComMatrix, ssOutTCP, ssOutUDP []byte, err error) {
 	nodesList, err := cs.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, nil, err
@@ -48,18 +43,18 @@ func GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format strin
 	for _, n := range nodesList.Items {
 		node := n
 		g.Go(func() error {
-			debugPod, err := debug.New(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+			newdebugPod, err := debugPod.New(cs, node.Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 			if err != nil {
 				return err
 			}
 			defer func() {
-				err := debugPod.Clean()
+				err := newdebugPod.Clean()
 				if err != nil {
-					fmt.Printf("failed cleaning debug pod %s: %v", debugPod, err)
+					fmt.Printf("failed cleaning debug pod %s: %v", newdebugPod, err)
 				}
 			}()
 
-			cds, ssTCP, ssUDP, err := ss.CreateSSOutputFromNode(debugPod, &node)
+			cds, ssTCP, ssUDP, err := ss.CreateSSOutputFromNode(newdebugPod, &node)
 			if err != nil {
 				return err
 			}

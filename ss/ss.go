@@ -23,7 +23,7 @@ const (
 	duration              = time.Second * 5
 )
 
-func CreateSSOutputFromNode(debugPod *debug.DebugPod, node *corev1.Node) (res []types.ComDetails, ssOutTCP, ssOutUDP []byte, err error) {
+func CreateSSOutputFromNode(debugPod debug.DebugPodInterface, node *corev1.Node) (res []types.ComDetails, ssOutTCP, ssOutUDP []byte, err error) {
 	ssOutTCP, err = debugPod.ExecWithRetry("ss -anpltH", interval, duration)
 	if err != nil {
 		return nil, nil, nil, err
@@ -51,7 +51,7 @@ func splitByLines(bytes []byte) []string {
 	return strings.Split(str, "\n")
 }
 
-func toComDetails(debugPod *debug.DebugPod, ssOutput []string, protocol string, node *corev1.Node) []types.ComDetails {
+func toComDetails(debugPod debug.DebugPodInterface, ssOutput []string, protocol string, node *corev1.Node) []types.ComDetails {
 	res := make([]types.ComDetails, 0)
 	nodeRoles := nodes.GetRole(node)
 
@@ -74,7 +74,7 @@ func toComDetails(debugPod *debug.DebugPod, ssOutput []string, protocol string, 
 }
 
 // getContainerName receives an ss entry and gets the name of the container exposing this port.
-func getContainerName(debugPod *debug.DebugPod, ssEntry string) (string, error) {
+func getContainerName(debugPod debug.DebugPodInterface, ssEntry string) (string, error) {
 	pid, err := extractPID(ssEntry)
 	if err != nil {
 		return "", err
@@ -108,7 +108,7 @@ func extractPID(ssEntry string) (string, error) {
 }
 
 // extractContainerID receives a PID of a container, and returns its CRI-O ID.
-func extractContainerID(debugPod *debug.DebugPod, pid string) (string, error) {
+func extractContainerID(debugPod debug.DebugPodInterface, pid string) (string, error) {
 	cmd := fmt.Sprintf("cat /proc/%s/cgroup", pid)
 	out, err := debugPod.ExecWithRetry(cmd, interval, duration)
 	if err != nil {
@@ -119,7 +119,7 @@ func extractContainerID(debugPod *debug.DebugPod, pid string) (string, error) {
 	match := re.FindStringSubmatch(string(out))
 
 	if len(match) < 2 {
-		return "", fmt.Errorf("container ID not found node:%s  pid: %s", debugPod.NodeName, pid)
+		return "", fmt.Errorf("container ID not found node:%s  pid: %s", debugPod.GetNodeName(), pid)
 	}
 
 	containerID := match[1]
@@ -127,7 +127,7 @@ func extractContainerID(debugPod *debug.DebugPod, pid string) (string, error) {
 }
 
 // extractContainerName receives CRI-O container ID and returns the container's name.
-func extractContainerName(debugPod *debug.DebugPod, containerID string) (string, error) {
+func extractContainerName(debugPod debug.DebugPodInterface, containerID string) (string, error) {
 	type ContainerInfo struct {
 		Containers []struct {
 			Labels struct {
