@@ -3,10 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 
-	"github.com/openshift-kni/commatrix/commatrix"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/openshift-kni/commatrix/pkg/client"
+	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
+	"github.com/openshift-kni/commatrix/pkg/endpointslices"
+	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
+	"github.com/openshift-kni/commatrix/pkg/types"
+	"github.com/openshift-kni/commatrix/pkg/utils"
 )
 
 var (
@@ -16,6 +22,7 @@ var (
 	deploymentStr       string
 	customEntriesPath   string
 	customEntriesFormat string
+	debug               bool
 )
 
 func init() {
@@ -25,71 +32,83 @@ func init() {
 	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
+	flag.BoolVar(&debug, "debug", false, "Debug logs")
 	flag.Parse()
 }
 
 func main() {
-	kubeconfig, ok := os.LookupEnv("KUBECONFIG")
-	if !ok {
-		panic("must set the KUBECONFIG environment variable")
+	env, err := types.GetEnv(envStr)
+	if err != nil {
+		panic(err)
 	}
 
-	var env commatrix.Env
-	switch envStr {
-	case "baremetal":
-		env = commatrix.Baremetal
-	case "cloud":
-		env = commatrix.Cloud
-	default:
-		panic(fmt.Sprintf("invalid cluster environment: %s", envStr))
+	deployment, err := types.GetDeployment(deploymentStr)
+	if err != nil {
+		panic(err)
 	}
 
-	var deployment commatrix.Deployment
-	switch deploymentStr {
-	case "mno":
-		deployment = commatrix.MNO
-	case "sno":
-		deployment = commatrix.SNO
-	default:
-		panic(fmt.Sprintf("invalid deployment type: %s", deploymentStr))
+	if debug {
+		log.SetLevel(log.DebugLevel)
 	}
 
 	if customEntriesPath != "" && customEntriesFormat == "" {
 		panic("error, variable customEntriesFormat is not set")
 	}
-	// generate the endpointslice matrix
-	mat, err := commatrix.New(kubeconfig, customEntriesPath, customEntriesFormat, env, deployment)
+
+	cs, err := client.New()
 	if err != nil {
-		panic(fmt.Errorf("failed to create the communication matrix: %s", err))
+		panic(fmt.Errorf("failed creating the k8s client: %w", err))
 	}
-	// write the endpoint slice matrix to file
-	err = commatrix.WriteMatrixToFileByType(*mat, "communication-matrix", format, deployment, destDir)
+
+	utilsHelpers := utils.New(cs)
+
+	epExporter, err := endpointslices.New(cs)
 	if err != nil {
-		panic(fmt.Sprintf("Error while writing the endpoint slice matrix to file :%v", err))
+		panic(fmt.Errorf("failed creating the endpointslices exporter: %w", err))
 	}
+
+	commMatrix, err := commatrixcreator.New(epExporter, customEntriesPath, customEntriesFormat, env, deployment)
+	if err != nil {
+		panic(fmt.Errorf("failed creating comm matrix creator: %w", err))
+	}
+
+	matrix, err := commMatrix.CreateEndpointMatrix()
+	if err != nil {
+		panic(fmt.Errorf("failed creating endpoint matrix: %w", err))
+	}
+
+	err = matrix.WriteMatrixToFileByType(utilsHelpers, "communication-matrix", format, deployment, destDir)
+	if err != nil {
+		panic(fmt.Errorf("failed to write endpoint matrix to file: %w", err))
+	}
+
+	listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, customEntriesPath, customEntriesFormat, format, destDir, env, deployment)
+	if err != nil {
+		panic(fmt.Errorf("failed creating listening socket check: %w", err))
+	}
+
 	// generate the ss matrix and ss raws
-	ssMat, ssOutTCP, ssOutUDP, err := commatrix.GenerateSS(kubeconfig, customEntriesPath, customEntriesFormat, format, env, deployment, destDir)
+	ssMat, ssOutTCP, ssOutUDP, err := listeningCheck.GenerateSS()
 	if err != nil {
-		panic(fmt.Sprintf("Error while generating the ss matrix and ss raws :%v", err))
+		panic(fmt.Sprintf("Error while generating the listening check matrix and ss raws :%v", err))
 	}
-	// write ss raw files
-	err = commatrix.WriteSSRawFiles(destDir, ssOutTCP, ssOutUDP)
+
+	err = listeningCheck.WriteSSRawFiles(ssOutTCP, ssOutUDP)
 	if err != nil {
 		panic(fmt.Sprintf("Error while writing the ss raw files :%v", err))
 	}
-	// write the ss matrix to file
-	err = commatrix.WriteMatrixToFileByType(*ssMat, "ss-generated-matrix", format, deployment, destDir)
+
+	err = ssMat.WriteMatrixToFileByType(utilsHelpers, "ss-generated-matrix", format, deployment, destDir)
 	if err != nil {
 		panic(fmt.Sprintf("Error while writing ss matrix to file :%v", err))
 	}
+
 	// generate the diff matrix between the enpointslice and the ss matrix
-	diff, err := commatrix.GenerateMatrixDiff(*mat, *ssMat)
+	diff, err := matrix.GenerateMatrixDiff(ssMat)
 	if err != nil {
 		panic(fmt.Sprintf("Error while generating matrix diff :%v", err))
 	}
-
-	// write the diff matrix between the enpointslice and the ss matrix to file
-	err = os.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff), 0644)
+	err = utilsHelpers.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff))
 	if err != nil {
 		panic(fmt.Sprintf("Error writing the diff matrix file: %v", err))
 	}
