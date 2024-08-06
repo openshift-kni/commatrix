@@ -66,7 +66,7 @@ func TestExtractPodName(t *testing.T) {
 	}
 	for _, test := range tests {
 		p := defineTestPod(&test)
-		res, err := extractPodName(p)
+		res, err := extractControllerName(p)
 		if err != nil {
 			t.Fatalf("test %s failed. got error: %s", test.desc, err)
 		}

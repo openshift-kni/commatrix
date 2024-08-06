@@ -1,8 +1,6 @@
-package commatrix
+package types
 
-import "github.com/openshift-kni/commatrix/types"
-
-var generalStaticEntriesWorker = []types.ComDetails{
+var GeneralStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -86,7 +84,7 @@ var generalStaticEntriesWorker = []types.ComDetails{
 	},
 }
 
-var generalStaticEntriesMaster = []types.ComDetails{
+var GeneralStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -300,7 +298,7 @@ var generalStaticEntriesMaster = []types.ComDetails{
 	},
 }
 
-var baremetalStaticEntriesWorker = []types.ComDetails{
+var BaremetalStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -334,7 +332,7 @@ var baremetalStaticEntriesWorker = []types.ComDetails{
 	},
 }
 
-var baremetalStaticEntriesMaster = []types.ComDetails{
+var BaremetalStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -418,7 +416,7 @@ var baremetalStaticEntriesMaster = []types.ComDetails{
 	},
 }
 
-var cloudStaticEntriesWorker = []types.ComDetails{
+var CloudStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -432,7 +430,7 @@ var cloudStaticEntriesWorker = []types.ComDetails{
 	},
 }
 
-var cloudStaticEntriesMaster = []types.ComDetails{
+var CloudStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -466,7 +464,7 @@ var cloudStaticEntriesMaster = []types.ComDetails{
 	},
 }
 
-var MNOStaticEntries = []types.ComDetails{
+var MNOStaticEntries = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "UDP",
