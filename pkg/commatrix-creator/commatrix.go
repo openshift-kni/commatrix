@@ -56,7 +56,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	epSliceComDetails = append(epSliceComDetails, staticEntries...)
 
 	if cm.customEntriesPath != "" {
-		customComDetails, err := cm.getComDetailsListFromFile()
+		customComDetails, err := cm.GetComDetailsListFromFile()
 		if err != nil {
 			return nil, fmt.Errorf("failed adding custom entries: %s", err)
 		}
@@ -68,7 +68,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	return commMatrix, nil
 }
 
-func (cm *CommunicationMatrixCreator) getComDetailsListFromFile() ([]types.ComDetails, error) {
+func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDetails, error) {
 	var res []types.ComDetails
 	f, err := os.Open(filepath.Clean(cm.customEntriesPath))
 	if err != nil {
