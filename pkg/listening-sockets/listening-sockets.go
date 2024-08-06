@@ -36,7 +36,7 @@ type ConnectionCheck struct {
 	destDir             string
 	env                 types.Env
 	deployment          types.Deployment
-	nodesRolesMap       map[string][]string
+	nodeToRole          map[string]string
 }
 
 func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, customEntriesPath, customEntriesFormat, format, destDir string, env types.Env, deployment types.Deployment) (*ConnectionCheck, error) {
@@ -46,9 +46,12 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, customEntriesP
 		return nil, err
 	}
 
-	nodesRolesMap := map[string][]string{}
+	nodeToRole := map[string]string{}
 	for _, node := range nodeList.Items {
-		nodesRolesMap[node.Name] = types.GetNodeRoles(&node)
+		nodeToRole[node.Name], err = types.GetNodeRole(&node)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &ConnectionCheck{
@@ -60,7 +63,7 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, customEntriesP
 		destDir,
 		env,
 		deployment,
-		nodesRolesMap,
+		nodeToRole,
 	}, nil
 }
 
@@ -80,7 +83,7 @@ func (cc *ConnectionCheck) GenerateSS() (*types.ComMatrix, []byte, []byte, error
 	var ssOutTCP, ssOutUDP []byte
 	nLock := &sync.Mutex{}
 	g := new(errgroup.Group)
-	for nodeName := range cc.nodesRolesMap {
+	for nodeName := range cc.nodeToRole {
 		name := nodeName
 		g.Go(func() error {
 			debugPod, err := cc.podUtils.CreatePodOnNode(name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
@@ -148,8 +151,8 @@ func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, nodeName
 	ssOutFilteredTCP := filterEntries(splitByLines(ssOutTCP))
 	ssOutFilteredUDP := filterEntries(splitByLines(ssOutUDP))
 
-	tcpComDetails := cc.toComDetails(debugPod, ssOutFilteredTCP, "TCP", cc.nodesRolesMap[nodeName])
-	udpComDetails := cc.toComDetails(debugPod, ssOutFilteredUDP, "UDP", cc.nodesRolesMap[nodeName])
+	tcpComDetails := cc.toComDetails(debugPod, ssOutFilteredTCP, "TCP", cc.nodeToRole[nodeName])
+	udpComDetails := cc.toComDetails(debugPod, ssOutFilteredUDP, "UDP", cc.nodeToRole[nodeName])
 
 	res := []types.ComDetails{}
 	res = append(res, udpComDetails...)
@@ -163,7 +166,7 @@ func splitByLines(bytes []byte) []string {
 	return strings.Split(str, "\n")
 }
 
-func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string, protocol string, nodeRole []string) []types.ComDetails {
+func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string, protocol string, nodeRole string) []types.ComDetails {
 	res := make([]types.ComDetails, 0)
 
 	for _, ssEntry := range ssOutput {
@@ -176,7 +179,7 @@ func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string,
 
 		cd.Container = name
 		cd.Protocol = protocol
-		cd.NodeRole = nodeRole[0]
+		cd.NodeRole = nodeRole
 		cd.Optional = false
 		res = append(res, *cd)
 	}
