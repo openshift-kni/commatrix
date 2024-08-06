@@ -300,7 +300,7 @@ var generalStaticEntriesMaster = []types.ComDetails{
 	},
 }
 
-var baremetalStaticEntriesWorker = []types.ComDetails{
+var BaremetalStaticEntriesWorker = []types.ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -334,7 +334,7 @@ var baremetalStaticEntriesWorker = []types.ComDetails{
 	},
 }
 
-var baremetalStaticEntriesMaster = []types.ComDetails{
+var BaremetalStaticEntriesMaster = []types.ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",

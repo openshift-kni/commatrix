@@ -120,11 +120,11 @@ func getStaticEntries(e Env, d Deployment) ([]types.ComDetails, error) {
 
 	switch e {
 	case Baremetal:
-		comDetails = append(comDetails, baremetalStaticEntriesMaster...)
+		comDetails = append(comDetails, BaremetalStaticEntriesMaster...)
 		if d == SNO {
 			break
 		}
-		comDetails = append(comDetails, baremetalStaticEntriesWorker...)
+		comDetails = append(comDetails, BaremetalStaticEntriesWorker...)
 	case Cloud:
 		comDetails = append(comDetails, cloudStaticEntriesMaster...)
 		if d == SNO {
