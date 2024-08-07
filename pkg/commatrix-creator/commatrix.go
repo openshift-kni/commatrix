@@ -22,22 +22,22 @@ type CommunicationMatrixCreator struct {
 	d                   types.Deployment
 }
 
-// New initializes a ComMatrix using Kubernetes cluster data.
+func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, e types.Env, d types.Deployment) (*CommunicationMatrixCreator, error) {
+	return &CommunicationMatrixCreator{
+		exporter: exporter,
+		customEntriesPath: customEntriesPath,
+		customEntriesFormat: customEntriesFormat,
+		e: e,
+		d: d,
+		}, nil
+	}
+	
+// CreateEndpointMatrix initializes a ComMatrix using Kubernetes cluster data.
 // It takes kubeconfigPath for cluster access to  fetch EndpointSlice objects,
 // detailing open ports for ingress traffic.
 // Custom entries from a JSON file can be added to the matrix by setting `customEntriesPath`.
 // Returns a pointer to ComMatrix and error. Entries include traffic direction, protocol,
 // port number, namespace, service name, pod, container, node role, and flow optionality for OpenShift.
-func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, e types.Env, d types.Deployment) (*CommunicationMatrixCreator, error) {
-	return &CommunicationMatrixCreator{
-		exporter,
-		customEntriesFormat,
-		customEntriesPath,
-		e,
-		d,
-	}, nil
-}
-
 func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, error) {
 	err := cm.exporter.LoadEndpointSlicesInfo()
 	if err != nil {
