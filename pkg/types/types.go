@@ -133,7 +133,7 @@ func (m *ComMatrix) String() string {
 
 func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, fileNamePrefix, format string, deployment Deployment, destDir string) error {
 	if format == FormatNFT {
-		masterMatrix, workerMatrix := m.separateMatrixByRole()
+		masterMatrix, workerMatrix := m.SeparateMatrixByRole()
 		err := masterMatrix.writeMatrixToFile(utilsHelpers, fileNamePrefix+"-master", format, destDir)
 		if err != nil {
 			return err
@@ -204,7 +204,7 @@ func (m *ComMatrix) print(format string) ([]byte, error) {
 	}
 }
 
-func (m *ComMatrix) separateMatrixByRole() (ComMatrix, ComMatrix) {
+func (m *ComMatrix) SeparateMatrixByRole() (ComMatrix, ComMatrix) {
 	var masterMatrix, workerMatrix ComMatrix
 	for _, entry := range m.Matrix {
 		if entry.NodeRole == "master" {
