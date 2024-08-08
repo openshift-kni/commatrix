@@ -28,7 +28,7 @@ build:
 generate: build
 	rm -rf $(DEST_DIR)/communication-matrix
 	mkdir -p $(DEST_DIR)/communication-matrix
-	./$(EXECUTABLE) -format=$(FORMAT) -env=$(CLUSTER_ENV) -destDir=$(DEST_DIR)/communication-matrix -deployment=$(DEPLOYMENT) -customEntriesPath=$(CUSTOM_ENTRIES_PATH) -customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) $(DEBUG)
+	./$(EXECUTABLE) -format=$(FORMAT) -env=$(CLUSTER_ENV) -destDir=$(DEST_DIR)/communication-matrix -deployment=$(DEPLOYMENT) -customEntriesPath=$(CUSTOM_ENTRIES_PATH) -customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) $(if $(DEBUG),-debug=true)
 
 .PHONY: clean
 clean:
