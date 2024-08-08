@@ -82,7 +82,7 @@ func main() {
 		panic(fmt.Errorf("failed to write endpoint matrix to file: %w", err))
 	}
 
-	listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, customEntriesPath, customEntriesFormat, format, destDir, env, deployment)
+	listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, destDir)
 	if err != nil {
 		panic(fmt.Errorf("failed creating listening socket check: %w", err))
 	}

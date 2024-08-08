@@ -29,17 +29,12 @@ const (
 
 type ConnectionCheck struct {
 	*client.ClientSet
-	podUtils            utils.UtilsInterface
-	customEntriesPath   string
-	customEntriesFormat string
-	format              string
-	destDir             string
-	env                 types.Env
-	deployment          types.Deployment
-	nodeToRole          map[string]string
+	podUtils   utils.UtilsInterface
+	destDir    string
+	nodeToRole map[string]string
 }
 
-func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, customEntriesPath, customEntriesFormat, format, destDir string, env types.Env, deployment types.Deployment) (*ConnectionCheck, error) {
+func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string) (*ConnectionCheck, error) {
 	nodeList := &corev1.NodeList{}
 	err := c.List(context.TODO(), nodeList)
 	if err != nil {
@@ -57,12 +52,7 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, customEntriesP
 	return &ConnectionCheck{
 		c,
 		podUtils,
-		customEntriesPath,
-		customEntriesFormat,
-		format,
 		destDir,
-		env,
-		deployment,
 		nodeToRole,
 	}, nil
 }
