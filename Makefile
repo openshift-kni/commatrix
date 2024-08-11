@@ -4,8 +4,8 @@ DEST_DIR ?= .
 DEPLOYMENT ?= mno
 DEBUG ?=
 GO_SRC := cmd/main.go
-
 EXECUTABLE := commatrix-gen
+export GOLANGCI_LINT_CACHE = /tmp/.cache
 
 .DEFAULT_GOAL := run
 
@@ -63,17 +63,17 @@ $(GOLANGCI_LINT): ; $(info installing golangci-lint...)
 
 .PHONY: lint
 lint: | $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run golangci-lint
-	$(GOLANGCI_LINT) run --timeout=10m
+	GOFLAGS="" $(GOLANGCI_LINT) run --timeout=10m
 
 .PHONY: test
 test:
-	go test ./...
+	GOFLAGS="" go test ./...
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
 define go-install-tool
 @[ -f $(1) ] || { \
 set -e ;\
 echo "Downloading $(2)" ;\
-GOBIN=$(BIN_DIR) go install $(2) ;\
+GOBIN=$(BIN_DIR) GOFLAGS="" go install $(2) ;\
 }
 endef
