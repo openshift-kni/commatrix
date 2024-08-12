@@ -154,26 +154,37 @@ func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, f
 	return nil
 }
 
-// GenerateMatrixDiff generates the diff between mat1 to mat2.
-func (m *ComMatrix) GenerateMatrixDiff(mat2 *ComMatrix) (string, error) {
-	colNames, err := getComMatrixHeadersByFormat(FormatCSV)
-	if err != nil {
-		return "", fmt.Errorf("error getting commatrix CSV tags: %v", err)
-	}
+// GenerateUnitedMatrix generates a new matrix from m and other with no duplications.
+func (m *ComMatrix) generateUnitedMatrix(other *ComMatrix) *ComMatrix {
+	// initial united matrix with m.Matrix
+	unitedComDetails := m.Matrix
 
-	diff := colNames + "\n"
+	for _, cd := range other.Matrix {
+		// avoid duplications of comdetails on united matrix
+		if !m.Contains(cd) {
+			unitedComDetails = append(unitedComDetails, cd)
+		}
+	}
+	return &ComMatrix{Matrix: unitedComDetails}
+}
+
+// mapDiffBetweenMatrices map the cd's string of the matrices to ints in the following way:
+// cd which m contains but other doesn't --> 1
+// cd both m and other contains --> 0
+// cd which other doesn't contain but m does --> -1.
+func (m *ComMatrix) mapDiffBetweenMatrices(other *ComMatrix) map[string]int {
+	mapComDetailToSign := make(map[string]int)
 
 	for _, cd := range m.Matrix {
-		if mat2.Contains(cd) {
-			diff += fmt.Sprintf("%s\n", cd)
-			continue
+		if other.Contains(cd) {
+			mapComDetailToSign[cd.String()] = 0
+		} else {
+			// m contains cd but other doesn't
+			mapComDetailToSign[cd.String()] = 1
 		}
-
-		// add "+" before cd's mat1 contains but mat2 doesn't
-		diff += fmt.Sprintf("+ %s\n", cd)
 	}
 
-	for _, cd := range mat2.Matrix {
+	for _, cd := range other.Matrix {
 		// Skip "rpc.statd" ports, these are randomly open ports on the node,
 		// no need to mention them in the matrix diff
 		if cd.Service == "rpc.statd" {
@@ -181,8 +192,37 @@ func (m *ComMatrix) GenerateMatrixDiff(mat2 *ComMatrix) (string, error) {
 		}
 
 		if !m.Contains(cd) {
-			// add "-" before cd's mat1 doesn't contain but mat2 does
+			// m doesn't contain cd but other does
+			mapComDetailToSign[cd.String()] = -1
+		}
+	}
+
+	return mapComDetailToSign
+}
+
+// GenerateMatrixDiff generates the diff between mat1 to mat2.
+func (m *ComMatrix) GenerateMatrixDiff(other *ComMatrix) (string, error) {
+	unitedComMatrix := m.generateUnitedMatrix(other)
+	unitedComMatrix.CleanComDetails()
+	mapComDetailToSign := m.mapDiffBetweenMatrices(other)
+
+	colNames, err := getComMatrixHeadersByFormat(FormatCSV)
+	if err != nil {
+		return "", fmt.Errorf("error getting commatrix CSV tags: %v", err)
+	}
+	diff := colNames + "\n"
+
+	// iterate over organized united Matrix and check every cd diff sign.
+	for _, cd := range unitedComMatrix.Matrix {
+		switch mapComDetailToSign[cd.String()] {
+		case 1:
+			// add "+" before cd's mat1 contains but mat2 doesn't
+			diff += fmt.Sprintf("+ %s\n", cd)
+		case -1:
+			// add "-" before cd's mat1 contains but mat2 doesn't
 			diff += fmt.Sprintf("- %s\n", cd)
+		case 0:
+			diff += fmt.Sprintf("%s\n", cd)
 		}
 	}
 
