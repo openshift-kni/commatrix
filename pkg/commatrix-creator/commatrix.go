@@ -138,27 +138,29 @@ func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, er
 	case types.Baremetal:
 		log.Debug("Adding Baremetal static entries")
 		comDetails = append(comDetails, types.BaremetalStaticEntriesMaster...)
-		if cm.d != types.SNO {
-			comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
+		if cm.d == types.SNO {
+			break
 		}
+		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
 	case types.Cloud:
 		log.Debug("Adding Cloud static entries")
-		comDetails = append(comDetails, types.CloudStaticEntriesMaster...)
-		if cm.d != types.SNO {
-			comDetails = append(comDetails, types.CloudStaticEntriesWorker...)
+		comDetails = append(comDetails, types.BaremetalStaticEntriesMaster...)
+		if cm.d == types.SNO {
+			break
 		}
+		comDetails = append(comDetails, types.CloudStaticEntriesWorker...)
 	default:
 		log.Errorf("Invalid value for cluster environment: %v", cm.e)
 		return nil, fmt.Errorf("invalid value for cluster environment")
 	}
 
 	log.Debug("Adding general static entries")
-	comDetails = append(comDetails, types.GeneralStaticEntriesMaster...)
-	if cm.d != types.SNO {
-		comDetails = append(comDetails, types.MNOStaticEntries...)
-		comDetails = append(comDetails, types.GeneralStaticEntriesWorker...)
+	if cm.d == types.SNO {
+		return comDetails, nil
 	}
 
+	comDetails = append(comDetails, types.MNOStaticEntries...)
+	comDetails = append(comDetails, types.GeneralStaticEntriesWorker...)
 	log.Debug("Successfully determined static entries")
 	return comDetails, nil
 }
