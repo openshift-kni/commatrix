@@ -172,7 +172,7 @@ func (m *ComMatrix) generateUnitedMatrix(other *ComMatrix) *ComMatrix {
 // cd which m contains but other doesn't --> 1
 // cd both m and other contains --> 0
 // cd which other doesn't contain but m does --> -1.
-func (m *ComMatrix) mapDiffBetweenMatrices(other *ComMatrix) map[string]int {
+func (m *ComMatrix) markDiffBetweenMatrices(other *ComMatrix) map[string]int {
 	mapComDetailToSign := make(map[string]int)
 
 	for _, cd := range m.Matrix {
@@ -204,7 +204,7 @@ func (m *ComMatrix) mapDiffBetweenMatrices(other *ComMatrix) map[string]int {
 func (m *ComMatrix) GenerateMatrixDiff(other *ComMatrix) (string, error) {
 	unitedComMatrix := m.generateUnitedMatrix(other)
 	unitedComMatrix.CleanComDetails()
-	mapComDetailToSign := m.mapDiffBetweenMatrices(other)
+	mapComDetailToSign := m.markDiffBetweenMatrices(other)
 
 	colNames, err := getComMatrixHeadersByFormat(FormatCSV)
 	if err != nil {
