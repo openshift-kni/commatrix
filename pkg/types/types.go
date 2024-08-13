@@ -371,7 +371,7 @@ func (m *ComMatrix) sort() {
 	})
 }
 
-// CleanComDetails deletes duplicates in matrix and sort it
+// CleanComDetails deletes duplicates in matrix and sort it.
 func (m *ComMatrix) CleanComDetails() {
 	m.deleteDuplicates()
 	m.sort()
