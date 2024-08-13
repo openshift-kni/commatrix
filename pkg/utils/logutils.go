@@ -25,5 +25,10 @@ func InitializeLog(isDebug bool) {
 
 // Logger returns the configured Logrus logger instance.
 func Logger() *logrus.Logger {
+	if logger == nil {
+		logger = logrus.New()
+		logger.SetLevel(logrus.InfoLevel)
+		logger.Warn("Logger is not initialized properly, using default logger.")
+	}
 	return logger
 }
