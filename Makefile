@@ -52,6 +52,10 @@ ginkgo:
 deps-update:
 	go mod tidy
 
+e2e-test:
+	cd test/e2e && ginkgo bootstrap
+	ginkgo -v ./test/e2e/...
+
 check-deps: deps-update
 	@set +e; git diff --quiet HEAD go.sum go.mod; \
 	if [ $$? -eq 1 ]; \

@@ -140,6 +140,9 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 }
 
 func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
+	terminationGracePeriodSeconds := int64(1)
+	tolerationSeconds := int64(300)
+
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -151,16 +154,18 @@ func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
-					Name: "container",
-					Command: []string{
-						"/bin/sh",
-						"-c",
-						"sleep INF",
-					},
-					Image: image,
+					Name:    "container",
+					Command: []string{"/bin/sh", "-c", "sleep INF"},
+					Image:   image,
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To[bool](true),
-						RunAsUser:  ptr.To[int64](0),
+						Privileged: ptr.To(true),
+						RunAsUser:  ptr.To(int64(0)),
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "host-root",
+							MountPath: "/host",
+						},
 					},
 				},
 			},
@@ -169,19 +174,30 @@ func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
 			NodeName:                      node,
 			PriorityClassName:             "openshift-user-critical",
 			RestartPolicy:                 corev1.RestartPolicyNever,
-			TerminationGracePeriodSeconds: ptr.To[int64](1),
+			TerminationGracePeriodSeconds: ptr.To(terminationGracePeriodSeconds),
 			Tolerations: []corev1.Toleration{
 				{
 					Effect:            corev1.TaintEffectNoExecute,
 					Key:               "node.kubernetes.io/not-ready",
 					Operator:          corev1.TolerationOpExists,
-					TolerationSeconds: ptr.To[int64](300),
+					TolerationSeconds: ptr.To(tolerationSeconds),
 				},
 				{
 					Effect:            corev1.TaintEffectNoExecute,
 					Key:               "node.kubernetes.io/unreachable",
 					Operator:          corev1.TolerationOpExists,
-					TolerationSeconds: ptr.To[int64](300),
+					TolerationSeconds: ptr.To(tolerationSeconds),
+				},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "host-root",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/",
+							Type: ptr.To(corev1.HostPathType("Directory")), // Ensure the path is a directory
+						},
+					},
 				},
 			},
 		},
