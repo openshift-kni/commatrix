@@ -154,21 +154,25 @@ func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, f
 	return nil
 }
 
-// GenerateUnitedMatrix generates a new matrix from m and other with no duplications.
-func (m *ComMatrix) generateUnitedMatrix(other *ComMatrix) *ComMatrix {
-	// initial united matrix with m.Matrix
-	unitedComDetails := m.Matrix
+// Combine generates a new sorted matrix from m and other with no duplications.
+func (m *ComMatrix) combine(other *ComMatrix) *ComMatrix {
+	// initial combined matrix with m.Matrix
+	combinedComDetails := m.Matrix
 
 	for _, cd := range other.Matrix {
-		// avoid duplications of comdetails on united matrix
+		// avoid duplications of comdetails on combined matrix
 		if !m.Contains(cd) {
-			unitedComDetails = append(unitedComDetails, cd)
+			combinedComDetails = append(combinedComDetails, cd)
 		}
 	}
-	return &ComMatrix{Matrix: unitedComDetails}
+
+	// sort combined matrix
+	combinedComMatrix := &ComMatrix{Matrix: combinedComDetails}
+	combinedComMatrix.sort()
+	return combinedComMatrix
 }
 
-// mapDiffBetweenMatrices map the cd's string of the matrices to ints in the following way:
+// markDiffBetweenMatrices map the cd's string of the matrices to ints in the following way:
 // cd which m contains but other doesn't --> 1
 // cd both m and other contains --> 0
 // cd which other doesn't contain but m does --> -1.
@@ -202,8 +206,7 @@ func (m *ComMatrix) markDiffBetweenMatrices(other *ComMatrix) map[string]int {
 
 // GenerateMatrixDiff generates the diff between mat1 to mat2.
 func (m *ComMatrix) GenerateMatrixDiff(other *ComMatrix) (string, error) {
-	unitedComMatrix := m.generateUnitedMatrix(other)
-	unitedComMatrix.CleanComDetails()
+	combinedComMatrix := m.combine(other)
 	mapComDetailToSign := m.markDiffBetweenMatrices(other)
 
 	colNames, err := getComMatrixHeadersByFormat(FormatCSV)
@@ -213,7 +216,7 @@ func (m *ComMatrix) GenerateMatrixDiff(other *ComMatrix) (string, error) {
 	diff := colNames + "\n"
 
 	// iterate over organized united Matrix and check every cd diff sign.
-	for _, cd := range unitedComMatrix.Matrix {
+	for _, cd := range combinedComMatrix.Matrix {
 		switch mapComDetailToSign[cd.String()] {
 		case 1:
 			// add "+" before cd's mat1 contains but mat2 doesn't
@@ -339,7 +342,7 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 	return []byte(result), nil
 }
 
-func (m *ComMatrix) CleanComDetails() {
+func (m *ComMatrix) deleteDuplicates() {
 	allKeys := make(map[string]bool)
 	res := []ComDetails{}
 	for _, item := range m.Matrix {
@@ -349,8 +352,11 @@ func (m *ComMatrix) CleanComDetails() {
 			res = append(res, item)
 		}
 	}
+	m.Matrix = res
+}
 
-	slices.SortFunc(res, func(a, b ComDetails) int {
+func (m *ComMatrix) sort() {
+	slices.SortFunc(m.Matrix, func(a, b ComDetails) int {
 		res := cmp.Compare(a.NodeRole, b.NodeRole)
 		if res != 0 {
 			return res
@@ -363,8 +369,12 @@ func (m *ComMatrix) CleanComDetails() {
 
 		return cmp.Compare(a.Port, b.Port)
 	})
+}
 
-	m.Matrix = res
+// CleanComDetails deletes duplicates in matrix and sort it
+func (m *ComMatrix) CleanComDetails() {
+	m.deleteDuplicates()
+	m.sort()
 }
 
 func (cd ComDetails) String() string {
