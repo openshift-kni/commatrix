@@ -36,6 +36,9 @@ func init() {
 func main() {
 	utils.InitializeLog(debug)
 	log := utils.Logger()
+	if log == nil {
+		panic("Logger is not initialized")
+	}
 
 	env, err := types.GetEnv(envStr)
 	if err != nil {

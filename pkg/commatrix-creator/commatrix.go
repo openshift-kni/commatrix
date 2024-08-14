@@ -41,6 +41,9 @@ func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath stri
 // port number, namespace, service name, pod, container, node role, and flow optionality for OpenShift.
 func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, error) {
 	log := utils.Logger() // Get the logger instance from utils
+	if log == nil {
+		return nil, fmt.Errorf("logger is not initialized")
+	}
 
 	log.Debug("Loading EndpointSlices information")
 	err := cm.exporter.LoadEndpointSlicesInfo()
@@ -82,6 +85,9 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 
 func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDetails, error) {
 	log := utils.Logger() // Get the logger instance from utils
+	if log == nil {
+		return nil, fmt.Errorf("logger is not initialized")
+	}
 
 	var res []types.ComDetails
 	log.Debugf("Opening file %s", cm.customEntriesPath)
@@ -130,6 +136,9 @@ func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDe
 
 func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, error) {
 	log := utils.Logger() // Get the logger instance from utils
+	if log == nil {
+		return nil, fmt.Errorf("logger is not initialized")
+	}
 
 	log.Debug("Determining static entries based on environment and deployment")
 	comDetails := []types.ComDetails{}
