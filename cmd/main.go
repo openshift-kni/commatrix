@@ -4,6 +4,8 @@ import (
 	"flag"
 	"path/filepath"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/openshift-kni/commatrix/pkg/client"
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
@@ -34,10 +36,8 @@ func init() {
 }
 
 func main() {
-	utils.InitializeLog(debug)
-	log := utils.Logger()
-	if log == nil {
-		panic("Logger is not initialized")
+	if debug {
+		log.SetLevel(log.DebugLevel)
 	}
 
 	env, err := types.GetEnv(envStr)
