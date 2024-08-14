@@ -125,7 +125,6 @@ func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDe
 }
 
 func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, error) {
-
 	log.Debug("Determining static entries based on environment and deployment")
 	comDetails := []types.ComDetails{}
 
