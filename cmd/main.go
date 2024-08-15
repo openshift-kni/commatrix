@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
@@ -37,79 +36,92 @@ func init() {
 }
 
 func main() {
-	env, err := types.GetEnv(envStr)
-	if err != nil {
-		panic(err)
-	}
-
-	deployment, err := types.GetDeployment(deploymentStr)
-	if err != nil {
-		panic(err)
-	}
-
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	env, err := types.GetEnv(envStr)
+	if err != nil {
+		log.Panicf("Failed to get environment: %v", err)
+	}
+
+	deployment, err := types.GetDeployment(deploymentStr)
+	if err != nil {
+		log.Panicf("Failed to get deployment: %v", err)
+	}
+
 	if customEntriesPath != "" && customEntriesFormat == "" {
-		panic("error, variable customEntriesFormat is not set")
+		log.Panic("Error: variable customEntriesFormat is not set")
 	}
 
 	cs, err := client.New()
 	if err != nil {
-		panic(fmt.Errorf("failed creating the k8s client: %w", err))
+		log.Panicf("Failed creating the k8s client: %v", err)
 	}
+	log.Debug("K8s client created successfully")
 
 	utilsHelpers := utils.New(cs)
+	log.Debug("Utils helpers initialized")
 
 	epExporter, err := endpointslices.New(cs)
 	if err != nil {
-		panic(fmt.Errorf("failed creating the endpointslices exporter: %w", err))
+		log.Panicf("Failed creating the endpointslices exporter: %v", err)
 	}
+	log.Debug("EndpointSlices exporter created")
 
+	log.Debug("Creating communication matrix")
 	commMatrix, err := commatrixcreator.New(epExporter, customEntriesPath, customEntriesFormat, env, deployment)
 	if err != nil {
-		panic(fmt.Errorf("failed creating comm matrix creator: %w", err))
+		log.Panicf("Failed creating comm matrix creator: %v", err)
 	}
 
+	log.Debug("Generating endpoint matrix")
 	matrix, err := commMatrix.CreateEndpointMatrix()
 	if err != nil {
-		panic(fmt.Errorf("failed creating endpoint matrix: %w", err))
+		log.Panicf("Failed creating endpoint matrix: %v", err)
 	}
 
+	log.Debug("Writing endpoint matrix to file")
 	err = matrix.WriteMatrixToFileByType(utilsHelpers, "communication-matrix", format, deployment, destDir)
 	if err != nil {
-		panic(fmt.Errorf("failed to write endpoint matrix to file: %w", err))
+		log.Panicf("Failed to write endpoint matrix to file: %v", err)
 	}
 
+	log.Debug("Creating listening socket check")
 	listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, destDir)
 	if err != nil {
-		panic(fmt.Errorf("failed creating listening socket check: %w", err))
+		log.Panicf("Failed creating listening socket check: %v", err)
 	}
 
-	// generate the ss matrix and ss raws
+	log.Debug("Generating SS matrix and raw files")
 	ssMat, ssOutTCP, ssOutUDP, err := listeningCheck.GenerateSS()
 	if err != nil {
-		panic(fmt.Sprintf("Error while generating the listening check matrix and ss raws :%v", err))
+		log.Panicf("Error while generating the listening check matrix and ss raws: %v", err)
 	}
 
+	log.Debug("Writing SS raw files")
 	err = listeningCheck.WriteSSRawFiles(ssOutTCP, ssOutUDP)
 	if err != nil {
-		panic(fmt.Sprintf("Error while writing the ss raw files :%v", err))
+		log.Panicf("Error while writing the SS raw files: %v", err)
 	}
 
+	log.Debug("Writing SS matrix to file")
 	err = ssMat.WriteMatrixToFileByType(utilsHelpers, "ss-generated-matrix", format, deployment, destDir)
 	if err != nil {
-		panic(fmt.Sprintf("Error while writing ss matrix to file :%v", err))
+		log.Panicf("Error while writing SS matrix to file: %v", err)
 	}
 
-	// generate the diff between the enpointslice and the ss matrix
+	log.Debug("Generating diff between the endpoint slice and SS matrix")
 	diff, err := matrix.GenerateDiff(ssMat)
 	if err != nil {
-		panic(fmt.Sprintf("Error while generating matrix diff :%v", err))
+		log.Panicf("Error while generating matrix diff: %v", err)
 	}
+
+	log.Debug("Writing the matrix diff to file")
 	err = utilsHelpers.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff))
 	if err != nil {
-		panic(fmt.Sprintf("Error writing the diff matrix file: %v", err))
+		log.Panicf("Error writing the diff matrix file: %v", err)
 	}
+
+	log.Debug("Matrix diff successfully written to file")
 }
