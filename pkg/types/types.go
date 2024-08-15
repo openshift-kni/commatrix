@@ -154,24 +154,6 @@ func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, f
 	return nil
 }
 
-// Combine generates a new sorted matrix from m and other with no duplications.
-func (m *ComMatrix) combine(other *ComMatrix) *ComMatrix {
-	// initial combined matrix with m.Matrix
-	combinedComDetails := m.Matrix
-
-	for _, cd := range other.Matrix {
-		// avoid duplications of comdetails on combined matrix
-		if !m.Contains(cd) {
-			combinedComDetails = append(combinedComDetails, cd)
-		}
-	}
-
-	// sort combined matrix
-	combinedComMatrix := &ComMatrix{Matrix: combinedComDetails}
-	combinedComMatrix.sort()
-	return combinedComMatrix
-}
-
 // markDiffBetweenMatrices map the cd's string of the matrices to ints in the following way:
 // cd which m contains but other doesn't --> 1
 // cd both m and other contains --> 0
@@ -205,8 +187,13 @@ func (m *ComMatrix) markDiffBetweenMatrices(other *ComMatrix) map[string]int {
 }
 
 // GenerateMatrixDiff generates the diff between mat1 to mat2.
-func (m *ComMatrix) GenerateMatrixDiff(other *ComMatrix) (string, error) {
-	combinedComMatrix := m.combine(other)
+func (m *ComMatrix) GenerateDiff(other *ComMatrix) (string, error) {
+	combinedComDetails := append([]ComDetails{}, m.Matrix...)
+	combinedComDetails = append(combinedComDetails, other.Matrix...)
+	combinedComMatrix := ComMatrix{Matrix: combinedComDetails}
+
+	combinedComMatrix.SortAndRemoveDuplicates()
+
 	mapComDetailToSign := m.markDiffBetweenMatrices(other)
 
 	colNames, err := getComMatrixHeadersByFormat(FormatCSV)
@@ -342,7 +329,8 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 	return []byte(result), nil
 }
 
-func (m *ComMatrix) deleteDuplicates() {
+// CleanComDetails deletes duplicates in matrix and sort it.
+func (m *ComMatrix) SortAndRemoveDuplicates() {
 	allKeys := make(map[string]bool)
 	res := []ComDetails{}
 	for _, item := range m.Matrix {
@@ -353,9 +341,7 @@ func (m *ComMatrix) deleteDuplicates() {
 		}
 	}
 	m.Matrix = res
-}
 
-func (m *ComMatrix) sort() {
 	slices.SortFunc(m.Matrix, func(a, b ComDetails) int {
 		res := cmp.Compare(a.NodeRole, b.NodeRole)
 		if res != 0 {
@@ -369,12 +355,6 @@ func (m *ComMatrix) sort() {
 
 		return cmp.Compare(a.Port, b.Port)
 	})
-}
-
-// CleanComDetails deletes duplicates in matrix and sort it.
-func (m *ComMatrix) CleanComDetails() {
-	m.deleteDuplicates()
-	m.sort()
 }
 
 func (cd ComDetails) String() string {

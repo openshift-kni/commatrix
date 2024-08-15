@@ -103,8 +103,8 @@ func main() {
 		panic(fmt.Sprintf("Error while writing ss matrix to file :%v", err))
 	}
 
-	// generate the diff matrix between the enpointslice and the ss matrix
-	diff, err := matrix.GenerateMatrixDiff(ssMat)
+	// generate the diff between the enpointslice and the ss matrix
+	diff, err := matrix.GenerateDiff(ssMat)
 	if err != nil {
 		panic(fmt.Sprintf("Error while generating matrix diff :%v", err))
 	}

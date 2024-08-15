@@ -64,7 +64,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	}
 
 	commMatrix := &types.ComMatrix{Matrix: epSliceComDetails}
-	commMatrix.CleanComDetails()
+	commMatrix.SortAndRemoveDuplicates()
 	return commMatrix, nil
 }
 
