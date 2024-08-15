@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 
 	"github.com/gocarina/gocsv"
+	log "github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
 
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
-	"github.com/openshift-kni/commatrix/pkg/utils"
 )
 
 type CommunicationMatrixCreator struct {
@@ -40,8 +40,6 @@ func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath stri
 // Returns a pointer to ComMatrix and error. Entries include traffic direction, protocol,
 // port number, namespace, service name, pod, container, node role, and flow optionality for OpenShift.
 func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, error) {
-	log := utils.Logger() // Get the logger instance from utils
-
 	log.Debug("Loading EndpointSlices information")
 	err := cm.exporter.LoadEndpointSlicesInfo()
 	if err != nil {
@@ -81,8 +79,6 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 }
 
 func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDetails, error) {
-	log := utils.Logger() // Get the logger instance from utils
-
 	var res []types.ComDetails
 	log.Debugf("Opening file %s", cm.customEntriesPath)
 	f, err := os.Open(filepath.Clean(cm.customEntriesPath))
@@ -129,8 +125,6 @@ func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDe
 }
 
 func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, error) {
-	log := utils.Logger() // Get the logger instance from utils
-
 	log.Debug("Determining static entries based on environment and deployment")
 	comDetails := []types.ComDetails{}
 
