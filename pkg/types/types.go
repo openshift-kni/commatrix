@@ -329,7 +329,7 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 	return []byte(result), nil
 }
 
-// CleanComDetails deletes duplicates in matrix and sort it.
+// SortAndRemoveDuplicates removes duplicates in the matrix and sort it.
 func (m *ComMatrix) SortAndRemoveDuplicates() {
 	allKeys := make(map[string]bool)
 	res := []ComDetails{}
