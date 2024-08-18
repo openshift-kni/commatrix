@@ -111,8 +111,8 @@ func main() {
 		log.Panicf("Error while writing SS matrix to file: %v", err)
 	}
 
-	log.Debug("Generating matrix diff between the endpoint slice and SS matrix")
-	diff, err := matrix.GenerateMatrixDiff(ssMat)
+	log.Debug("Generating diff between the endpoint slice and SS matrix")
+	diff, err := matrix.GenerateDiff(ssMat)
 	if err != nil {
 		log.Panicf("Error while generating matrix diff: %v", err)
 	}

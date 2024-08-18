@@ -73,8 +73,8 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	}
 
 	commMatrix := &types.ComMatrix{Matrix: epSliceComDetails}
-	log.Debug("Cleaning ComDetails")
-	commMatrix.CleanComDetails()
+	log.Debug("Sorting ComMatrix and removing duplicates")
+	commMatrix.SortAndRemoveDuplicates()
 	return commMatrix, nil
 }
 
