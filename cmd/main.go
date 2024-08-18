@@ -10,6 +10,7 @@ import (
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
+	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 )
@@ -112,13 +113,14 @@ func main() {
 	}
 
 	log.Debug("Generating diff between the endpoint slice and SS matrix")
-	diff, err := matrix.GenerateDiff(ssMat)
+	diff := matrixdiff.Generate(matrix, ssMat)
+	diffStr, err := diff.String()
 	if err != nil {
-		log.Panicf("Error while generating matrix diff: %v", err)
+		log.Panicf("Error while generating matrix diff string: %v", err)
 	}
 
 	log.Debug("Writing the matrix diff to file")
-	err = utilsHelpers.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diff))
+	err = utilsHelpers.WriteFile(filepath.Join(destDir, "matrix-diff-ss"), []byte(diffStr))
 	if err != nil {
 		log.Panicf("Error writing the diff matrix file: %v", err)
 	}
