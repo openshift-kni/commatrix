@@ -1,7 +1,7 @@
 FORMAT ?= csv
 CLUSTER_ENV ?= baremetal
 DEST_DIR ?= .
-DEPLOYMENT ?= mno
+DEPLOYMENT ?= standard
 DEBUG ?=
 GO_SRC := cmd/main.go
 EXECUTABLE := commatrix-gen
