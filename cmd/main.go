@@ -29,7 +29,7 @@ func init() {
 	flag.StringVar(&destDir, "destDir", "communication-matrix", "Output files dir")
 	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv,nft)")
 	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/cloud)")
-	flag.StringVar(&deploymentStr, "deployment", "mno", "Deployment type (mno/sno)")
+	flag.StringVar(&deploymentStr, "deployment", "standard", "Deployment type (standard/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 	flag.BoolVar(&debug, "debug", false, "Debug logs")
