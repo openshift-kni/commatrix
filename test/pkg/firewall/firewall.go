@@ -12,73 +12,49 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/utils"
 )
 
-type Firewall struct {
-	ns           string
-	utilsHelpers utils.UtilsInterface
-}
-
-func New(ns string, utilsHelpers utils.UtilsInterface) *Firewall {
-	return &Firewall{
-		ns:           ns,
-		utilsHelpers: utilsHelpers,
-	}
-}
-
-func (firewall *Firewall) runBashCommandOnPod(debugPod *v1.Pod, command string, chrootDir string) ([]byte, error) {
-	var fullCommand string
-	if chrootDir != "" {
-		// Format the command for chroot
-		fullCommand = fmt.Sprintf("chroot %s /bin/bash -c '%s'", chrootDir, command)
-	} else {
-		fullCommand = command
-	}
-
-	output, err := firewall.utilsHelpers.RunCommandOnPod(debugPod, []string{"bash", "-c", fullCommand})
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute command '%s' on node %s: %w", command, debugPod.Spec.NodeName, err)
-	}
-	return output, nil
-}
-
-func (firewall *Firewall) ApplyRulesToNode(NFTtable []byte, nodeName string) error {
-	debugPod, err := firewall.utilsHelpers.CreatePodOnNode(nodeName, firewall.ns, consts.DefaultDebugPodImage)
+// Apply the firewall rules on the node.
+func ApplyRulesToNode(NFTtable []byte, nodeName string, utilsHelpers utils.UtilsInterface) error {
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
 	}
 
 	defer func() {
-		err := firewall.utilsHelpers.DeletePod(debugPod)
+		err := utilsHelpers.DeletePod(debugPod)
 		if err != nil {
 			log.Printf("failed cleaning debug pod %s: %v", debugPod, err)
 		}
 	}()
 
-	_, err = firewall.runBashCommandOnPod(debugPod, fmt.Sprintf("echo '%s' > /host/etc/nftables/firewall.nft", string(NFTtable)), "")
+	// save the nftabes on  /host/etc/nftables/firewall.nft
+	_, err = runBashCommandOnPod(debugPod, fmt.Sprintf("echo '%s' > /host/etc/nftables/firewall.nft", string(NFTtable)), false, utilsHelpers)
 	if err != nil {
 		return fmt.Errorf("failed to save rule set to file on node %s: %w", nodeName, err)
 	}
 
-	_, err = firewall.runBashCommandOnPod(debugPod, "nft -f /etc/nftables/firewall.nft", "/host")
+	// run apply nft command for the rules
+	_, err = runBashCommandOnPod(debugPod, "nft -f /etc/nftables/firewall.nft", true, utilsHelpers)
 	if err != nil {
 		return fmt.Errorf("failed to apply rule set on node %s: %w", nodeName, err)
 	}
 
-	output, err := firewall.nftList(debugPod)
+	output, err := nftList(debugPod, utilsHelpers)
 	if err != nil {
 		return err
 	}
 
-	err = firewall.editNftablesConf(debugPod)
+	// edit the sys conf to make sure it will be on the list after reboot
+	err = editNftablesConf(debugPod, utilsHelpers)
 	if err != nil {
 		return err
 	}
 
-	_, err = firewall.runBashCommandOnPod(debugPod, "/usr/sbin/nft list ruleset > /etc/nftables.conf", "/host")
+	_, err = runBashCommandOnPod(debugPod, "/usr/sbin/nft list ruleset > /etc/nftables.conf", true, utilsHelpers)
 	if err != nil {
 		return fmt.Errorf("failed to save NFT ruleset to file on node %s: %w", nodeName, err)
 	}
 
-	_, err = firewall.runBashCommandOnPod(debugPod, "systemctl enable nftables", "/host")
+	_, err = runBashCommandOnPod(debugPod, "systemctl enable nftables", true, utilsHelpers)
 	if err != nil {
 		return fmt.Errorf("failed to enable nftables on node %s: %w", nodeName, err)
 	}
@@ -91,20 +67,20 @@ func (firewall *Firewall) ApplyRulesToNode(NFTtable []byte, nodeName string) err
 	return nil
 }
 
-func (firewall *Firewall) RulesList(nodeName string) ([]byte, error) {
-	debugPod, err := firewall.utilsHelpers.CreatePodOnNode(nodeName, firewall.ns, consts.DefaultDebugPodImage)
+func RulesList(nodeName string, utilsHelpers utils.UtilsInterface) ([]byte, error) {
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
 	}
 
 	defer func() {
-		err := firewall.utilsHelpers.DeletePod(debugPod)
+		err := utilsHelpers.DeletePod(debugPod)
 		if err != nil {
 			log.Printf("failed cleaning debug pod %s: %v", debugPod, err)
 		}
 	}()
 
-	output, err := firewall.nftList(debugPod)
+	output, err := nftList(debugPod, utilsHelpers)
 	if err != nil {
 		return nil, err
 	}
@@ -117,16 +93,34 @@ func (firewall *Firewall) RulesList(nodeName string) ([]byte, error) {
 	return output, nil
 }
 
-func (firewall *Firewall) editNftablesConf(debugPod *v1.Pod) error {
+func runBashCommandOnPod(debugPod *v1.Pod, command string, chrootDir bool, utilsHelpers utils.UtilsInterface) ([]byte, error) {
+	var fullCommand string
+	if chrootDir {
+		// Format the command for chroot
+		fullCommand = fmt.Sprintf("chroot %s /bin/bash -c '%s'", "/host", command)
+	} else {
+		fullCommand = command
+	}
+
+	output, err := utilsHelpers.RunCommandOnPod(debugPod, []string{"bash", "-c", fullCommand})
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute command '%s' on node %s: %w", command, debugPod.Spec.NodeName, err)
+	}
+	return output, nil
+}
+
+// Make sure that the icnlude of the new nftables is not there.
+// Then if it not there just add that include.
+func editNftablesConf(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface) error {
 	checkCommand := `grep -q 'include "/etc/nftables/firewall.nft"' /host/etc/sysconfig/nftables.conf`
-	_, err := firewall.runBashCommandOnPod(debugPod, checkCommand, "")
+	_, err := runBashCommandOnPod(debugPod, checkCommand, false, utilsHelpers)
 	if err == nil {
 		log.Println("Include statement already exists, no need to add it")
 		return nil
 	}
 
 	addCommand := `echo 'include "/etc/nftables/firewall.nft"' >> /host/etc/sysconfig/nftables.conf`
-	_, err = firewall.runBashCommandOnPod(debugPod, addCommand, "")
+	_, err = runBashCommandOnPod(debugPod, addCommand, false, utilsHelpers)
 	if err != nil {
 		return fmt.Errorf("failed to edit nftables.conf on debug pod: %w", err)
 	}
@@ -134,6 +128,7 @@ func (firewall *Firewall) editNftablesConf(debugPod *v1.Pod) error {
 	return nil
 }
 
+// For our test save the nftables to see before and after reboot.
 func saveNFTablesRules(folderName, fileName, content string) error {
 	artifactsDir, ok := os.LookupEnv("ARTIFACT_DIR")
 	if !ok {
@@ -155,9 +150,9 @@ func saveNFTablesRules(folderName, fileName, content string) error {
 	return nil
 }
 
-func (firewall *Firewall) nftList(debugPod *v1.Pod) ([]byte, error) {
+func nftList(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface) ([]byte, error) {
 	command := "nft list ruleset"
-	output, err := firewall.runBashCommandOnPod(debugPod, command, "/host")
+	output, err := runBashCommandOnPod(debugPod, command, true, utilsHelpers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list NFT ruleset on node %s: %w", debugPod.Spec.NodeName, err)
 	}

@@ -16,11 +16,12 @@ import (
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
-	nodeWrapper "github.com/openshift-kni/commatrix/test/pkg/node"
+	node "github.com/openshift-kni/commatrix/test/pkg/node"
 )
 
 var (
@@ -55,12 +56,24 @@ var _ = BeforeSuite(func() {
 	epExporter, err := endpointslices.New(cs)
 	Expect(err).ToNot(HaveOccurred())
 
+	By("Create commMatrix")
 	commMatrix, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
 	Expect(err).NotTo(HaveOccurred())
 
 	matrix, err = commMatrix.CreateEndpointMatrix()
 	Expect(err).NotTo(HaveOccurred())
 	utilsHelpers = utils.New(cs)
+
+	By("Create Namespace")
+	err = utilsHelpers.CreateNamespace(consts.DefaultDebugNamespace)
+	Expect(err).ToNot(HaveOccurred())
+
+})
+
+var _ = AfterSuite(func() {
+	By("Delete Namespace")
+	err := utilsHelpers.DeleteNamespace(consts.DefaultDebugNamespace)
+	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = Describe("commatrix", func() {
@@ -75,21 +88,10 @@ var _ = Describe("commatrix", func() {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
 		}
-		ns := "commatrix-firewall"
-		err = utilsHelpers.CreateNamespace(ns)
-		Expect(err).ToNot(HaveOccurred())
-
-		defer func() {
-			err := utilsHelpers.DeleteNamespace(ns)
-			Expect(err).ToNot(HaveOccurred())
-
-		}()
 
 		nodeList := &corev1.NodeList{}
 		err = cs.List(context.TODO(), nodeList)
 		Expect(err).ToNot(HaveOccurred())
-
-		firewallapply := firewall.New(ns, utilsHelpers)
 
 		g := new(errgroup.Group)
 
@@ -105,7 +107,7 @@ var _ = Describe("commatrix", func() {
 					nftTable = workerNFT
 				}
 
-				err := firewallapply.ApplyRulesToNode(nftTable, nodeName)
+				err := firewall.ApplyRulesToNode(nftTable, nodeName, utilsHelpers)
 				if err != nil {
 					return err
 				}
@@ -118,17 +120,21 @@ var _ = Describe("commatrix", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		By("reboot first node")
+
+		debugPod, err := utilsHelpers.CreatePodOnNode(nodeList.Items[0].Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 		Expect(err).ToNot(HaveOccurred())
 
-		nodeWrapper := nodeWrapper.New(&nodeList.Items[0], cs)
-		err = nodeWrapper.SoftRebootNodeAndWaitForDisconnect(ns)
+		defer func() {
+			err := utilsHelpers.DeletePod(debugPod)
+			Expect(err).ToNot(HaveOccurred())
+		}()
+
+		err = node.SoftRebootNodeAndWaitForDisconnect(debugPod, cs)
 		Expect(err).ToNot(HaveOccurred())
 
-		nodeWrapper.WaitForNodeReady()
+		node.WaitForNodeReady(nodeList.Items[0].Name, cs)
 
-		firewallcheck := firewall.New(ns, utilsHelpers)
-
-		output, err := firewallcheck.RulesList(nodeList.Items[0].Name)
+		output, err := firewall.RulesList(nodeList.Items[0].Name, utilsHelpers)
 		Expect(err).ToNot(HaveOccurred())
 
 		if strings.Contains(string(output), "table inet openshift_filter") &&
