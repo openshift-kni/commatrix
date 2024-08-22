@@ -8,6 +8,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
+	"github.com/openshift-kni/commatrix/pkg/types"
 	mock_utils "github.com/openshift-kni/commatrix/pkg/utils/mock"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
@@ -132,8 +133,35 @@ UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1399,fd=
 UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1015,fd=5))                        
 UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21))`
 
+	expectedssMat := []types.ComDetails{
+		{
+			Direction: "Ingress",
+			Protocol:  "UDP",
+			Port:      111,
+			NodeRole:  "master",
+			Service:   "rpcbind",
+			Namespace: "",
+			Pod:       "",
+			Container: "test-container",
+			Optional:  false,
+		},
+		{
+			Direction: "Ingress",
+			Protocol:  "UDP",
+			Port:      500,
+			NodeRole:  "master",
+			Service:   "pluto",
+			Namespace: "",
+			Pod:       "",
+			Container: "test-container",
+			Optional:  false,
+		},
+	}
+
 	assert.NoError(t, err)
 	assert.NotNil(t, ssMat)
 	assert.Equal(t, normalizeOutput(expectedTCPOutput), normalizeOutput(string(ssOutTCP)))
 	assert.Equal(t, normalizeOutput(expectedUDPOutput), normalizeOutput(string(ssOutUDP)))
+	assert.Equal(t, expectedssMat, ssMat.Matrix)
+
 }
