@@ -163,5 +163,4 @@ UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21
 	assert.Equal(t, normalizeOutput(expectedTCPOutput), normalizeOutput(string(ssOutTCP)))
 	assert.Equal(t, normalizeOutput(expectedUDPOutput), normalizeOutput(string(ssOutUDP)))
 	assert.Equal(t, expectedssMat, ssMat.Matrix)
-
 }
