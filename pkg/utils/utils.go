@@ -106,7 +106,7 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 
 	// ExecCommand runs command in the pod's first container and returns buffer output
 	var buf bytes.Buffer
-	req := u.RESTClient().
+	req := u.CoreV1Interface.RESTClient().
 		Post().
 		Namespace(pod.Namespace).
 		Resource("pods").

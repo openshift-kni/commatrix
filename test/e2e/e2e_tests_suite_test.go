@@ -9,10 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"golang.org/x/sync/errgroup"
 
-	configv1 "github.com/openshift/api/config/v1"
-	configv1client "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
@@ -22,6 +19,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
 	node "github.com/openshift-kni/commatrix/test/pkg/node"
+	utilsTest "github.com/openshift-kni/commatrix/test/pkg/utils"
 )
 
 var (
@@ -29,6 +27,7 @@ var (
 	matrix       *types.ComMatrix
 	isSNO        bool
 	utilsHelpers utils.UtilsInterface
+	nodeList     *corev1.NodeList
 )
 
 var _ = BeforeSuite(func() {
@@ -38,7 +37,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	deployment := types.Standard
-	isSNO, err := isSNOCluster(cs)
+	isSNO, err := utilsTest.IsSNOCluster(cs)
 	Expect(err).NotTo(HaveOccurred())
 
 	if isSNO {
@@ -46,7 +45,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	infra := types.Cloud
-	isBM, err := isBMInfra(cs)
+	isBM, err := utilsTest.IsBMInfra(cs)
 	Expect(err).NotTo(HaveOccurred())
 
 	if isBM {
@@ -68,6 +67,9 @@ var _ = BeforeSuite(func() {
 	err = utilsHelpers.CreateNamespace(consts.DefaultDebugNamespace)
 	Expect(err).ToNot(HaveOccurred())
 
+	nodeList = &corev1.NodeList{}
+	err = cs.List(context.TODO(), nodeList)
+	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
@@ -89,10 +91,6 @@ var _ = Describe("commatrix", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		nodeList := &corev1.NodeList{}
-		err = cs.List(context.TODO(), nodeList)
-		Expect(err).ToNot(HaveOccurred())
-
 		g := new(errgroup.Group)
 
 		for _, node := range nodeList.Items {
@@ -113,8 +111,8 @@ var _ = Describe("commatrix", func() {
 				}
 				return nil
 			})
-
 		}
+
 		// Wait for all goroutines to finish
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
@@ -137,6 +135,7 @@ var _ = Describe("commatrix", func() {
 		output, err := firewall.RulesList(nodeList.Items[0].Name, utilsHelpers)
 		Expect(err).ToNot(HaveOccurred())
 
+		By("check if nftables contain the chain OPENSHIFT after reboot")
 		if strings.Contains(string(output), "table inet openshift_filter") &&
 			strings.Contains(string(output), "chain OPENSHIFT") {
 			log.Println("The byte slices are identical.")
@@ -145,23 +144,3 @@ var _ = Describe("commatrix", func() {
 		}
 	})
 })
-
-func isSNOCluster(cs *client.ClientSet) (bool, error) {
-	oc := configv1client.NewForConfigOrDie(cs.Config)
-	infra, err := oc.Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	return infra.Status.ControlPlaneTopology == configv1.SingleReplicaTopologyMode, nil
-}
-
-func isBMInfra(cs *client.ClientSet) (bool, error) {
-	oc := configv1client.NewForConfigOrDie(cs.Config)
-	infra, err := oc.Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
-}
