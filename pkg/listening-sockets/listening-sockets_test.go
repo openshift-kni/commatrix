@@ -142,7 +142,7 @@ var _ = Describe("GenerateSS", func() {
 			mockUtils.EXPECT().RunCommandOnPod(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(pod *v1.Pod, cmd []string) ([]byte, error) {
 					if len(cmd) > 2 && strings.HasPrefix(cmd[2], "crictl ps -o json --id") {
-						return []byte(crictlExecCommandOut), nil // containrt data output
+						return []byte(crictlExecCommandOut), nil // container data output
 					}
 
 					if strings.HasPrefix(cmd[2], "cat /proc/") &&
