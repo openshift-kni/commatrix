@@ -64,45 +64,45 @@ const (
 	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21))`
 )
 
+var (
+	clientset *client.ClientSet
+	mockUtils *mock_utils.MockUtilsInterface
+	ctrlTest  *gomock.Controller
+
+	mockPod = &v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "mock-pod",
+			Namespace: "mock-namespace",
+		},
+	}
+
+	expectedssMat = []types.ComDetails{
+		{
+			Direction: "Ingress",
+			Protocol:  "UDP",
+			Port:      111,
+			NodeRole:  "master",
+			Service:   "rpcbind",
+			Namespace: "",
+			Pod:       "",
+			Container: "test-container",
+			Optional:  false,
+		},
+		{
+			Direction: "Ingress",
+			Protocol:  "UDP",
+			Port:      500,
+			NodeRole:  "master",
+			Service:   "pluto",
+			Namespace: "",
+			Pod:       "",
+			Container: "test-container",
+			Optional:  false,
+		},
+	}
+)
+
 var _ = Describe("GenerateSS", func() {
-	var (
-		clientset *client.ClientSet
-		mockUtils *mock_utils.MockUtilsInterface
-		ctrlTest  *gomock.Controller
-
-		mockPod = &v1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "mock-pod",
-				Namespace: "mock-namespace",
-			},
-		}
-
-		expectedssMat = []types.ComDetails{
-			{
-				Direction: "Ingress",
-				Protocol:  "UDP",
-				Port:      111,
-				NodeRole:  "master",
-				Service:   "rpcbind",
-				Namespace: "",
-				Pod:       "",
-				Container: "test-container",
-				Optional:  false,
-			},
-			{
-				Direction: "Ingress",
-				Protocol:  "UDP",
-				Port:      500,
-				NodeRole:  "master",
-				Service:   "pluto",
-				Namespace: "",
-				Pod:       "",
-				Container: "test-container",
-				Optional:  false,
-			},
-		}
-	)
-
 	// creating the fake clients, node, pods
 	BeforeEach(func() {
 		sch := runtime.NewScheme()
@@ -131,36 +131,30 @@ var _ = Describe("GenerateSS", func() {
 		mockUtils = mock_utils.NewMockUtilsInterface(ctrlTest)
 	})
 
-	AfterEach(func() {
-		ctrlTest.Finish()
-	})
-
-	DescribeTable("should generate the correct socket state",
+	DescribeTable("should generate the correct ss tcp, udp output and the correct ssMatrix",
 		func(tc ssTestCase) {
 
 			// RunCommandOnPod had more that one calling and in each call we want other output
 			mockUtils.EXPECT().RunCommandOnPod(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(pod *v1.Pod, cmd []string) ([]byte, error) {
-					if len(cmd) > 2 && strings.HasPrefix(cmd[2], "crictl ps -o json --id") {
+					switch {
+					case len(cmd) > 2 && strings.HasPrefix(cmd[2], "crictl ps -o json --id"):
 						return []byte(crictlExecCommandOut), nil // container data output
-					}
 
-					if strings.HasPrefix(cmd[2], "cat /proc/") &&
-						strings.Contains(cmd[2], "/cgroup") {
+					case strings.HasPrefix(cmd[2], "cat /proc/") &&
+						strings.Contains(cmd[2], "/cgroup"):
 						return []byte(procExecCommandOutput), nil // pid data output
-					}
 
-					if cmd[2] == "ss -anpltH" {
+					case cmd[2] == "ss -anpltH":
 						return []byte(tcpExecCommandOutput), nil // tcp output
-					}
 
-					if cmd[2] == "ss -anpluH" {
+					case cmd[2] == "ss -anpluH":
 						return []byte(udpExecCommandOutput), nil // udp output
-					}
 
-					return nil, fmt.Errorf("unknown command")
-				},
-			).AnyTimes()
+					default:
+						return nil, fmt.Errorf("unknown command")
+					}
+				}).AnyTimes()
 
 			mockUtils.EXPECT().
 				CreateNamespace(consts.DefaultDebugNamespace).
@@ -196,9 +190,13 @@ var _ = Describe("GenerateSS", func() {
 			expectedssMat:     expectedssMat,
 		}),
 	)
+
+	AfterEach(func() {
+		ctrlTest.Finish()
+	})
 })
 
-// output is with alot of \n and \t this is to normalize the Output
+// Normalize output by replacing tabs with spaces, removing extra newlines, and trimming spaces.
 func normalizeOutput(s string) string {
 	s = strings.ReplaceAll(s, "\t", " ")
 	s = strings.ReplaceAll(s, "\n ", "\n")
