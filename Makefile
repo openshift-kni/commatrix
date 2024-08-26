@@ -52,9 +52,6 @@ ginkgo:
 deps-update:
 	go mod tidy
 
-e2e-test:
-	ginkgo -v ./test/e2e/...
-
 check-deps: deps-update
 	@set +e; git diff --quiet HEAD go.sum go.mod; \
 	if [ $$? -eq 1 ]; \
@@ -71,6 +68,10 @@ lint: | $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run golangci-l
 .PHONY: test
 test:
 	GOFLAGS="" go test ./pkg/...
+
+.PHONY: e2e-test
+e2e-test:
+	ginkgo -v ./test/e2e/...
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
 define go-install-tool
