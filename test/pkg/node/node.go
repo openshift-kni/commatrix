@@ -22,7 +22,7 @@ func SoftRebootNodeAndWaitForDisconnect(debugPod *v1.Pod, cs *client.ClientSet) 
 
 	_, err := utilsHelpers.RunCommandOnPod(debugPod, rebootcmd)
 	if err != nil {
-		return fmt.Errorf("failed to install nftables on  debugpod on node%s: %w", nodeName, err)
+		return fmt.Errorf("failed to reboot node: %s with error %w", nodeName, err)
 	}
 
 	WaitForNodeNotReady(nodeName, cs)
@@ -35,13 +35,13 @@ func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
 
 	timeout := 5 * time.Minute
 	gomega.Eventually(func() bool {
-		updatedNode, err := cs.CoreV1Interface.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		node, err := cs.CoreV1Interface.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
-			log.Printf("Error getting node %s: %v", updatedNode.Name, err)
+			log.Printf("Error getting node %s: %v", node.Name, err)
 			return false
 		}
 
-		for _, condition := range updatedNode.Status.Conditions {
+		for _, condition := range node.Status.Conditions {
 			if condition.Type == v1.NodeReady && condition.Status != v1.ConditionTrue {
 				return true
 			}
@@ -61,13 +61,13 @@ func WaitForNodeReady(nodeName string, cs *client.ClientSet) {
 
 	timeout := 15 * time.Minute
 	gomega.Eventually(func() bool {
-		updatedNode, err := cs.CoreV1Interface.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		node, err := cs.CoreV1Interface.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			log.Printf("Error getting node %s: %v", nodeName, err)
 			return false
 		}
 
-		for _, condition := range updatedNode.Status.Conditions {
+		for _, condition := range node.Status.Conditions {
 			if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
 				return true
 			}

@@ -19,7 +19,6 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
 	node "github.com/openshift-kni/commatrix/test/pkg/node"
-	utilsTest "github.com/openshift-kni/commatrix/test/pkg/utils"
 )
 
 var (
@@ -28,16 +27,18 @@ var (
 	isSNO        bool
 	utilsHelpers utils.UtilsInterface
 	nodeList     *corev1.NodeList
+	err          error
 )
 
 var _ = BeforeSuite(func() {
 	By("generating the commatrix")
-	var err error
 	cs, err = client.New()
 	Expect(err).NotTo(HaveOccurred())
 
+	utilsHelpers = utils.New(cs)
+
 	deployment := types.Standard
-	isSNO, err := utilsTest.IsSNOCluster(cs)
+	isSNO, err = utilsHelpers.IsSNOCluster()
 	Expect(err).NotTo(HaveOccurred())
 
 	if isSNO {
@@ -45,7 +46,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	infra := types.Cloud
-	isBM, err := utilsTest.IsBMInfra(cs)
+	isBM, err := utilsHelpers.IsBMInfra()
 	Expect(err).NotTo(HaveOccurred())
 
 	if isBM {
@@ -61,7 +62,6 @@ var _ = BeforeSuite(func() {
 
 	matrix, err = commMatrix.CreateEndpointMatrix()
 	Expect(err).NotTo(HaveOccurred())
-	utilsHelpers = utils.New(cs)
 
 	By("Create Namespace")
 	err = utilsHelpers.CreateNamespace(consts.DefaultDebugNamespace)
@@ -98,10 +98,8 @@ var _ = Describe("commatrix", func() {
 			nodeRole, err := types.GetNodeRole(&node)
 			Expect(err).ToNot(HaveOccurred())
 			g.Go(func() error {
-				var nftTable []byte
-				if nodeRole == "master" {
-					nftTable = masterNFT
-				} else {
+				nftTable := masterNFT
+				if nodeRole == "worker" {
 					nftTable = workerNFT
 				}
 

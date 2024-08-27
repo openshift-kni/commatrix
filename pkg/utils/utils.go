@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +28,8 @@ type UtilsInterface interface {
 	DeletePod(pod *corev1.Pod) error
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
 	WriteFile(path string, data []byte) error
+	IsSNOCluster() (bool, error)
+	IsBMInfra() (bool, error)
 }
 
 type utils struct {
@@ -140,7 +143,6 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 }
 
 func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
-	terminationGracePeriodSeconds := int64(1)
 	tolerationSeconds := int64(300)
 
 	return &corev1.Pod{
@@ -174,7 +176,7 @@ func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
 			NodeName:                      node,
 			PriorityClassName:             "openshift-user-critical",
 			RestartPolicy:                 corev1.RestartPolicyNever,
-			TerminationGracePeriodSeconds: ptr.To(terminationGracePeriodSeconds),
+			TerminationGracePeriodSeconds: ptr.To(int64(1)),
 			Tolerations: []corev1.Toleration{
 				{
 					Effect:            corev1.TaintEffectNoExecute,
@@ -215,4 +217,22 @@ func getNamespaceDefinition(namespace string) *corev1.Namespace {
 			},
 		},
 	}
+}
+
+func (u *utils) IsSNOCluster() (bool, error) {
+	infra, err := u.ConfigV1Interface.Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	return infra.Status.ControlPlaneTopology == configv1.SingleReplicaTopologyMode, nil
+}
+
+func (u *utils) IsBMInfra() (bool, error) {
+	infra, err := u.ConfigV1Interface.Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
 }
