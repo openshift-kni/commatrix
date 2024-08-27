@@ -131,6 +131,10 @@ var _ = Describe("GenerateSS", func() {
 		mockUtils = mock_utils.NewMockUtilsInterface(ctrlTest)
 	})
 
+	AfterEach(func() {
+		ctrlTest.Finish()
+	})
+
 	DescribeTable("should generate the correct ss tcp, udp output and the correct ssMatrix",
 		func(tc ssTestCase) {
 
@@ -190,10 +194,6 @@ var _ = Describe("GenerateSS", func() {
 			expectedssMat:     expectedssMat,
 		}),
 	)
-
-	AfterEach(func() {
-		ctrlTest.Finish()
-	})
 })
 
 // Normalize output by replacing tabs with spaces, removing extra newlines, and trimming spaces.
