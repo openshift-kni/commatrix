@@ -20,13 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-type ssTestCase struct {
-	name              string
-	expectedTCPOutput string
-	expectedUDPOutput string
-	expectedssMat     []types.ComDetails
-}
-
 const (
 	tcpExecCommandOutput = (`LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
 	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
@@ -135,65 +128,55 @@ var _ = Describe("GenerateSS", func() {
 		ctrlTest.Finish()
 	})
 
-	DescribeTable("should generate the correct ss tcp, udp output and the correct ssMatrix",
-		func(tc ssTestCase) {
+	It("should generate the correct ss tcp, udp output and the correct ssMatrix", func() {
+		// RunCommandOnPod had more that one calling and in each call we want other output
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(pod *v1.Pod, cmd []string) ([]byte, error) {
+				switch {
+				case len(cmd) > 2 && strings.HasPrefix(cmd[2], "crictl ps -o json --id"):
+					return []byte(crictlExecCommandOut), nil // container data output
 
-			// RunCommandOnPod had more that one calling and in each call we want other output
-			mockUtils.EXPECT().RunCommandOnPod(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(pod *v1.Pod, cmd []string) ([]byte, error) {
-					switch {
-					case len(cmd) > 2 && strings.HasPrefix(cmd[2], "crictl ps -o json --id"):
-						return []byte(crictlExecCommandOut), nil // container data output
+				case strings.HasPrefix(cmd[2], "cat /proc/") &&
+					strings.Contains(cmd[2], "/cgroup"):
+					return []byte(procExecCommandOutput), nil // pid data output
 
-					case strings.HasPrefix(cmd[2], "cat /proc/") &&
-						strings.Contains(cmd[2], "/cgroup"):
-						return []byte(procExecCommandOutput), nil // pid data output
+				case cmd[2] == "ss -anpltH":
+					return []byte(tcpExecCommandOutput), nil // tcp output
 
-					case cmd[2] == "ss -anpltH":
-						return []byte(tcpExecCommandOutput), nil // tcp output
+				case cmd[2] == "ss -anpluH":
+					return []byte(udpExecCommandOutput), nil // udp output
 
-					case cmd[2] == "ss -anpluH":
-						return []byte(udpExecCommandOutput), nil // udp output
+				default:
+					return nil, fmt.Errorf("unknown command")
+				}
+			}).AnyTimes()
 
-					default:
-						return nil, fmt.Errorf("unknown command")
-					}
-				}).AnyTimes()
+		mockUtils.EXPECT().
+			CreateNamespace(consts.DefaultDebugNamespace).
+			Return(nil).
+			AnyTimes()
 
-			mockUtils.EXPECT().
-				CreateNamespace(consts.DefaultDebugNamespace).
-				Return(nil).
-				AnyTimes()
+		mockUtils.EXPECT().
+			DeleteNamespace(consts.DefaultDebugNamespace).
+			Return(nil).
+			AnyTimes()
 
-			mockUtils.EXPECT().
-				DeleteNamespace(consts.DefaultDebugNamespace).
-				Return(nil).
-				AnyTimes()
+		mockUtils.EXPECT().
+			CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, consts.DefaultDebugPodImage).
+			Return(mockPod, nil).AnyTimes()
 
-			mockUtils.EXPECT().
-				CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, consts.DefaultDebugPodImage).
-				Return(mockPod, nil).AnyTimes()
+		mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
 
-			mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
+		connectionCheck, err := NewCheck(clientset, mockUtils, "/some/dest/dir")
+		Expect(err).NotTo(HaveOccurred())
 
-			connectionCheck, err := NewCheck(clientset, mockUtils, "/some/dest/dir")
-			Expect(err).NotTo(HaveOccurred())
+		ssMat, ssOutTCP, ssOutUDP, err := connectionCheck.GenerateSS()
+		Expect(err).NotTo(HaveOccurred())
 
-			ssMat, ssOutTCP, ssOutUDP, err := connectionCheck.GenerateSS()
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(normalizeOutput(string(ssOutTCP))).To(Equal(normalizeOutput(tc.expectedTCPOutput)))
-			Expect(normalizeOutput(string(ssOutUDP))).To(Equal(normalizeOutput(tc.expectedUDPOutput)))
-			Expect(ssMat.Matrix).To(Equal(tc.expectedssMat))
-		},
-
-		Entry("Case 1", ssTestCase{
-			name:              "Case 1",
-			expectedTCPOutput: expectedTCPOutput,
-			expectedUDPOutput: expectedUDPOutput,
-			expectedssMat:     expectedssMat,
-		}),
-	)
+		Expect(normalizeOutput(string(ssOutTCP))).To(Equal(normalizeOutput(expectedTCPOutput)))
+		Expect(normalizeOutput(string(ssOutUDP))).To(Equal(normalizeOutput(expectedUDPOutput)))
+		Expect(ssMat.Matrix).To(Equal(expectedssMat))
+	})
 })
 
 // Normalize output by replacing tabs with spaces, removing extra newlines, and trimming spaces.
