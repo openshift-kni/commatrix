@@ -17,7 +17,9 @@ const (
 	uniqueSecondary
 )
 
+// MatrixDiff represent the diff between two comMatrices.
 type MatrixDiff struct {
+	// Matrix Diff's ComMatrix is the combined matrix of the primary and secondary matrices.
 	types.ComMatrix
 	cdToStatus map[string]status
 }
@@ -97,4 +99,18 @@ func (m *MatrixDiff) GenerateUniqueSecondary() *types.ComMatrix {
 	}
 
 	return &matrix
+}
+
+// Returns true if the diff between the matrices is empty, meaning matrices are equal.
+func (m *MatrixDiff) IsEmpty() bool {
+	uniquePrimarey := m.GenerateUniquePrimary()
+	uniqueSecondary := m.GenerateUniqueSecondary()
+
+	// Check if the unique diff matrices are not empty
+	if len(uniquePrimarey.Matrix) > 0 || len(uniqueSecondary.Matrix) > 0 {
+		return false
+	}
+
+	// Unique diff matrices are empty, ComMatrices are equal
+	return true
 }
