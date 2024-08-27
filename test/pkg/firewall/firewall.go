@@ -3,7 +3,6 @@ package firewall
 import (
 	"fmt"
 	"log"
-	"os"
 	"path/filepath"
 
 	v1 "k8s.io/api/core/v1"
@@ -13,7 +12,7 @@ import (
 )
 
 // Apply the firewall rules on the node.
-func ApplyRulesToNode(NFTtable []byte, nodeName string, utilsHelpers utils.UtilsInterface) error {
+func ApplyRulesToNode(NFTtable []byte, nodeName, artifactsDir string, utilsHelpers utils.UtilsInterface) error {
 	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
@@ -59,7 +58,7 @@ func ApplyRulesToNode(NFTtable []byte, nodeName string, utilsHelpers utils.Utils
 		return fmt.Errorf("failed to enable nftables on node %s: %w", nodeName, err)
 	}
 
-	err = saveNFTablesRules("nftables-"+nodeName, string(output))
+	err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "nftables-"+nodeName), output)
 	if err != nil {
 		return err
 	}
@@ -67,7 +66,7 @@ func ApplyRulesToNode(NFTtable []byte, nodeName string, utilsHelpers utils.Utils
 	return nil
 }
 
-func RulesList(nodeName string, utilsHelpers utils.UtilsInterface) ([]byte, error) {
+func RulesList(nodeName, artifactsDir string, utilsHelpers utils.UtilsInterface) ([]byte, error) {
 	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
@@ -85,7 +84,7 @@ func RulesList(nodeName string, utilsHelpers utils.UtilsInterface) ([]byte, erro
 		return nil, err
 	}
 
-	err = saveNFTablesRules("nftables-after-reboot"+nodeName, string(output))
+	err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "nftables-after-reboot"+nodeName), output)
 	if err != nil {
 		return nil, err
 	}
@@ -121,28 +120,6 @@ func editNftablesConf(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface) error
 	_, err = RunCommandInPod(debugPod, addCommand, false, utilsHelpers)
 	if err != nil {
 		return fmt.Errorf("failed to edit nftables.conf on debug pod: %w", err)
-	}
-
-	return nil
-}
-
-// For our test save the nftables to see before and after reboot.
-func saveNFTablesRules(fileName, content string) error {
-	artifactsDir, ok := os.LookupEnv("ARTIFACT_DIR")
-	if !ok {
-		log.Println("env var ARTIFACT_DIR is not set")
-	}
-
-	folderPath := filepath.Join(artifactsDir, "commatrix")
-	err := os.MkdirAll(folderPath, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create folder %s: %w", folderPath, err)
-	}
-
-	filePath := filepath.Join(folderPath, fileName)
-	err = os.WriteFile(filePath, []byte(content), 0644)
-	if err != nil {
-		return fmt.Errorf("failed to save file %s: %w", filePath, err)
 	}
 
 	return nil

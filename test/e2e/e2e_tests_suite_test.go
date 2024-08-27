@@ -3,6 +3,8 @@ package e2e
 import (
 	"context"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,10 +29,20 @@ var (
 	isSNO        bool
 	utilsHelpers utils.UtilsInterface
 	nodeList     *corev1.NodeList
-	err          error
+	artifactsDir string
 )
 
 var _ = BeforeSuite(func() {
+	By("create output folder")
+	artifactsDir = os.Getenv("ARTIFACT_DIR")
+	if artifactsDir == "" {
+		log.Println("env var ARTIFACT_DIR is not set, using default value")
+	}
+	artifactsDir = filepath.Join(artifactsDir, "commatrix")
+
+	err := os.MkdirAll(artifactsDir, 0755)
+	Expect(err).NotTo(HaveOccurred())
+
 	By("generating the commatrix")
 	cs, err = client.New()
 	Expect(err).NotTo(HaveOccurred())
@@ -103,7 +115,7 @@ var _ = Describe("commatrix", func() {
 					nftTable = workerNFT
 				}
 
-				err := firewall.ApplyRulesToNode(nftTable, nodeName, utilsHelpers)
+				err := firewall.ApplyRulesToNode(nftTable, nodeName, artifactsDir, utilsHelpers)
 				if err != nil {
 					return err
 				}
@@ -130,7 +142,7 @@ var _ = Describe("commatrix", func() {
 
 		node.WaitForNodeReady(nodeList.Items[0].Name, cs)
 
-		output, err := firewall.RulesList(nodeList.Items[0].Name, utilsHelpers)
+		output, err := firewall.RulesList(nodeList.Items[0].Name, artifactsDir, utilsHelpers)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("check if nftables contain the chain OPENSHIFT after reboot")
