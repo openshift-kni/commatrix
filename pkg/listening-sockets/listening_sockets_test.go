@@ -22,8 +22,8 @@ import (
 
 const (
 	tcpExecCommandOutput = (`LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
-	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=1393,fd=13))               
-	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=1234,fd=3))`)
+	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=1221,fd=13))               
+	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=3323,fd=3))`)
 
 	udpExecCommandOutput = (`UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=3534,fd=5),("systemd",pid=3534,fd=78))
 	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1393,fd=5))                        
@@ -48,8 +48,8 @@ const (
 
 	expectedTCPOutput = `node: test-node
 	LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
-	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=1393,fd=13))               
-	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=1234,fd=3))`
+	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=1221,fd=13))               
+	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=3323,fd=3))`
 
 	expectedUDPOutput = `node: test-node
 	UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=3534,fd=5),("systemd",pid=3534,fd=78))
