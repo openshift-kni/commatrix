@@ -1,6 +1,7 @@
 package listeningsockets
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/golang/mock/gomock"
@@ -21,14 +22,14 @@ import (
 
 const (
 	tcpExecCommandOutput = (`LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
-	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
-	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=3534,fd=3))`)
+	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=1393,fd=13))               
+	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=1234,fd=3))`)
 
 	udpExecCommandOutput = (`UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=3534,fd=5),("systemd",pid=3534,fd=78))
-	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=3534,fd=5))                        
-	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=3534,fd=21))`)
+	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1393,fd=5))                        
+	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=1234,fd=21))`)
 
-	procExecCommandOutput = (`1: /system.slice/crio-1234567890abcdef.scope
+	procExecCommandOutput = (`1: /system.slice/crio-123abcd.scope
 	2: /system.slice/other-service.scope
 	
 	3: /system.slice/sshd.service`)
@@ -47,13 +48,13 @@ const (
 
 	expectedTCPOutput = `node: test-node
 	LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
-	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
-	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=3534,fd=3))`
+	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=1393,fd=13))               
+	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=1234,fd=3))`
 
 	expectedUDPOutput = `node: test-node
 	UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=3534,fd=5),("systemd",pid=3534,fd=78))
-	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=3534,fd=5))                        
-	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=3534,fd=21))`
+	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1393,fd=5))                        
+	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=1234,fd=21))`
 )
 
 var (
@@ -140,14 +141,18 @@ var _ = Describe("GenerateSS", func() {
 			Return([]byte(udpExecCommandOutput), nil).AnyTimes()
 
 		// Mock expectation for /proc/{pid}/cgroup command
-		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
-			[]string{"/bin/sh", "-c", "cat /proc/3534/cgroup"}).
-			Return([]byte(procExecCommandOutput), nil).
-			AnyTimes()
+		pids := []string{"3534", "1393", "1234"}
+
+		for _, pid := range pids {
+			command := []string{"/bin/sh", "-c", fmt.Sprintf("cat /proc/%s/cgroup", pid)}
+			mockUtils.EXPECT().RunCommandOnPod(gomock.Any(), command).
+				Return([]byte(procExecCommandOutput), nil).
+				AnyTimes()
+		}
 
 		// Mock expectation for crictl command
 		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
-			[]string{"/bin/sh", "-c", "crictl ps -o json --id 1234567890abcdef"}).
+			[]string{"/bin/sh", "-c", "crictl ps -o json --id 123abcd"}).
 			Return([]byte(crictlExecCommandOut), nil).
 			AnyTimes()
 
