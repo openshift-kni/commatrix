@@ -68,7 +68,7 @@ var (
 		},
 	}
 
-	expectedssMat = []types.ComDetails{
+	expectedSSMat = []types.ComDetails{
 		{
 			Direction: "Ingress",
 			Protocol:  "UDP",
@@ -174,7 +174,7 @@ var _ = Describe("GenerateSS", func() {
 
 		Expect(normalizeOutput(string(ssOutTCP))).To(Equal(normalizeOutput(expectedTCPOutput)))
 		Expect(normalizeOutput(string(ssOutUDP))).To(Equal(normalizeOutput(expectedUDPOutput)))
-		Expect(ssMat.Matrix).To(Equal(expectedssMat))
+		Expect(ssMat.Matrix).To(Equal(expectedSSMat))
 	})
 })
 
