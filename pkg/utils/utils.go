@@ -220,7 +220,8 @@ func getNamespaceDefinition(namespace string) *corev1.Namespace {
 }
 
 func (u *utils) IsSNOCluster() (bool, error) {
-	infra, err := u.ConfigV1Interface.Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
+	infra := &configv1.Infrastructure{}
+	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "cluster"}, infra)
 	if err != nil {
 		return false, err
 	}
@@ -229,7 +230,8 @@ func (u *utils) IsSNOCluster() (bool, error) {
 }
 
 func (u *utils) IsBMInfra() (bool, error) {
-	infra, err := u.ConfigV1Interface.Infrastructures().Get(context.Background(), "cluster", metav1.GetOptions{})
+	infra := &configv1.Infrastructure{}
+	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "cluster"}, infra)
 	if err != nil {
 		return false, err
 	}

@@ -128,7 +128,6 @@ var _ = Describe("commatrix", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		By("reboot first node")
-
 		debugPod, err := utilsHelpers.CreatePodOnNode(nodeList.Items[0].Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 		Expect(err).ToNot(HaveOccurred())
 

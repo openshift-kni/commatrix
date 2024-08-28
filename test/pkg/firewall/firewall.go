@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -84,7 +86,7 @@ func RulesList(nodeName, artifactsDir string, utilsHelpers utils.UtilsInterface)
 		return nil, err
 	}
 
-	err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "nftables-after-reboot"+nodeName), output)
+	err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "nftables-after-reboot-"+nodeName), output)
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +111,19 @@ func RunCommandInPod(debugPod *v1.Pod, command string, chrootDir bool, utilsHelp
 // Is present in the nftables.conf file. If the include statement is not present,
 // Add it the statement to the file.
 func editNftablesConf(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface) error {
-	checkCommand := `grep -q 'include "/etc/nftables/firewall.nft"' /host/etc/sysconfig/nftables.conf`
-	_, err := RunCommandInPod(debugPod, checkCommand, false, utilsHelpers)
-	if err == nil {
+	checkCommand := `grep 'include "/etc/nftables/firewall.nft"' /host/etc/sysconfig/nftables.conf | wc -l`
+	output, err := RunCommandInPod(debugPod, checkCommand, false, utilsHelpers)
+	if err != nil {
+		return fmt.Errorf("failed to check nftables.conf on debug pod: %w", err)
+	}
+
+	// Convert output to an integer and check if the include statement exists
+	includeCount, err := strconv.Atoi(strings.TrimSpace(string(output)))
+	if err != nil {
+		return fmt.Errorf("failed to parse grep output: %w", err)
+	}
+
+	if includeCount > 0 {
 		log.Println("Include statement already exists, no need to add it")
 		return nil
 	}

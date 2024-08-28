@@ -35,7 +35,7 @@ func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
 
 	timeout := 5 * time.Minute
 	gomega.Eventually(func() bool {
-		node, err := cs.CoreV1Interface.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			log.Printf("Error getting node %s: %v", node.Name, err)
 			return false
@@ -61,7 +61,7 @@ func WaitForNodeReady(nodeName string, cs *client.ClientSet) {
 
 	timeout := 15 * time.Minute
 	gomega.Eventually(func() bool {
-		node, err := cs.CoreV1Interface.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
+		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			log.Printf("Error getting node %s: %v", nodeName, err)
 			return false
