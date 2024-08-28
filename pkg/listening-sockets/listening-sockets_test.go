@@ -128,15 +128,16 @@ var _ = Describe("GenerateSS", func() {
 	})
 
 	It("should generate the correct ss tcp, udp output and the correct ssMatrix", func() {
-		// RunCommandOnPod had more that one calling and in each call we want other output
-
+		// RunCommandOnPod had more than one calling and in each call we want other output
 		// Mock expectation for TCP socket check
 		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
-			[]string{"/bin/sh", "-c", "ss -anpltH"}).Return([]byte(tcpExecCommandOutput), nil)
+			[]string{"/bin/sh", "-c", "ss -anpltH"}).
+			Return([]byte(tcpExecCommandOutput), nil).AnyTimes()
 
 		// Mock expectation for UDP socket check
 		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
-			[]string{"/bin/sh", "-c", "ss -anpluH"}).Return([]byte(udpExecCommandOutput), nil)
+			[]string{"/bin/sh", "-c", "ss -anpluH"}).
+			Return([]byte(udpExecCommandOutput), nil).AnyTimes()
 
 		// Mock expectation for /proc/{pid}/cgroup command
 		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
