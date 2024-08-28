@@ -1,7 +1,6 @@
 package listeningsockets
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/golang/mock/gomock"
@@ -23,11 +22,11 @@ import (
 const (
 	tcpExecCommandOutput = (`LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
 	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
-	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=4147,fd=3))`)
+	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=3534,fd=3))`)
 
-	udpExecCommandOutput = (`UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1399,fd=5),("systemd",pid=1,fd=78))
-	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1015,fd=5))                        
-	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21))`)
+	udpExecCommandOutput = (`UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=3534,fd=5),("systemd",pid=3534,fd=78))
+	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=3534,fd=5))                        
+	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=3534,fd=21))`)
 
 	procExecCommandOutput = (`1: /system.slice/crio-1234567890abcdef.scope
 	2: /system.slice/other-service.scope
@@ -49,12 +48,12 @@ const (
 	expectedTCPOutput = `node: test-node
 	LISTEN 0      4096      127.0.0.1:8797  0.0.0.0:* users:(("machine-config-",pid=3534,fd=3))                
 	LISTEN 0      4096      127.0.0.1:8798  0.0.0.0:* users:(("machine-config-",pid=3534,fd=13))               
-	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=4147,fd=3))`
+	LISTEN 0      4096      127.0.0.1:9100  0.0.0.0:* users:(("node_exporter",pid=3534,fd=3))`
 
 	expectedUDPOutput = `node: test-node
-	UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1399,fd=5),("systemd",pid=1,fd=78))
-	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1015,fd=5))                        
-	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=2115,fd=21))`
+	UNCONN 0      0           0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=3534,fd=5),("systemd",pid=3534,fd=78))
+	UNCONN 0      0         127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=3534,fd=5))                        
+	UNCONN 0      0      10.46.97.104:500   0.0.0.0:* users:(("pluto",pid=3534,fd=21))`
 )
 
 var (
@@ -130,26 +129,26 @@ var _ = Describe("GenerateSS", func() {
 
 	It("should generate the correct ss tcp, udp output and the correct ssMatrix", func() {
 		// RunCommandOnPod had more that one calling and in each call we want other output
-		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(), gomock.Any()).DoAndReturn(
-			func(pod *v1.Pod, cmd []string) ([]byte, error) {
-				switch {
-				case len(cmd) > 2 && strings.HasPrefix(cmd[2], "crictl ps -o json --id"):
-					return []byte(crictlExecCommandOut), nil // container data output
 
-				case strings.HasPrefix(cmd[2], "cat /proc/") &&
-					strings.Contains(cmd[2], "/cgroup"):
-					return []byte(procExecCommandOutput), nil // pid data output
+		// Mock expectation for TCP socket check
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
+			[]string{"/bin/sh", "-c", "ss -anpltH"}).Return([]byte(tcpExecCommandOutput), nil)
 
-				case cmd[2] == "ss -anpltH":
-					return []byte(tcpExecCommandOutput), nil // tcp output
+		// Mock expectation for UDP socket check
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
+			[]string{"/bin/sh", "-c", "ss -anpluH"}).Return([]byte(udpExecCommandOutput), nil)
 
-				case cmd[2] == "ss -anpluH":
-					return []byte(udpExecCommandOutput), nil // udp output
+		// Mock expectation for /proc/{pid}/cgroup command
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
+			[]string{"/bin/sh", "-c", "cat /proc/3534/cgroup"}).
+			Return([]byte(procExecCommandOutput), nil).
+			AnyTimes()
 
-				default:
-					return nil, fmt.Errorf("unknown command")
-				}
-			}).AnyTimes()
+		// Mock expectation for crictl command
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
+			[]string{"/bin/sh", "-c", "crictl ps -o json --id 1234567890abcdef"}).
+			Return([]byte(crictlExecCommandOut), nil).
+			AnyTimes()
 
 		mockUtils.EXPECT().
 			CreateNamespace(consts.DefaultDebugNamespace).
