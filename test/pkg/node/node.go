@@ -9,6 +9,7 @@ import (
 	"github.com/onsi/gomega"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,12 +21,21 @@ const (
 )
 
 // SoftRebootNodeAndWaitForDisconnect soft reboots given node and wait for node to be unreachable.
-func SoftRebootNodeAndWaitForDisconnect(debugPod *v1.Pod, cs *client.ClientSet) error {
-	utilsHelpers := utils.New(cs)
-	nodeName := debugPod.Spec.NodeName
-	rebootcmd := []string{"chroot", "/host", "reboot"}
+func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName string) error {
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+	if err != nil {
+		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
+	}
 
-	_, err := utilsHelpers.RunCommandOnPod(debugPod, rebootcmd)
+	defer func() {
+		err := utilsHelpers.DeletePod(debugPod)
+		if err != nil {
+			log.Printf("failed cleaning debug pod %s: %v", debugPod, err)
+		}
+	}()
+
+	rebootcmd := []string{"chroot", "/host", "reboot"}
+	_, err = utilsHelpers.RunCommandOnPod(debugPod, rebootcmd)
 	if err != nil {
 		return fmt.Errorf("failed to reboot node: %s with error %w", nodeName, err)
 	}
