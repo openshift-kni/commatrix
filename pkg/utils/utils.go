@@ -28,8 +28,8 @@ type UtilsInterface interface {
 	DeletePod(pod *corev1.Pod) error
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
 	WriteFile(path string, data []byte) error
-	IsSNOCluster() (bool, error)
 	IsBMInfra() (bool, error)
+	IsSNOCluster() (bool, error)
 }
 
 type utils struct {

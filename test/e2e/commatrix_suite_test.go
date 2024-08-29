@@ -32,6 +32,12 @@ var (
 	artifactsDir string
 )
 
+const (
+	workerNodeRole = "worker"
+	tableName      = "table inet openshift_filter"
+	chainName      = "chain OPENSHIFT"
+)
+
 var _ = BeforeSuite(func() {
 	By("create output folder")
 	artifactsDir = os.Getenv("ARTIFACT_DIR")
@@ -68,14 +74,14 @@ var _ = BeforeSuite(func() {
 	epExporter, err := endpointslices.New(cs)
 	Expect(err).ToNot(HaveOccurred())
 
-	By("Create commMatrix")
+	By("Creating commMatrix")
 	commMatrix, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
 	Expect(err).NotTo(HaveOccurred())
 
 	matrix, err = commMatrix.CreateEndpointMatrix()
 	Expect(err).NotTo(HaveOccurred())
 
-	By("Create Namespace")
+	By("Creating Namespace")
 	err = utilsHelpers.CreateNamespace(consts.DefaultDebugNamespace)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -85,17 +91,17 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	By("Delete Namespace")
+	By("Deleting Namespace")
 	err := utilsHelpers.DeleteNamespace(consts.DefaultDebugNamespace)
 	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = Describe("commatrix", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
-		By("apply firewall on nodes")
 		masterMat, workerMat := matrix.SeparateMatrixByRole()
 		var workerNFT []byte
 
+		By("creating NFT output for each role")
 		masterNFT, err := masterMat.ToNFTables()
 		Expect(err).NotTo(HaveOccurred())
 		if !isSNO {
@@ -104,17 +110,17 @@ var _ = Describe("commatrix", func() {
 		}
 
 		g := new(errgroup.Group)
-
 		for _, node := range nodeList.Items {
 			nodeName := node.Name
 			nodeRole, err := types.GetNodeRole(&node)
 			Expect(err).ToNot(HaveOccurred())
 			g.Go(func() error {
 				nftTable := masterNFT
-				if nodeRole == "worker" {
+				if nodeRole == workerNodeRole {
 					nftTable = workerNFT
 				}
 
+				By("applying firewall on node: " + nodeName)
 				err := firewall.ApplyRulesToNode(nftTable, nodeName, artifactsDir, utilsHelpers)
 				if err != nil {
 					return err
@@ -127,7 +133,7 @@ var _ = Describe("commatrix", func() {
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
 
-		By("reboot first node")
+		By("rebooting first node: " + nodeList.Items[0].Name + "and waiting for disconnect")
 		debugPod, err := utilsHelpers.CreatePodOnNode(nodeList.Items[0].Name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -139,14 +145,15 @@ var _ = Describe("commatrix", func() {
 		err = node.SoftRebootNodeAndWaitForDisconnect(debugPod, cs)
 		Expect(err).ToNot(HaveOccurred())
 
+		By("waiting for node to be ready")
 		node.WaitForNodeReady(nodeList.Items[0].Name, cs)
 
 		output, err := firewall.RulesList(nodeList.Items[0].Name, artifactsDir, utilsHelpers)
 		Expect(err).ToNot(HaveOccurred())
 
-		By("check if nftables contain the chain OPENSHIFT after reboot")
-		if strings.Contains(string(output), "table inet openshift_filter") &&
-			strings.Contains(string(output), "chain OPENSHIFT") {
+		By("checking if nftables contain the chain OPENSHIFT after reboot")
+		if strings.Contains(string(output), tableName) &&
+			strings.Contains(string(output), chainName) {
 			log.Println("The byte slices are identical.")
 		} else {
 			Fail("The byte slices are different")

@@ -14,6 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	timeout  = 5 * time.Minute
+	interval = 3 * time.Second
+)
+
 // SoftRebootNodeAndWaitForDisconnect soft reboots given node and wait for node to be unreachable.
 func SoftRebootNodeAndWaitForDisconnect(debugPod *v1.Pod, cs *client.ClientSet) error {
 	utilsHelpers := utils.New(cs)
@@ -33,7 +38,6 @@ func SoftRebootNodeAndWaitForDisconnect(debugPod *v1.Pod, cs *client.ClientSet) 
 func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
 	log.Printf("Waiting for node %s to be in NotReady state", nodeName)
 
-	timeout := 5 * time.Minute
 	gomega.Eventually(func() bool {
 		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
@@ -47,7 +51,7 @@ func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
 			}
 		}
 		return false
-	}, timeout, 3*time.Second).Should(
+	}, timeout, interval).Should(
 		gomega.BeTrue(),
 		fmt.Sprintf("Node %s is still ready after %s", nodeName, timeout.String()),
 	)
@@ -59,7 +63,6 @@ func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
 func WaitForNodeReady(nodeName string, cs *client.ClientSet) {
 	log.Printf("Waiting for node %s to be in Ready state", nodeName)
 
-	timeout := 15 * time.Minute
 	gomega.Eventually(func() bool {
 		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
@@ -73,7 +76,7 @@ func WaitForNodeReady(nodeName string, cs *client.ClientSet) {
 			}
 		}
 		return false
-	}, timeout, 3*time.Second).Should(
+	}, timeout, interval).Should(
 		gomega.BeTrue(),
 		fmt.Sprintf("Node %s is still not ready after %s", nodeName, timeout.String()),
 	)

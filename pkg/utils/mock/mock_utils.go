@@ -91,6 +91,36 @@ func (mr *MockUtilsInterfaceMockRecorder) DeletePod(pod interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePod", reflect.TypeOf((*MockUtilsInterface)(nil).DeletePod), pod)
 }
 
+// IsBMInfra mocks base method.
+func (m *MockUtilsInterface) IsBMInfra() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsBMInfra")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsBMInfra indicates an expected call of IsBMInfra.
+func (mr *MockUtilsInterfaceMockRecorder) IsBMInfra() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBMInfra", reflect.TypeOf((*MockUtilsInterface)(nil).IsBMInfra))
+}
+
+// IsSNOCluster mocks base method.
+func (m *MockUtilsInterface) IsSNOCluster() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsSNOCluster")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsSNOCluster indicates an expected call of IsSNOCluster.
+func (mr *MockUtilsInterfaceMockRecorder) IsSNOCluster() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSNOCluster", reflect.TypeOf((*MockUtilsInterface)(nil).IsSNOCluster))
+}
+
 // RunCommandOnPod mocks base method.
 func (m *MockUtilsInterface) RunCommandOnPod(pod *v1.Pod, command []string) ([]byte, error) {
 	m.ctrl.T.Helper()
