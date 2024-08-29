@@ -93,6 +93,8 @@ var (
 			Optional:  false,
 		},
 	}
+
+	pids = []string{"1399", "2115"}
 )
 
 var _ = Describe("GenerateSS", func() {
@@ -141,8 +143,6 @@ var _ = Describe("GenerateSS", func() {
 			Return([]byte(udpExecCommandOutput), nil).AnyTimes()
 
 		// Mock expectation for /proc/{pid}/cgroup command
-		pids := []string{"1399", "1015", "2115"}
-
 		for _, pid := range pids {
 			command := []string{"/bin/sh", "-c", fmt.Sprintf("cat /proc/%s/cgroup", pid)}
 			mockUtils.EXPECT().RunCommandOnPod(gomock.Any(), command).
