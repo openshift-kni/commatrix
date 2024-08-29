@@ -69,12 +69,9 @@ lint: | $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run golangci-l
 test:
 	GOFLAGS="" go test ./pkg/...
 
-commatrix-suite-test: ginkgo
-	ginkgo -v ./test/e2e/...
-
 .PHONY: e2e-test
-e2e-test: commatrix-suite-test
-	openshift-tests run all
+e2e-test: ginkgo
+	ginkgo -v ./test/e2e/...
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
 define go-install-tool
