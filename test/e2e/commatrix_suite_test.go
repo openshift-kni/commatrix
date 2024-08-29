@@ -151,7 +151,7 @@ var _ = Describe("commatrix", func() {
 		}()
 
 		By("Listing nftables rules after reboot")
-		output, err := firewall.NftListAndWrite(debugPod, utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
+		output, err := firewall.NftListAndWriteToFile(debugPod, utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if nftables contain the chain OPENSHIFT after reboot")

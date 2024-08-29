@@ -39,7 +39,7 @@ func ApplyRulesToNode(NFTtable []byte, nodeName, artifactsDir string, utilsHelpe
 		return fmt.Errorf("failed to apply rule set on node %s: %w", nodeName, err)
 	}
 
-	_, err = NftListAndWrite(debugPod, utilsHelpers, artifactsDir, "nftables-"+nodeName)
+	_, err = NftListAndWriteToFile(debugPod, utilsHelpers, artifactsDir, "nftables-"+nodeName)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func editNftablesConf(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface) error
 	return nil
 }
 
-func NftListAndWrite(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, artifactsDir, fileName string) ([]byte, error) {
+func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, artifactsDir, fileName string) ([]byte, error) {
 	command := "nft list ruleset"
 	output, err := RunRootCommandOnPod(debugPod, command, true, utilsHelpers)
 	if err != nil {
