@@ -18,8 +18,6 @@ import (
 var (
 	destDir             string
 	format              string
-	envStr              string
-	deploymentStr       string
 	customEntriesPath   string
 	customEntriesFormat string
 	debug               bool
@@ -28,8 +26,6 @@ var (
 func init() {
 	flag.StringVar(&destDir, "destDir", "communication-matrix", "Output files dir")
 	flag.StringVar(&format, "format", "csv", "Desired format (json,yaml,csv,nft)")
-	flag.StringVar(&envStr, "env", "baremetal", "Cluster environment (baremetal/cloud)")
-	flag.StringVar(&deploymentStr, "deployment", "standard", "Deployment type (standard/sno)")
 	flag.StringVar(&customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	flag.StringVar(&customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 	flag.BoolVar(&debug, "debug", false, "Debug logs")
@@ -39,16 +35,6 @@ func init() {
 func main() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
-	}
-
-	env, err := types.GetEnv(envStr)
-	if err != nil {
-		log.Panicf("Failed to get environment: %v", err)
-	}
-
-	deployment, err := types.GetDeployment(deploymentStr)
-	if err != nil {
-		log.Panicf("Failed to get deployment: %v", err)
 	}
 
 	if customEntriesPath != "" && customEntriesFormat == "" {
@@ -64,6 +50,28 @@ func main() {
 	utilsHelpers := utils.New(cs)
 	log.Debug("Utils helpers initialized")
 
+	log.Debug("Get deployment type")
+	deployment := types.Standard
+	isSNO, err := utilsHelpers.IsSNOCluster()
+	if err != nil {
+		log.Panicf("Failed to deployment type %v", err)
+	}
+
+	if isSNO {
+		deployment = types.SNO
+	}
+
+	log.Debug("Get infra type")
+	infra := types.Cloud
+	isBM, err := utilsHelpers.IsBMInfra()
+	if err != nil {
+		log.Panicf("Failed to get infra type %v", err)
+	}
+
+	if isBM {
+		infra = types.Baremetal
+	}
+
 	epExporter, err := endpointslices.New(cs)
 	if err != nil {
 		log.Panicf("Failed creating the endpointslices exporter: %v", err)
@@ -71,7 +79,7 @@ func main() {
 	log.Debug("EndpointSlices exporter created")
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, customEntriesPath, customEntriesFormat, env, deployment)
+	commMatrix, err := commatrixcreator.New(epExporter, customEntriesPath, customEntriesFormat, infra, deployment)
 	if err != nil {
 		log.Panicf("Failed creating comm matrix creator: %v", err)
 	}

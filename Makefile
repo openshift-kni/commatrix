@@ -1,7 +1,5 @@
 FORMAT ?= csv
-CLUSTER_ENV ?= baremetal
 DEST_DIR ?= .
-DEPLOYMENT ?= standard
 DEBUG ?=
 GO_SRC := cmd/main.go
 EXECUTABLE := commatrix-gen
@@ -28,7 +26,7 @@ build:
 generate: build
 	rm -rf $(DEST_DIR)/communication-matrix
 	mkdir -p $(DEST_DIR)/communication-matrix
-	./$(EXECUTABLE) -format=$(FORMAT) -env=$(CLUSTER_ENV) -destDir=$(DEST_DIR)/communication-matrix -deployment=$(DEPLOYMENT) -customEntriesPath=$(CUSTOM_ENTRIES_PATH) -customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) $(if $(DEBUG),-debug=true)
+	./$(EXECUTABLE) -format=$(FORMAT) -destDir=$(DEST_DIR)/communication-matrix -customEntriesPath=$(CUSTOM_ENTRIES_PATH) -customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) $(if $(DEBUG),-debug=true)
 
 .PHONY: clean
 clean:
