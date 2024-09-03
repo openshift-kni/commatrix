@@ -69,7 +69,8 @@ test:
 
 .PHONY: e2e-test
 e2e-test: ginkgo
-	ginkgo -v ./test/e2e/...
+	$(GINKGO) -v ./test/e2e/...
+
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
 define go-install-tool
