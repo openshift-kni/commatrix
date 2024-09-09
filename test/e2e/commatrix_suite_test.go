@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -36,6 +37,7 @@ const (
 	workerNodeRole = "worker"
 	tableName      = "table inet openshift_filter"
 	chainName      = "chain OPENSHIFT"
+	portRange      = "tcp dport { 30000-32767, } accept\nudp dport { 30000-32767, } accept"
 )
 
 var _ = BeforeSuite(func() {
@@ -104,9 +106,14 @@ var _ = Describe("commatrix", func() {
 		By("Creating NFT output for each role")
 		masterNFT, err := masterMat.ToNFTables()
 		Expect(err).NotTo(HaveOccurred())
+		// add the k8s port range
+		masterNFT = addRange(masterNFT)
+
 		if !isSNO {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
+			// add the k8s port range
+			workerNFT = addRange(workerNFT)
 		}
 
 		g := new(errgroup.Group)
@@ -163,3 +170,16 @@ var _ = Describe("commatrix", func() {
 		}
 	})
 })
+
+func addRange(matrixNFT []byte) []byte {
+	matrixNFTStr := string(matrixNFT)
+	re := regexp.MustCompile(`udp dport.*accept`)
+	loc := re.FindStringIndex(matrixNFTStr)
+
+	if loc != nil {
+		matrixNFTStr = matrixNFTStr[:loc[1]] + portRange + matrixNFTStr[loc[1]:]
+	}
+
+	matrixNFT = []byte(matrixNFTStr)
+	return matrixNFT
+}

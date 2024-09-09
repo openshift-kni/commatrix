@@ -234,8 +234,8 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 			ip6 nexthdr ipv6-icmp accept
 
 			# Allow specific TCP and UDP ports
-			tcp dport { %s, 9000-9999, 30000-32767, 49152-65535 } accept
-			udp dport { %s, 9000-9999, 30000-32767, 49152-65535 } accept
+			tcp dport  { %s } accept
+			udp dport { %s } accept
 
 			# Logging and default drop
 			log prefix "firewall " drop
