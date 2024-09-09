@@ -37,7 +37,7 @@ const (
 	workerNodeRole = "worker"
 	tableName      = "table inet openshift_filter"
 	chainName      = "chain OPENSHIFT"
-	portRange      = "tcp dport { 30000-32767, } accept\nudp dport { 30000-32767, } accept"
+	portRange      = "\ntcp dport { 30000-32767, } accept\nudp dport { 30000-32767, } accept"
 )
 
 var _ = BeforeSuite(func() {
