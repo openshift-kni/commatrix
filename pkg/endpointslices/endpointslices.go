@@ -190,7 +190,7 @@ func (ei *EndpointSlicesInfo) toComDetails(nodesRoles map[string]string) ([]type
 				Pod:       name,
 				Container: containerName,
 				NodeRole:  role,
-				Service:   ei.Service.Namespace,
+				Service:   ei.Service.Name,
 				Optional:  optional,
 			})
 		}
