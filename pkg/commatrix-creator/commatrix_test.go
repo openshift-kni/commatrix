@@ -149,7 +149,7 @@ var _ = g.Describe("Commatrix", func() {
 					Namespace: "test-ns",
 					Labels: map[string]string{
 						"kubernetes.io/service-name": "test-service",
-						"app": "test-app",
+						"app":                        "test-app",
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -230,14 +230,14 @@ var _ = g.Describe("Commatrix", func() {
 			testEpsComDetails = []types.ComDetails{
 				{
 					Direction: "Ingress",
-					Protocol: "TCP",
-					Port: 80,
+					Protocol:  "TCP",
+					Port:      80,
 					Namespace: "test-ns",
-					Service: "test-service",
-					Pod: "test-pod",
+					Service:   "test-service",
+					Pod:       "test-pod",
 					Container: "test-container",
-					NodeRole: "master",
-					Optional: false,
+					NodeRole:  "master",
+					Optional:  false,
 				},
 			}
 
@@ -254,7 +254,7 @@ var _ = g.Describe("Commatrix", func() {
 			wantedComDetails := append(append(append(testEpsComDetails, types.CloudStaticEntriesMaster...), types.GeneralStaticEntriesMaster...), exampleComDetailsList...)
 			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
-			
+
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
 			o.Expect(diff.GenerateUniquePrimary().Matrix).To(o.BeEmpty())
 			o.Expect(diff.GenerateUniqueSecondary().Matrix).To(o.BeEmpty())
@@ -269,7 +269,7 @@ var _ = g.Describe("Commatrix", func() {
 			wantedComDetails := append(append(testEpsComDetails, types.CloudStaticEntriesMaster...), types.GeneralStaticEntriesMaster...)
 			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
-			
+
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
 			o.Expect(diff.GenerateUniquePrimary().Matrix).To(o.BeEmpty())
 			o.Expect(diff.GenerateUniqueSecondary().Matrix).To(o.BeEmpty())
