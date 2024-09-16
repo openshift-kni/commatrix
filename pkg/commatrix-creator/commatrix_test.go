@@ -6,7 +6,6 @@ import (
 	g "github.com/onsi/ginkgo/v2"
 	o "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -129,12 +128,12 @@ var _ = g.Describe("Commatrix", func() {
 		g.BeforeEach(func() {
 			sch := runtime.NewScheme()
 
-			err := v1.AddToScheme(sch)
+			err := corev1.AddToScheme(sch)
 			o.Expect(err).NotTo(o.HaveOccurred())
 			err = discoveryv1.AddToScheme(sch)
 			o.Expect(err).NotTo(o.HaveOccurred())
 
-			testNode := &v1.Node{
+			testNode := &corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-node",
 					Namespace: "test-ns",
@@ -168,7 +167,7 @@ var _ = g.Describe("Commatrix", func() {
 				},
 			}
 
-			testService := &v1.Service{
+			testService := &corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-service",
 					Namespace: "test-ns",
@@ -253,12 +252,12 @@ var _ = g.Describe("Commatrix", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			wantedComDetails := append(append(append(testEpsComDetails, types.CloudStaticEntriesMaster...), types.GeneralStaticEntriesMaster...), exampleComDetailsList...)
-			wantedComMatrix := types.ComMatrix{wantedComDetails}
+			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 			
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
-			o.Expect(len(diff.GenerateUniquePrimary().Matrix)).To(o.Equal(0))
-			o.Expect(len(diff.GenerateUniqueSecondary().Matrix)).To(o.Equal(0))
+			o.Expect(diff.GenerateUniquePrimary().Matrix).To(o.BeEmpty())
+			o.Expect(diff.GenerateUniqueSecondary().Matrix).To(o.BeEmpty())
 		})
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
@@ -268,12 +267,12 @@ var _ = g.Describe("Commatrix", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			wantedComDetails := append(append(testEpsComDetails, types.CloudStaticEntriesMaster...), types.GeneralStaticEntriesMaster...)
-			wantedComMatrix := types.ComMatrix{wantedComDetails}
+			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 			
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
-			o.Expect(len(diff.GenerateUniquePrimary().Matrix)).To(o.Equal(0))
-			o.Expect(len(diff.GenerateUniqueSecondary().Matrix)).To(o.Equal(0))
+			o.Expect(diff.GenerateUniquePrimary().Matrix).To(o.BeEmpty())
+			o.Expect(diff.GenerateUniqueSecondary().Matrix).To(o.BeEmpty())
 		})
 	})
 })
