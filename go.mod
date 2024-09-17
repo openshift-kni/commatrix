@@ -9,7 +9,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
-	github.com/openshift/api v0.0.0-20240704102751-33ed71ab039f
+	github.com/openshift/api v0.0.0-20240906165951-d73f2e11e0be
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/sync v0.7.0
 	k8s.io/api v0.30.2
@@ -62,6 +62,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
+	github.com/openshift/client-go v0.0.0-20240906181530-b2f7c4ab0984
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/net v0.26.0 // indirect
