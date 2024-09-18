@@ -74,7 +74,7 @@ var (
 
 const (
 	minimalDocCommatrixVersion = 4.16
-	docCommatrixBaseUrl        = "https://raw.githubusercontent.com/openshift/openshift-docs/enterprise-VERSION/snippets/network-flow-matrix.csv"
+	docCommatrixBaseURL        = "https://raw.githubusercontent.com/openshift/openshift-docs/enterprise-VERSION/snippets/network-flow-matrix.csv"
 	diffFileComments           = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
 )
@@ -157,16 +157,17 @@ var _ = Describe("commatrix", func() {
 		}
 
 		By("write commatrix to artifact file")
-		commatrix.WriteMatrixToFileByType(utilsHelpers, "new-commatrix", types.FormatCSV, deployment, artifactsDir)
+		err = commatrix.WriteMatrixToFileByType(utilsHelpers, "new-commatrix", types.FormatCSV, deployment, artifactsDir)
+		Expect(err).ToNot(HaveOccurred())
 
 		By(fmt.Sprintf("get documented commatrix version %s", clusterVersion))
 		// get documented commatrix from URL
-		resp, err := http.Get(strings.Replace(docCommatrixBaseUrl, "VERSION", clusterVersion, 1))
+		resp, err := http.Get(strings.Replace(docCommatrixBaseURL, "VERSION", clusterVersion, 1))
 		Expect(err).ToNot(HaveOccurred())
 		defer resp.Body.Close()
 		// if response status code equals to "status not found", compare generated commatrix to the master documented commatrix
 		if resp.StatusCode == http.StatusNotFound {
-			resp, err = http.Get(strings.Replace(docCommatrixBaseUrl, "enterprise-VERSION", "main", 1))
+			resp, err = http.Get(strings.Replace(docCommatrixBaseURL, "enterprise-VERSION", "main", 1))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).ToNot(Equal(http.StatusNotFound))
 		}
@@ -295,7 +296,7 @@ var _ = Describe("commatrix", func() {
 	})
 })
 
-// getClusterVersion return cluster's Y stream version
+// getClusterVersion return cluster's Y stream version.
 func getClusterVersion(cs *client.ClientSet) (string, error) {
 	configClient := configv1client.NewForConfigOrDie(cs.Config)
 	clusterVersion, err := configClient.ClusterVersions().Get(context.Background(), "version", metav1.GetOptions{})
