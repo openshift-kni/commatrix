@@ -8,6 +8,7 @@ import (
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
@@ -102,8 +103,14 @@ func main() {
 		log.Panicf("Failed creating listening socket check: %v", err)
 	}
 
+	log.Debug("Creating namespace")
+	err = utilsHelpers.CreateNamespace(consts.DefaultDebugNamespace)
+	if err != nil {
+		log.Panicf("Failed to create namespace: %v", err)
+	}
+
 	log.Debug("Generating SS matrix and raw files")
-	ssMat, ssOutTCP, ssOutUDP, err := listeningCheck.GenerateSS()
+	ssMat, ssOutTCP, ssOutUDP, err := listeningCheck.GenerateSS(consts.DefaultDebugNamespace)
 	if err != nil {
 		log.Panicf("Error while generating the listening check matrix and ss raws: %v", err)
 	}

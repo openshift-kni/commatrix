@@ -157,16 +157,6 @@ var _ = Describe("GenerateSS", func() {
 			AnyTimes()
 
 		mockUtils.EXPECT().
-			CreateNamespace(consts.DefaultDebugNamespace).
-			Return(nil).
-			AnyTimes()
-
-		mockUtils.EXPECT().
-			DeleteNamespace(consts.DefaultDebugNamespace).
-			Return(nil).
-			AnyTimes()
-
-		mockUtils.EXPECT().
 			CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, consts.DefaultDebugPodImage).
 			Return(mockPod, nil).AnyTimes()
 
@@ -175,7 +165,7 @@ var _ = Describe("GenerateSS", func() {
 		connectionCheck, err := NewCheck(clientset, mockUtils, "/some/dest/dir")
 		Expect(err).NotTo(HaveOccurred())
 
-		ssMat, ssOutTCP, ssOutUDP, err := connectionCheck.GenerateSS()
+		ssMat, ssOutTCP, ssOutUDP, err := connectionCheck.GenerateSS(consts.DefaultDebugNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(normalizeOutput(string(ssOutTCP))).To(Equal(normalizeOutput(expectedTCPOutput)))

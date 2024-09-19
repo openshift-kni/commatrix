@@ -14,8 +14,8 @@ import (
 )
 
 // Apply the firewall rules on the node.
-func ApplyRulesToNode(NFTtable []byte, nodeName, artifactsDir string, utilsHelpers utils.UtilsInterface) error {
-	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+func ApplyRulesToNode(NFTtable []byte, nodeName, namespace, artifactsDir string, utilsHelpers utils.UtilsInterface) error {
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, namespace, consts.DefaultDebugPodImage)
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
 	}
