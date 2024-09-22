@@ -57,26 +57,16 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string
 	}, nil
 }
 
-func (cc *ConnectionCheck) GenerateSS() (*types.ComMatrix, []byte, []byte, error) {
-	nodesComDetails := []types.ComDetails{}
-	err := cc.podUtils.CreateNamespace(consts.DefaultDebugNamespace)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	defer func() {
-		err := cc.podUtils.DeleteNamespace(consts.DefaultDebugNamespace)
-		if err != nil {
-			fmt.Printf("failed to delete debug namespace: %v", err)
-		}
-	}()
+func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byte, []byte, error) {
 	var ssOutTCP, ssOutUDP []byte
+	nodesComDetails := []types.ComDetails{}
+
 	nLock := &sync.Mutex{}
 	g := new(errgroup.Group)
 	for nodeName := range cc.nodeToRole {
 		name := nodeName
 		g.Go(func() error {
-			debugPod, err := cc.podUtils.CreatePodOnNode(name, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+			debugPod, err := cc.podUtils.CreatePodOnNode(name, namespace, consts.DefaultDebugPodImage)
 			if err != nil {
 				return err
 			}
@@ -103,7 +93,7 @@ func (cc *ConnectionCheck) GenerateSS() (*types.ComMatrix, []byte, []byte, error
 		})
 	}
 
-	err = g.Wait()
+	err := g.Wait()
 	if err != nil {
 		return nil, nil, nil, err
 	}
