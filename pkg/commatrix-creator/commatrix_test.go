@@ -2,6 +2,7 @@ package commatrixcreator
 
 import (
 	"fmt"
+	"slices"
 
 	g "github.com/onsi/ginkgo/v2"
 	o "github.com/onsi/gomega"
@@ -152,75 +153,115 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 	g.Context("Get ComDetails List From File", func() {
 		for _, format := range []string{types.FormatCSV, types.FormatJSON, types.FormatYAML} {
 			g.It(fmt.Sprintf("Should successfully extract ComDetails from a %s file", format), func() {
+				g.By(fmt.Sprintf("Creating new communication matrix with %s static entries format", format))
 				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, 0, 0)
 				o.Expect(err).ToNot(o.HaveOccurred())
+
+				g.By("Getting ComDetails List From File")
 				gotComDetails, err := cm.GetComDetailsListFromFile()
 				o.Expect(err).ToNot(o.HaveOccurred())
+
+				g.By("Comparing gotten ComDetails to wanted ComDetials")
 				o.Expect(gotComDetails).To(o.Equal(exampleComDetailsList))
 			})
 		}
 
 		g.It("Should return an error due to non-matched customEntriesPath and customEntriesFormat types", func() {
+			g.By("Creating new communication matrix with non-matched customEntriesPath and customEntriesFormat")
 			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, 0, 0)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Getting ComDetails List From File")
 			gotComDetails, err := cm.GetComDetailsListFromFile()
 			o.Expect(err).To(o.HaveOccurred())
+
+			g.By("Comparing gotten ComDetails to empty ComDetials")
 			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
 		})
 
 		g.It("Should return an error due to an invalid customEntriesFormat", func() {
+			g.By("Creating new communication matrix with invalid customEntriesFormat")
 			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, 0, 0)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Getting ComDetails List From File")
 			gotComDetails, err := cm.GetComDetailsListFromFile()
 			o.Expect(err).To(o.HaveOccurred())
+
+			g.By("Comparing gotten ComDetails to empty ComDetials")
 			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
 		})
 	})
 
 	g.Context("Get static enteries from file", func() {
 		g.It("Should successfully get static entries suitable to baremetal standard cluster", func() {
+			g.By("Creating new communication matrix suitable to baremetal standard cluster")
 			cm, err := New(nil, "", "", types.Baremetal, types.Standard)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
-			wantedComDetails := append(append(append(append(types.BaremetalStaticEntriesMaster, types.BaremetalStaticEntriesWorker...),
-				types.GeneralStaticEntriesMaster...), types.StandardStaticEntries...), types.GeneralStaticEntriesWorker...)
+
+			g.By("Comparing gotten static entries to wanted comDetails")
+			wantedComDetails := slices.Concat(types.BaremetalStaticEntriesMaster, types.BaremetalStaticEntriesWorker,
+				types.GeneralStaticEntriesMaster, types.StandardStaticEntries, types.GeneralStaticEntriesWorker)
 			o.Expect(gotComDetails).To(o.Equal(wantedComDetails))
 		})
 
 		g.It("Should successfully get static entries suitable to baremetal SNO cluster", func() {
+			g.By("Creating new communication matrix suitable to baremetal SNO cluster")
 			cm, err := New(nil, "", "", types.Baremetal, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
-			wantedComDetails := append(types.BaremetalStaticEntriesMaster, types.GeneralStaticEntriesMaster...)
+
+			g.By("Comparing gotten static entries to wanted comDetails")
+			wantedComDetails := slices.Concat(types.BaremetalStaticEntriesMaster, types.GeneralStaticEntriesMaster)
 			o.Expect(gotComDetails).To(o.Equal(wantedComDetails))
 		})
 
 		g.It("Should successfully get static entries suitable to cloud standard cluster", func() {
+			g.By("Creating new communication matrix suitable to cloud standard cluster")
 			cm, err := New(nil, "", "", types.Cloud, types.Standard)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
-			wantedComDetails := append(append(append(append(types.CloudStaticEntriesMaster, types.CloudStaticEntriesWorker...),
-				types.GeneralStaticEntriesMaster...), types.StandardStaticEntries...), types.GeneralStaticEntriesWorker...)
+
+			g.By("Comparing gotten static entries to wanted comDetails")
+			wantedComDetails := slices.Concat(types.CloudStaticEntriesMaster, types.CloudStaticEntriesWorker,
+				types.GeneralStaticEntriesMaster, types.StandardStaticEntries, types.GeneralStaticEntriesWorker)
 			o.Expect(gotComDetails).To(o.Equal(wantedComDetails))
 		})
 
 		g.It("Should successfully get static entries suitable to cloud SNO cluster", func() {
+			g.By("Creating new communication matrix suitable to cloud SNO cluster")
 			cm, err := New(nil, "", "", types.Cloud, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
-			wantedComDetails := append(types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster...)
+
+			g.By("Comparing gotten static entries to wanted comDetails")
+			wantedComDetails := slices.Concat(types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster)
 			o.Expect(gotComDetails).To(o.Equal(wantedComDetails))
 		})
 
 		g.It("Should return an error due to an invalid value for cluster environment", func() {
+			g.By("Creating new communication matrix with an invalid value for cluster environment")
 			cm, err := New(nil, "", "", -1, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).To(o.HaveOccurred())
+
+			g.By("Comparing gotten static entries to empty comDetails")
 			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
 		})
 
@@ -248,31 +289,45 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 		})
 
 		g.It("Should successfully create an endpoint matrix with custom entries", func() {
+			g.By("Creating new communication matrix with static entries")
 			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, types.Cloud, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
-			wantedComDetails := append(append(append(testEpsComDetails, types.CloudStaticEntriesMaster...), types.GeneralStaticEntriesMaster...), exampleComDetailsList...)
+			g.By("Generating wanted comDetails based on cluster features")
+			wantedComDetails := slices.Concat(testEpsComDetails, types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster)
+
+			g.By("Add to wanted comDetails the example static entries")
+			wantedComDetails = slices.Concat(wantedComDetails, exampleComDetailsList)
+
 			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 
+			g.By("Generate diff between created commatrix and eanted commatrix")
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
+
+			g.By("Checking whether diff is empty")
 			o.Expect(diff.GenerateUniquePrimary().Matrix).To(o.BeEmpty())
 			o.Expect(diff.GenerateUniqueSecondary().Matrix).To(o.BeEmpty())
 		})
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
+			g.By("Creating new communication matrix without static entries")
 			commatrixCreator, err := New(endpointSlices, "", "", types.Cloud, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
-			wantedComDetails := append(append(testEpsComDetails, types.CloudStaticEntriesMaster...), types.GeneralStaticEntriesMaster...)
+			g.By("Generating wanted comDetails")
+			wantedComDetails := slices.Concat(testEpsComDetails, types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster)
 			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 
+			g.By("Generate diff between created commatrix and eanted commatrix")
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
+
+			g.By("Checking whether diff is empty")
 			o.Expect(diff.GenerateUniquePrimary().Matrix).To(o.BeEmpty())
 			o.Expect(diff.GenerateUniqueSecondary().Matrix).To(o.BeEmpty())
 		})
