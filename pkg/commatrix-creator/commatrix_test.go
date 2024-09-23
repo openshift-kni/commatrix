@@ -19,135 +19,142 @@ import (
 	fakek "k8s.io/client-go/kubernetes/fake"
 )
 
+// Global uninitialized vars
 var (
 	endpointSlices    *endpointslices.EndpointSlicesExporter
 	nilComDetailsList []types.ComDetails
 )
 
-var exampleComDetailsList = []types.ComDetails{
-	{
-		Direction: "ingress",
-		Protocol:  "TCP",
-		Port:      9050,
-		Namespace: "example-namespace",
-		Service:   "example-service",
-		Pod:       "example-pod",
-		Container: "example-container",
-		NodeRole:  "master",
-		Optional:  false,
-	},
-	{
-		Direction: "ingress",
-		Protocol:  "UDP",
-		Port:      9051,
-		Namespace: "example-namespace2",
-		Service:   "example-service2",
-		Pod:       "example-pod2",
-		Container: "example-container2",
-		NodeRole:  "worker",
-		Optional:  false,
-	},
-}
-
-var testNode = &corev1.Node{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "test-node",
-		Namespace: "test-ns",
-		Labels: map[string]string{
-			"node-role.kubernetes.io/master": "",
+// Example Comdetails lists
+var ( 
+	exampleComDetailsList = []types.ComDetails{
+		{
+			Direction: "ingress",
+			Protocol:  "TCP",
+			Port:      9050,
+			Namespace: "example-namespace",
+			Service:   "example-service",
+			Pod:       "example-pod",
+			Container: "example-container",
+			NodeRole:  "master",
+			Optional:  false,
 		},
-	},
-}
-
-var testPod = &corev1.Pod{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "test-app-pod",
-		Namespace: "test-ns",
-		Labels: map[string]string{
-			"kubernetes.io/service-name": "test-service",
-			"app":                        "test-app",
+		{
+			Direction: "ingress",
+			Protocol:  "UDP",
+			Port:      9051,
+			Namespace: "example-namespace2",
+			Service:   "example-service2",
+			Pod:       "example-pod2",
+			Container: "example-container2",
+			NodeRole:  "worker",
+			Optional:  false,
 		},
-	},
-	Spec: corev1.PodSpec{
-		Containers: []corev1.Container{
-			{
-				Name:  "test-container",
-				Image: "test-image:latest",
-				Ports: []corev1.ContainerPort{
-					{
-						ContainerPort: 80,
+	}
+
+	testEpsComDetails = []types.ComDetails{
+		{
+			Direction: "Ingress",
+			Protocol:  "TCP",
+			Port:      80,
+			Namespace: "test-ns",
+			Service:   "test-service",
+			Pod:       "test-pod",
+			Container: "test-container",
+			NodeRole:  "master",
+			Optional:  false,
+		},
+	}
+)
+
+// Test resources
+var (
+	testNode = &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-node",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"node-role.kubernetes.io/master": "",
+			},
+		},
+	}
+
+	testPod = &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-app-pod",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"kubernetes.io/service-name": "test-service",
+				"app":                        "test-app",
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "test-container",
+					Image: "test-image:latest",
+					Ports: []corev1.ContainerPort{
+						{
+							ContainerPort: 80,
+						},
 					},
 				},
 			},
 		},
-	},
-}
+	}
 
-var testService = &corev1.Service{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "test-service",
-		Namespace: "test-ns",
-		Labels: map[string]string{
-			"kubernetes.io/service-name": "test-service",
-		},
-	},
-	Spec: corev1.ServiceSpec{
-		Selector: map[string]string{
-			"app": "test-app",
-		},
-		Ports: []corev1.ServicePort{
-			{
-				Port:     80,
-				Protocol: corev1.ProtocolTCP,
+	testService = &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"kubernetes.io/service-name": "test-service",
 			},
 		},
-		Type: corev1.ServiceTypeNodePort,
-	},
-}
-
-var testEndpointSlice = &discoveryv1.EndpointSlice{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "test-service-endpoints",
-		Namespace: "test-ns",
-		Labels: map[string]string{
-			"kubernetes.io/service-name": "test-service",
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"app": "test-app",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Port:     80,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+			Type: corev1.ServiceTypeNodePort,
 		},
-		OwnerReferences: []metav1.OwnerReference{
-			{
-				Kind: "Service",
-				Name: "test-service",
+	}
+
+	testEndpointSlice = &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-service-endpoints",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"kubernetes.io/service-name": "test-service",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind: "Service",
+					Name: "test-service",
+				},
 			},
 		},
-	},
-	AddressType: discoveryv1.AddressTypeIPv4,
-	Endpoints: []discoveryv1.Endpoint{
-		{
-			NodeName:  &testNode.Name,
-			Addresses: []string{"192.168.1.1", "192.168.1.2"},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				NodeName:  &testNode.Name,
+				Addresses: []string{"192.168.1.1", "192.168.1.2"},
+			},
 		},
-	},
-	Ports: []discoveryv1.EndpointPort{
-		{
-			Name:     nil,
-			Port:     func(i int32) *int32 { return &i }(80),
-			Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+		Ports: []discoveryv1.EndpointPort{
+			{
+				Name:     nil,
+				Port:     func(i int32) *int32 { return &i }(80),
+				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+			},
 		},
-	},
-}
-
-var testEpsComDetails = []types.ComDetails{
-	{
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      80,
-		Namespace: "test-ns",
-		Service:   "test-service",
-		Pod:       "test-pod",
-		Container: "test-container",
-		NodeRole:  "master",
-		Optional:  false,
-	},
-}
+	}
+)
 
 var _ = g.Describe("Commatrix creator pkg tests", func() {
 	g.Context("Get ComDetails List From File", func() {
