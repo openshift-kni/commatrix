@@ -19,14 +19,14 @@ import (
 	fakek "k8s.io/client-go/kubernetes/fake"
 )
 
-// Global uninitialized vars
+// Global uninitialized vars.
 var (
 	endpointSlices    *endpointslices.EndpointSlicesExporter
 	nilComDetailsList []types.ComDetails
 )
 
-// Example Comdetails lists
-var ( 
+// Example Comdetails lists.
+var (
 	exampleComDetailsList = []types.ComDetails{
 		{
 			Direction: "ingress",
@@ -67,7 +67,7 @@ var (
 	}
 )
 
-// Test resources
+// Test resources.
 var (
 	testNode = &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
