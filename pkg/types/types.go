@@ -237,6 +237,10 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 			tcp dport  { %s } accept
 			udp dport { %s } accept
 
+			# Allow host level services dynamic port range
+			tcp dport 9000-9999 accept
+			udp dport 9000-9999 accept
+
 			# Logging and default drop
 			log prefix "firewall " drop
 		}
