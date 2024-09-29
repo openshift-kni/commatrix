@@ -241,6 +241,16 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 			tcp dport 9000-9999 accept
 			udp dport 9000-9999 accept
 
+			# Keep port open for origin test
+			# https://github.com/openshift/origin/blob/master/vendor/k8s.io/kubernetes/test/e2e/network/service.go#L2622
+			tcp dport 10180 accept
+			udp dport 10180 accept
+
+			# Keep port open for origin test
+			# https://github.com/openshift/origin/blob/master/vendor/k8s.io/kubernetes/test/e2e/network/service.go#L2724
+			tcp dport 80 accept
+			udp dport 80 accept
+
 			# Logging and default drop
 			log prefix "firewall " drop
 		}
