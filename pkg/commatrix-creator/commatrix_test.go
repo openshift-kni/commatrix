@@ -71,8 +71,7 @@ var (
 var (
 	testNode = &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-node",
-			Namespace: "test-ns",
+			Name: "test-node",
 			Labels: map[string]string{
 				"node-role.kubernetes.io/master": "",
 			},
@@ -157,7 +156,7 @@ var (
 )
 
 var _ = g.Describe("Commatrix creator pkg tests", func() {
-	g.Context("Get ComDetails List From File", func() {
+	g.Context("Get Costume entries List From File", func() {
 		for _, format := range []string{types.FormatCSV, types.FormatJSON, types.FormatYAML} {
 			g.It(fmt.Sprintf("Should successfully extract ComDetails from a %s file", format), func() {
 				g.By(fmt.Sprintf("Creating new communication matrix with %s static entries format", format))
@@ -200,7 +199,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 		})
 	})
 
-	g.Context("Get static enteries from file", func() {
+	g.Context("Get static entries from file", func() {
 		g.It("Should successfully get static entries suitable to baremetal standard cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal standard cluster")
 			cm, err := New(nil, "", "", types.Baremetal, types.Standard)
@@ -274,7 +273,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 	})
 
-	g.Context("Create Endpoint Matrix", func() {
+	g.Context("Create EndpointSlice Matrix", func() {
 		g.BeforeEach(func() {
 			sch := runtime.NewScheme()
 
