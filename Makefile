@@ -1,6 +1,7 @@
 FORMAT ?= csv
 DEST_DIR ?= .
 DEBUG ?=
+SUITE ?= 
 GO_SRC := cmd/main.go
 EXECUTABLE := commatrix-gen
 export GOLANGCI_LINT_CACHE = /tmp/.cache
@@ -69,8 +70,15 @@ test:
 
 .PHONY: e2e-test
 e2e-test: ginkgo
-	$(GINKGO) -v ./test/e2e/...
-
+	@if [ "$$SUITE" = "Validation" ] || [ "$$SUITE" = "Nftables" ]; then \
+		echo "Running e2e '$$SUITE' test suite"; \
+		$(GINKGO) -v --focus "$$SUITE" ./test/e2e/...; \
+	elif [ "$$SUITE" = "all" ]; then \
+		echo "Running all e2e test suites"; \
+		$(GINKGO) -v ./test/e2e/...; \
+	else \
+		echo "Env var 'SUITE' must be set (Options: 'all', 'Validation', 'Nftables')"; \
+	fi
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
 define go-install-tool
