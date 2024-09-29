@@ -3,3 +3,7 @@ commatrix-gen
 
 bin/
 vendor/
+.vscode/
+
+test/e2e/commatrix-e2e
+test/e2e/e2e.test
