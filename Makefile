@@ -70,7 +70,6 @@ test:
 
 .PHONY: e2e-test
 e2e-test: ginkgo
-	@echo "Current SUITE value: '$(SUITE)'"
 	@if [ "$(SUITE)" = "Validation" ] || [ "$(SUITE)" = "Nftables" ]; then \
 		echo "Running e2e '$(SUITE)' test suite"; \
 		$(GINKGO) -v --focus "$(SUITE)" ./test/e2e/...; \
