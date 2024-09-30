@@ -1,7 +1,7 @@
 FORMAT ?= csv
 DEST_DIR ?= .
 DEBUG ?=
-SUITE ?= 
+SUITE ?= all
 GO_SRC := cmd/main.go
 EXECUTABLE := commatrix-gen
 export GOLANGCI_LINT_CACHE = /tmp/.cache
@@ -70,10 +70,11 @@ test:
 
 .PHONY: e2e-test
 e2e-test: ginkgo
-	@if [ "$$SUITE" = "Validation" ] || [ "$$SUITE" = "Nftables" ]; then \
-		echo "Running e2e '$$SUITE' test suite"; \
-		$(GINKGO) -v --focus "$$SUITE" ./test/e2e/...; \
-	elif [ "$$SUITE" = "all" ]; then \
+	@echo "Current SUITE value: '$(SUITE)'"
+	@if [ "$(SUITE)" = "Validation" ] || [ "$(SUITE)" = "Nftables" ]; then \
+		echo "Running e2e '$(SUITE)' test suite"; \
+		$(GINKGO) -v --focus "$(SUITE)" ./test/e2e/...; \
+	elif [ "$(SUITE)" = "all" ]; then \
 		echo "Running all e2e test suites"; \
 		$(GINKGO) -v ./test/e2e/...; \
 	else \
