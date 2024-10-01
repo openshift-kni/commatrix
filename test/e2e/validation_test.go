@@ -270,6 +270,12 @@ func filterSSMatrix(mat *types.ComMatrix) (*types.ComMatrix, error) {
 			continue
 		}
 
+		// Skip dns ports used during provisioning for dhcp and tftp,
+		// not used for external traffic
+		if cd.Service == "dnsmasq" || cd.Service == "dig" {
+			continue
+		}
+
 		res = append(res, cd)
 	}
 
