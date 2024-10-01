@@ -241,6 +241,10 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 			tcp dport 9000-9999 accept
 			udp dport 9000-9999 accept
 
+			# Allow Kubernetes node ports dynamic port range
+			tcp dport 30000-32767 accept
+			udp dport 30000-32767 accept
+
 			# Keep port open for origin test
 			# https://github.com/openshift/origin/blob/master/vendor/k8s.io/kubernetes/test/e2e/network/service.go#L2622
 			tcp dport 10180 accept
