@@ -174,17 +174,6 @@ func MachineconfigWay(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRo
 	}
 	fmt.Println("write the yaml MachineConfiguration ")
 
-	versionMajorMinor, err := utilsHelpers.GetClusterVersiona()
-	if err != nil {
-		return err
-	}
-
-	if isVersionGreaterThan(versionMajorMinor, "4.16") {
-		if err = updateMachineConfiguration(c); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			return err
-		}
-	}
 	fmt.Println("apply the yaml MachineConfiguration ")
 
 	if err = applyYAMLWithOC(output, c); err != nil {
@@ -196,7 +185,7 @@ func MachineconfigWay(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRo
 }
 
 // isVersionGreaterThan compares two version strings (major.minor) and returns true if v1 > v2.
-func isVersionGreaterThan(v1, v2 string) bool {
+func IsVersionGreaterThan(v1, v2 string) bool {
 	parts1 := strings.Split(v1, ".")
 	parts2 := strings.Split(v2, ".")
 
@@ -331,7 +320,7 @@ func applyYAMLWithOC(output []byte, c *client.ClientSet) error {
 	return nil
 }
 
-func updateMachineConfiguration(c *client.ClientSet) error {
+func UpdateMachineConfiguration(c *client.ClientSet) error {
 	// Define the command to edit the MachineConfiguration
 	machineConfig := &ocpoperatorv1.MachineConfiguration{}
 

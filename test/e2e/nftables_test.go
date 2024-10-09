@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -35,6 +36,15 @@ var _ = Describe("Nftables", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 		g := new(errgroup.Group)
+		versionMajorMinor, err := utilsHelpers.GetClusterVersiona()
+		Expect(err).ToNot(HaveOccurred())
+
+		if firewall.IsVersionGreaterThan(versionMajorMinor, "4.16") {
+			if err = firewall.UpdateMachineConfiguration(cs); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				Expect(err).ToNot(HaveOccurred())
+			}
+		}
 		Expect(err).ToNot(HaveOccurred())
 		for _, role := range nodeRoles {
 			g.Go(func() error {
