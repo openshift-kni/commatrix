@@ -23,7 +23,7 @@ var (
 
 var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
-		masterMat, workerMat := matrix.SeparateMatrixByRole()
+		masterMat, workerMat := commatrix.SeparateMatrixByRole()
 		var workerNFT []byte
 		nodeRoles := []string{"master"}
 		By("Creating NFT output for each role")
