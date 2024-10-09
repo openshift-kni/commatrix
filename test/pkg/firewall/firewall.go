@@ -340,11 +340,13 @@ func updateMachineConfiguration(c *client.ClientSet) error {
 	if err != nil {
 		log.Fatalf("error getting MachineConfiguration: %v", err)
 	}
-	// Modify the MachineConfiguration spec (e.g., adding node disruption policy)
-	// Modify any fields as required
+	machineConfig.Spec.OperatorLogLevel = ocpoperatorv1.Normal
+	machineConfig.Spec.ManagementState = ocpoperatorv1.Managed
 	machineConfig.Spec.LogLevel = ocpoperatorv1.Normal
-	// Modify the MachineConfiguration
 	mc.Spec.NodeDisruptionPolicy = ocpoperatorv1.NodeDisruptionPolicyConfig{
+		SSHKey: ocpoperatorv1.NodeDisruptionPolicySpecSSHKey{
+			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{},
+		},
 		Files: []ocpoperatorv1.NodeDisruptionPolicySpecFile{
 			{
 				Path: "/etc/sysconfig/nftables.conf",
