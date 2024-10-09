@@ -16,12 +16,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	configv1 "github.com/openshift/api/config/v1"
-	configv1client "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/openshift-kni/commatrix/pkg/client"
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
+	"github.com/openshift-kni/commatrix/test/pkg/cluster"
 
 	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
@@ -71,7 +69,7 @@ const (
 var _ = Describe("Validation", func() {
 	It("generated communication matrix should be equal to documented communication matrix", func() {
 		By("get cluster's version and check if it's suitable for test")
-		clusterVersion, err := getClusterVersion(cs)
+		clusterVersion, err := cluster.GetClusterVersion(cs)
 		Expect(err).NotTo(HaveOccurred())
 		floatClusterVersion, err := strconv.ParseFloat(clusterVersion, 64)
 		Expect(err).ToNot(HaveOccurred())
@@ -194,17 +192,6 @@ var _ = Describe("Validation", func() {
 		}
 	})
 })
-
-// getClusterVersion return cluster's Y stream version.
-func getClusterVersion(cs *client.ClientSet) (string, error) {
-	configClient := configv1client.NewForConfigOrDie(cs.Config)
-	clusterVersion, err := configClient.ClusterVersions().Get(context.Background(), "version", metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-	clusterVersionParts := strings.SplitN(clusterVersion.Status.Desired.Version, ".", 3)
-	return strings.Join(clusterVersionParts[:2], "."), nil
-}
 
 // excludeStaticEntriesWithGivenNodeRole excludes from comDetails, static entries from staticEntriesMatrix with the given nodeRole
 // The function returns filtered ComDetails without the excluded entries.
