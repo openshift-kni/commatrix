@@ -299,7 +299,7 @@ func ConvertButaneToYAML(butaneContent []byte) ([]byte, error) {
 
 func applyYAMLWithOC(filePath string) error {
 	// Construct the oc apply command
-	cmd := exec.Command("oc", "apply", "-f", filePath)
+	cmd := exec.Command("/usr/local/bin/oc", "apply", "-f", filePath)
 
 	// Set the command's output to be the same as the program's output
 	cmd.Stdout = os.Stdout
@@ -317,7 +317,7 @@ func applyYAMLWithOC(filePath string) error {
 
 func updateMachineConfiguration() error {
 	// Define the command to edit the MachineConfiguration
-	cmd := exec.Command("oc", "patch", "MachineConfiguration", "cluster", "-n", "openshift-machine-config-operator", "--type", "merge", "-p", `
+	cmd := exec.Command("/usr/local/bin/oc", "patch", "MachineConfiguration", "cluster", "-n", "openshift-machine-config-operator", "--type", "merge", "-p", `
 spec:
   logLevel: Normal
   managementState: Managed
