@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -10,9 +11,8 @@ import (
 
 	"github.com/openshift-kni/commatrix/pkg/consts"
 
-	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
-	node "github.com/openshift-kni/commatrix/test/pkg/node"
+	testnode "github.com/openshift-kni/commatrix/test/pkg/node"
 )
 
 var (
@@ -23,30 +23,27 @@ var (
 
 var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
-		masterMat, workerMat := commatrix.SeparateMatrixByRole()
+		masterMat, workerMat := matrix.SeparateMatrixByRole()
 		var workerNFT []byte
-
+		nodeRoles := []string{"master"}
 		By("Creating NFT output for each role")
 		masterNFT, err := masterMat.ToNFTables()
 		Expect(err).NotTo(HaveOccurred())
 		if !isSNO {
+			nodeRoles = append(nodeRoles, "worker")
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
 		}
-
 		g := new(errgroup.Group)
-		for _, node := range nodeList.Items {
-			nodeName := node.Name
-			nodeRole, err := types.GetNodeRole(&node)
-			Expect(err).ToNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
+		for _, role := range nodeRoles {
 			g.Go(func() error {
+				By(fmt.Sprintf("Applying firewall on %s nodes", role))
 				nftTable := masterNFT
-				if nodeRole == workerNodeRole {
+				if role == workerNodeRole {
 					nftTable = workerNFT
 				}
-
-				By("Applying firewall on node: " + nodeName)
-				err := firewall.ApplyRulesToNode(nftTable, nodeName, testNS, artifactsDir, utilsHelpers)
+				err := firewall.MachineconfigWay(nftTable, artifactsDir, role, utilsHelpers)
 				if err != nil {
 					return err
 				}
@@ -57,17 +54,20 @@ var _ = Describe("Nftables", func() {
 		// Wait for all goroutines to finish
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
+
+		g = new(errgroup.Group)
 		nodeName := nodeList.Items[0].Name
-
-		By("Rebooting first node: " + nodeName + "and waiting for disconnect")
-
-		err = node.SoftRebootNodeAndWaitForDisconnect(utilsHelpers, cs, nodeName, testNS)
+		for _, node := range nodeList.Items {
+			nodeName = node.Name
+			g.Go(func() error {
+				By("Waiting for node to be ready " + nodeName)
+				testnode.WaitForNodeReady(nodeName, cs)
+				return nil
+			})
+		}
+		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
-
-		By("Waiting for node to be ready")
-		node.WaitForNodeReady(nodeName, cs)
-
-		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS, consts.DefaultDebugPodImage)
+		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
 		Expect(err).ToNot(HaveOccurred())
 
 		defer func() {
