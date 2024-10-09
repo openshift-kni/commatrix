@@ -72,10 +72,10 @@ test:
 e2e-test: ginkgo
 	@if [ "$(SUITE)" = "Validation" ] || [ "$(SUITE)" = "Nftables" ]; then \
 		echo "Running e2e '$(SUITE)' test suite"; \
-		$(GINKGO) -v --focus "$(SUITE)" ./test/e2e/...; \
+		EXTRA_NFTABLES_MASTER_FILE="$(EXTRA_NFTABLES_MASTER_FILE)" EXTRA_NFTABLES_WORKER_FILE="$(EXTRA_NFTABLES_WORKER_FILE)" $(GINKGO) -v --focus "$(SUITE)" ./test/e2e/...; \
 	elif [ "$(SUITE)" = "all" ]; then \
 		echo "Running all e2e test suites"; \
-		$(GINKGO) -v ./test/e2e/...; \
+		EXTRA_NFTABLES_MASTER_FILE="$(EXTRA_NFTABLES_MASTER_FILE)" EXTRA_NFTABLES_WORKER_FILE="$(EXTRA_NFTABLES_WORKER_FILE)" $(GINKGO) -v ./test/e2e/...; \
 	else \
 		echo "Env var 'SUITE' must be set (Options: 'all', 'Validation', 'Nftables')"; \
 	fi

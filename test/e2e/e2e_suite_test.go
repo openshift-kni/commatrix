@@ -18,16 +18,18 @@ import (
 )
 
 var (
-	cs           *client.ClientSet
-	commatrix    *types.ComMatrix
-	isSNO        bool
-	isBM         bool
-	deployment   types.Deployment
-	infra        types.Env
-	utilsHelpers utils.UtilsInterface
-	epExporter   *endpointslices.EndpointSlicesExporter
-	nodeList     *corev1.NodeList
-	artifactsDir string
+	cs                      *client.ClientSet
+	commatrix               *types.ComMatrix
+	isSNO                   bool
+	isBM                    bool
+	deployment              types.Deployment
+	infra                   types.Env
+	utilsHelpers            utils.UtilsInterface
+	epExporter              *endpointslices.EndpointSlicesExporter
+	nodeList                *corev1.NodeList
+	artifactsDir            string
+	extraNFTablesMasterFile = ""
+	extraNFTablesWorkerFile = ""
 )
 
 const testNS = "openshift-commatrix-test"
@@ -82,6 +84,17 @@ var _ = BeforeSuite(func() {
 	nodeList = &corev1.NodeList{}
 	err = cs.List(context.TODO(), nodeList)
 	Expect(err).ToNot(HaveOccurred())
+
+	// get the EXTRA_NFTABLES_FILE if it not exist value is ""
+	val, exists := os.LookupEnv("EXTRA_NFTABLES_MASTER_FILE")
+	if exists {
+		extraNFTablesMasterFile = val
+	}
+
+	val, exists = os.LookupEnv("EXTRA_NFTABLES_WORKER_FILE")
+	if exists {
+		extraNFTablesWorkerFile = val
+	}
 })
 
 var _ = AfterSuite(func() {

@@ -1,0 +1,7 @@
+tcp dport { 9000-9999 } accept
+tcp dport { 30000-32767 } accept
+tcp dport { 10180 } accept
+tcp dport { 80 } accept
+udp dport { 9000-9999 } accept
+udp dport { 30000-32767 } accept
+udp dport { 10180 } accept
