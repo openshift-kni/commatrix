@@ -43,7 +43,7 @@ var _ = Describe("Nftables", func() {
 				if role == workerNodeRole {
 					nftTable = workerNFT
 				}
-				err := firewall.MachineconfigWay(nftTable, artifactsDir, role, utilsHelpers)
+				err := firewall.MachineconfigWay(cs, nftTable, artifactsDir, role, utilsHelpers)
 				if err != nil {
 					return err
 				}

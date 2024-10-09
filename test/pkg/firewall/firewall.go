@@ -1,16 +1,26 @@
 package firewall
 
 import (
-	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
+	"gopkg.in/yaml.v2" // For parsing YAML
+
+	"github.com/openshift-kni/commatrix/pkg/client"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1" // Adjust the import path as needed
+
+	ocpoperatorv1 "github.com/openshift/api/operator/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	butaneConfig "github.com/coreos/butane/config"
 	"github.com/coreos/butane/config/common"
@@ -130,7 +140,8 @@ func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, 
 	return output, nil
 }
 
-func MachineconfigWay(NFTtable []byte, artifactsDir, nodeRolde string, utilsHelpers utils.UtilsInterface) error {
+func MachineconfigWay(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde string, utilsHelpers utils.UtilsInterface) error {
+
 	fmt.Println("MachineConfiguration way!")
 
 	output, err := createButaneConfig(string(NFTtable), nodeRolde)
@@ -169,14 +180,14 @@ func MachineconfigWay(NFTtable []byte, artifactsDir, nodeRolde string, utilsHelp
 	}
 
 	if isVersionGreaterThan(versionMajorMinor, "4.16") {
-		if err = updateMachineConfiguration(); err != nil {
+		if err = updateMachineConfiguration(c); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			return err
 		}
 	}
 	fmt.Println("apply the yaml MachineConfiguration ")
 
-	if err = applyYAMLWithOC(filePath); err != nil {
+	if err = applyYAMLWithOC(output, c); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return err
 	}
@@ -256,31 +267,6 @@ storage:
 	return []byte(butaneConfig), nil
 }
 
-// Function to convert Butane config to YAML using API
-/*func convertButaneToYAML(butaneContent []byte) ([]byte, error) {
-	// Example API endpoint (replace with actual Butane conversion API)
-	apiURL := "https://butane-api.example.com/convert"
-
-	// Create the POST request
-	resp, err := http.Post(apiURL, "application/x-yaml", bytes.NewBuffer(butaneContent))
-	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Read the response body
-	yamlContent, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API error: %s", string(yamlContent))
-	}
-
-	return yamlContent, nil
-}*/
-
 func fail(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 	os.Exit(1)
@@ -297,57 +283,125 @@ func ConvertButaneToYAML(butaneContent []byte) ([]byte, error) {
 	return dataOut, nil
 }
 
-func applyYAMLWithOC(filePath string) error {
-	// Construct the oc apply command
-	cmd := exec.Command("/usr/local/bin/oc", "apply", "-f", filePath)
+func applyYAMLWithOC(output []byte, c *client.ClientSet) error {
 
-	// Set the command's output to be the same as the program's output
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Run the oc apply command
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("failed to apply YAML file using oc: %w", err)
+	var data map[interface{}]interface{}
+	if err := yaml.Unmarshal(output, &data); err != nil {
+		return fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	fmt.Println("YAML file applied successfully with oc!")
+	convertedData := convertMapInterfaceToString(data)
+
+	jsonData, err := json.Marshal(convertedData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal to JSON: %w", err)
+	}
+
+	obj := &machineconfigurationv1.MachineConfig{}
+	if err := json.Unmarshal(jsonData, obj); err != nil {
+		return fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+
+	fmt.Printf("Unmarshaled MachineConfig: %+v\n", obj)
+
+	// Check if the MachineConfig already exists
+	existingMC := &machineconfigurationv1.MachineConfig{}
+	err = c.Get(context.TODO(), types.NamespacedName{Name: obj.Name}, existingMC)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// If it doesn't exist, create it
+			if err := c.Create(context.TODO(), obj); err != nil {
+				return fmt.Errorf("failed to create MachineConfig: %w", err)
+			}
+			fmt.Println("MachineConfig created successfully.")
+		} else {
+			return fmt.Errorf("failed to get MachineConfig: %w", err)
+		}
+	} else {
+		// If it exists, update it
+		// Set the resourceVersion from the existing object
+		obj.ResourceVersion = existingMC.ResourceVersion
+
+		if err := c.Update(context.TODO(), obj); err != nil {
+			return fmt.Errorf("failed to update MachineConfig: %w", err)
+		}
+		fmt.Println("MachineConfig updated successfully.")
+	}
+
 	return nil
 }
 
-func updateMachineConfiguration() error {
+func updateMachineConfiguration(c *client.ClientSet) error {
 	// Define the command to edit the MachineConfiguration
-	cmd := exec.Command("/usr/local/bin/oc", "patch", "MachineConfiguration", "cluster", "-n", "openshift-machine-config-operator", "--type", "merge", "-p", `
-spec:
-  logLevel: Normal
-  managementState: Managed
-  operatorLogLevel: Normal
-  nodeDisruptionPolicy:
-    files:
-    - actions:
-      - restart:
-          serviceName: nftables.service
-        type: Restart
-      path: /etc/sysconfig/nftables.conf
-    units:
-    - actions:
-      - type: DaemonReload
-      - type: Reload
-        reload:
-          serviceName: nftables.service
-      name: nftables.service
-`)
+	machineConfig := &ocpoperatorv1.MachineConfiguration{}
 
-	// Set up buffers to capture standard output and standard error
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	// Execute the command
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to update MachineConfiguration: %v, stderr: %s", err, stderr.String())
+	mc := &ocpoperatorv1.MachineConfiguration{}
+	err := c.Get(context.TODO(), types.NamespacedName{Name: "cluster", Namespace: "openshift-machine-config-operator"}, mc)
+	if err != nil {
+		log.Fatalf("error getting MachineConfiguration: %v", err)
+	}
+	// Modify the MachineConfiguration spec (e.g., adding node disruption policy)
+	// Modify any fields as required
+	machineConfig.Spec.LogLevel = ocpoperatorv1.Normal
+	// Modify the MachineConfiguration
+	mc.Spec.NodeDisruptionPolicy = ocpoperatorv1.NodeDisruptionPolicyConfig{
+		Files: []ocpoperatorv1.NodeDisruptionPolicySpecFile{
+			{
+				Path: "/etc/sysconfig/nftables.conf",
+				Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
+					{
+						Type: ocpoperatorv1.RestartSpecAction,
+						Restart: &ocpoperatorv1.RestartService{
+							ServiceName: "nftables.service",
+						},
+					},
+				},
+			},
+		},
+		Units: []ocpoperatorv1.NodeDisruptionPolicySpecUnit{
+			{
+				Name: "nftables.service",
+				Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
+					{
+						Type: ocpoperatorv1.DaemonReloadSpecAction,
+					},
+					{
+						Type: ocpoperatorv1.ReloadSpecAction,
+						Reload: &ocpoperatorv1.ReloadService{
+							ServiceName: "nftables.service",
+						},
+					},
+				},
+			},
+		},
+	}
+	if err := c.Update(context.TODO(), mc); err != nil {
+		log.Fatalf("failed to update MachineConfiguration: %v", err)
 	}
 
 	fmt.Println("MachineConfiguration updated successfully!")
 	return nil
+}
+
+func convertMapInterfaceToString(data interface{}) interface{} {
+	switch v := data.(type) {
+	case map[interface{}]interface{}:
+		newMap := make(map[string]interface{})
+		for k, val := range v {
+			if key, ok := k.(string); ok {
+				newMap[key] = convertMapInterfaceToString(val)
+			} else {
+				fmt.Printf("Invalid key type: %v\n", reflect.TypeOf(k))
+			}
+		}
+		return newMap
+	case []interface{}:
+		newSlice := make([]interface{}, len(v))
+		for i, val := range v {
+			newSlice[i] = convertMapInterfaceToString(val)
+		}
+		return newSlice
+	default:
+		return v // Return the value as is if it's not a map or slice
+	}
 }
