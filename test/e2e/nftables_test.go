@@ -67,7 +67,7 @@ var _ = Describe("Nftables", func() {
 		}
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
-		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage)
+		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS, consts.DefaultDebugPodImage)
 		Expect(err).ToNot(HaveOccurred())
 
 		defer func() {
