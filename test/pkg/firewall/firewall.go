@@ -345,16 +345,15 @@ func convertMapInterfaceToString(data interface{}) interface{} {
 
 func UpdateMachineConfiguration(c *client.ClientSet) error {
 	// Define the command to edit the MachineConfiguration
-	machineConfig := &ocpoperatorv1.MachineConfiguration{}
 
 	mc := &ocpoperatorv1.MachineConfiguration{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "cluster", Namespace: "openshift-machine-config-operator"}, mc)
 	if err != nil {
 		log.Fatalf("error getting MachineConfiguration: %v", err)
 	}
-	machineConfig.Spec.OperatorLogLevel = ocpoperatorv1.Normal
-	machineConfig.Spec.ManagementState = ocpoperatorv1.Managed
-	machineConfig.Spec.LogLevel = ocpoperatorv1.Normal
+	mc.Spec.OperatorLogLevel = ocpoperatorv1.Normal
+	mc.Spec.ManagementState = ocpoperatorv1.Managed
+	mc.Spec.LogLevel = ocpoperatorv1.Normal
 	mc.Spec.NodeDisruptionPolicy = ocpoperatorv1.NodeDisruptionPolicyConfig{
 		SSHKey: ocpoperatorv1.NodeDisruptionPolicySpecSSHKey{
 			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{},
