@@ -171,7 +171,6 @@ func MachineconfigWay(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRo
 	if err != nil {
 		return err
 	}
-	fmt.Println("write the yaml MachineConfiguration ")
 
 	fmt.Println("apply the yaml MachineConfiguration ")
 

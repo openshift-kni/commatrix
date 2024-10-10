@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -64,6 +65,9 @@ var _ = Describe("Nftables", func() {
 		// Wait for all goroutines to finish
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
+		waitDuration := 5 * time.Minute
+		fmt.Printf("Waiting for %s after applying MachineConfiguration...\n", waitDuration)
+		time.Sleep(waitDuration)
 
 		g = new(errgroup.Group)
 		nodeName := nodeList.Items[0].Name
@@ -85,11 +89,11 @@ var _ = Describe("Nftables", func() {
 			Expect(err).ToNot(HaveOccurred())
 		}()
 
-		By("Listing nftables rules after reboot")
+		By("Listing nftables rules")
 		output, err := firewall.NftListAndWriteToFile(debugPod, utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
 		Expect(err).ToNot(HaveOccurred())
 
-		By("Checking if nftables contain the chain OPENSHIFT after reboot")
+		By("Checking if nftables contain the chain OPENSHIFT")
 		if strings.Contains(string(output), tableName) &&
 			strings.Contains(string(output), chainName) {
 			log.Println("OPENSHIFT chain found in nftables.")
