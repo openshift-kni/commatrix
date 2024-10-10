@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -176,7 +175,7 @@ func MachineconfigWay(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRo
 
 	fmt.Println("apply the yaml MachineConfiguration ")
 
-	if err = applyYAMLWithOC(output, c); err != nil {
+	if err = applyYAMLWithOC(output, c, utilsHelpers, artifactsDir, nodeRolde); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return err
 	}
@@ -272,18 +271,26 @@ func ConvertButaneToYAML(butaneContent []byte) ([]byte, error) {
 	return dataOut, nil
 }
 
-func applyYAMLWithOC(output []byte, c *client.ClientSet) error {
-
+func applyYAMLWithOC(output []byte, c *client.ClientSet, utilsHelpers utils.UtilsInterface, artifactsDir, role string) error {
 	var data map[interface{}]interface{}
-	if err := yaml.Unmarshal(output, &data); err != nil {
+	err := yaml.Unmarshal(output, &data)
+	if err != nil {
 		return fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
+	// Convert map[interface{}]interface{} to map[string]interface{}
 	convertedData := convertMapInterfaceToString(data)
-
-	jsonData, err := json.Marshal(convertedData)
+	// Marshal the converted map into JSON
+	jsonData, err := json.MarshalIndent(convertedData, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal to JSON: %w", err)
+	}
+
+	fileName := fmt.Sprintf("convertedData-%s.json", role)
+	filePath := filepath.Join(artifactsDir, fileName)
+	err = utilsHelpers.WriteFile(filePath, jsonData)
+	if err != nil {
+		return err
 	}
 
 	obj := &machineconfigurationv1.MachineConfig{}
@@ -318,6 +325,23 @@ func applyYAMLWithOC(output []byte, c *client.ClientSet) error {
 	}
 
 	return nil
+}
+
+// Helper function to convert map[interface{}]interface{} to map[string]interface{}
+func convertMapInterfaceToString(data interface{}) interface{} {
+	switch v := data.(type) {
+	case map[interface{}]interface{}:
+		newMap := make(map[string]interface{})
+		for key, value := range v {
+			newMap[fmt.Sprintf("%v", key)] = convertMapInterfaceToString(value)
+		}
+		return newMap
+	case []interface{}:
+		for i, item := range v {
+			v[i] = convertMapInterfaceToString(item)
+		}
+	}
+	return data
 }
 
 func UpdateMachineConfiguration(c *client.ClientSet) error {
@@ -372,27 +396,4 @@ func UpdateMachineConfiguration(c *client.ClientSet) error {
 
 	fmt.Println("MachineConfiguration updated successfully!")
 	return nil
-}
-
-func convertMapInterfaceToString(data interface{}) interface{} {
-	switch v := data.(type) {
-	case map[interface{}]interface{}:
-		newMap := make(map[string]interface{})
-		for k, val := range v {
-			if key, ok := k.(string); ok {
-				newMap[key] = convertMapInterfaceToString(val)
-			} else {
-				fmt.Printf("Invalid key type: %v\n", reflect.TypeOf(k))
-			}
-		}
-		return newMap
-	case []interface{}:
-		newSlice := make([]interface{}, len(v))
-		for i, val := range v {
-			newSlice[i] = convertMapInterfaceToString(val)
-		}
-		return newSlice
-	default:
-		return v // Return the value as is if it's not a map or slice
-	}
 }
