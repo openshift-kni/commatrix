@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -10,8 +11,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/sync/errgroup"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift-kni/commatrix/pkg/consts"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1" // Adjust the import path as needed
 
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
 	testnode "github.com/openshift-kni/commatrix/test/pkg/node"
@@ -48,13 +51,14 @@ var _ = Describe("Nftables", func() {
 		}
 		Expect(err).ToNot(HaveOccurred())
 		for _, role := range nodeRoles {
+			noderole := role
 			g.Go(func() error {
-				By(fmt.Sprintf("Applying firewall on %s nodes", role))
+				By(fmt.Sprintf("Applying firewall on %s nodes", noderole))
 				nftTable := masterNFT
-				if role == workerNodeRole {
+				if noderole == workerNodeRole {
 					nftTable = workerNFT
 				}
-				err := firewall.MachineconfigWay(cs, nftTable, artifactsDir, role, utilsHelpers)
+				err := firewall.MachineconfigWay(cs, nftTable, artifactsDir, noderole, utilsHelpers)
 				if err != nil {
 					return err
 				}
@@ -72,15 +76,32 @@ var _ = Describe("Nftables", func() {
 		g = new(errgroup.Group)
 		nodeName := nodeList.Items[0].Name
 		for _, node := range nodeList.Items {
-			nodeName = node.Name
+			nodename := node.Name
 			g.Go(func() error {
-				By("Waiting for node to be ready " + nodeName)
-				testnode.WaitForNodeReady(nodeName, cs)
+				By("Waiting for node to be ready " + nodename)
+				testnode.WaitForNodeReady(nodename, cs)
 				return nil
 			})
 		}
+		mcpList := &machineconfigurationv1.MachineConfigPoolList{}
+
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
+		// List all MachineConfigPools
+		err = cs.List(context.TODO(), mcpList, &client.ListOptions{})
+		if err != nil {
+			log.Fatalf("error getting MachineConfigPools: %v", err)
+		}
+
+		for _, mcp := range mcpList.Items {
+			fmt.Printf("MCP: %s\n", mcp.Name)
+			fmt.Printf("  Updated: %v\n", mcp.Status)
+			fmt.Printf("  MachineCount: %d\n", mcp.Status.MachineCount)
+			fmt.Printf("  ReadyMachineCount: %d\n", mcp.Status.ReadyMachineCount)
+			fmt.Printf("  UpdatedMachineCount: %d\n", mcp.Status.UpdatedMachineCount)
+			fmt.Printf("  DegradedMachineCount: %d\n", mcp.Status.DegradedMachineCount)
+		}
+
 		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS, consts.DefaultDebugPodImage)
 		Expect(err).ToNot(HaveOccurred())
 

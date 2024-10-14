@@ -140,13 +140,10 @@ func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, 
 }
 
 func MachineconfigWay(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde string, utilsHelpers utils.UtilsInterface) error {
-
 	fmt.Println("MachineConfiguration way!")
 
-	output, err := createButaneConfig(string(NFTtable), nodeRolde)
-	if err != nil {
-		return fmt.Errorf("failed to create Butane Config on nodeRole: %s %s: ", nodeRolde, err)
-	}
+	output := createButaneConfig(string(NFTtable), nodeRolde)
+
 	fileName := fmt.Sprintf("bu-%s.bu", nodeRolde)
 	fmt.Printf("fileName the bu MachineConfiguration %s", fileName)
 
@@ -154,7 +151,7 @@ func MachineconfigWay(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRo
 
 	fmt.Printf("write the bu MachineConfiguration %s", filePath)
 
-	err = utilsHelpers.WriteFile(filePath, output)
+	err := utilsHelpers.WriteFile(filePath, output)
 	if err != nil {
 		return err
 	}
@@ -205,13 +202,12 @@ func IsVersionGreaterThan(v1, v2 string) bool {
 	return false
 }
 
-func createButaneConfig(nftablesRules, nodeRole string) ([]byte, error) {
+func createButaneConfig(nftablesRules, nodeRole string) []byte {
 	lines := strings.Split(nftablesRules, "\n")
 	nftablesRulesWithoutFirstLine := ""
 	if len(lines) > 1 {
 		nftablesRulesWithoutFirstLine = strings.Join(lines[1:], "\n")
 	}
-	//nftablesRulesWithoutFirstLine = strings.ReplaceAll(nftablesRulesWithoutFirstLine, "\t", "  ")
 
 	butaneConfig := fmt.Sprintf(`variant: openshift
 version: 4.16.0
@@ -251,7 +247,7 @@ storage:
 		%s
         `, nodeRole, nodeRole, nftablesRulesWithoutFirstLine)
 	butaneConfig = strings.ReplaceAll(butaneConfig, "\t", "  ")
-	return []byte(butaneConfig), nil
+	return []byte(butaneConfig)
 }
 
 func fail(format string, args ...interface{}) {
@@ -297,8 +293,6 @@ func applyYAMLWithOC(output []byte, c *client.ClientSet, utilsHelpers utils.Util
 		return fmt.Errorf("failed to unmarshal JSON: %w", err)
 	}
 
-	fmt.Printf("Unmarshaled MachineConfig: %+v\n", obj)
-
 	// Check if the MachineConfig already exists
 	existingMC := &machineconfigurationv1.MachineConfig{}
 	err = c.Get(context.TODO(), types.NamespacedName{Name: obj.Name}, existingMC)
@@ -326,7 +320,7 @@ func applyYAMLWithOC(output []byte, c *client.ClientSet, utilsHelpers utils.Util
 	return nil
 }
 
-// Helper function to convert map[interface{}]interface{} to map[string]interface{}
+// Helper function to convert map[interface{}]interface{} to map[string]interface{}.
 func convertMapInterfaceToString(data interface{}) interface{} {
 	switch v := data.(type) {
 	case map[interface{}]interface{}:
