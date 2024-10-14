@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -11,11 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"golang.org/x/sync/errgroup"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift-kni/commatrix/pkg/consts"
-	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1" // Adjust the import path as needed
-
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
 	testnode "github.com/openshift-kni/commatrix/test/pkg/node"
 )
@@ -69,9 +65,11 @@ var _ = Describe("Nftables", func() {
 		// Wait for all goroutines to finish
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
-		waitDuration := 5 * time.Minute
+		waitDuration := 1 * time.Minute
 		fmt.Printf("Waiting for %s after applying MachineConfiguration...\n", waitDuration)
 		time.Sleep(waitDuration)
+		err = firewall.WaitForMCPReady(cs, 20*time.Minute)
+		Expect(err).ToNot(HaveOccurred())
 
 		g = new(errgroup.Group)
 		nodeName := nodeList.Items[0].Name
@@ -83,24 +81,9 @@ var _ = Describe("Nftables", func() {
 				return nil
 			})
 		}
-		mcpList := &machineconfigurationv1.MachineConfigPoolList{}
 
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
-		// List all MachineConfigPools
-		err = cs.List(context.TODO(), mcpList, &client.ListOptions{})
-		if err != nil {
-			log.Fatalf("error getting MachineConfigPools: %v", err)
-		}
-
-		for _, mcp := range mcpList.Items {
-			fmt.Printf("MCP: %s\n", mcp.Name)
-			fmt.Printf("  Updated: %v\n", mcp.Status)
-			fmt.Printf("  MachineCount: %d\n", mcp.Status.MachineCount)
-			fmt.Printf("  ReadyMachineCount: %d\n", mcp.Status.ReadyMachineCount)
-			fmt.Printf("  UpdatedMachineCount: %d\n", mcp.Status.UpdatedMachineCount)
-			fmt.Printf("  DegradedMachineCount: %d\n", mcp.Status.DegradedMachineCount)
-		}
 
 		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS, consts.DefaultDebugPodImage)
 		Expect(err).ToNot(HaveOccurred())

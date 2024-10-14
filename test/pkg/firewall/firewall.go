@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/coreos/butane/config/common"
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/utils"
+	controllersClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Apply the firewall rules on the node.
@@ -345,9 +347,6 @@ func UpdateMachineConfiguration(c *client.ClientSet) error {
 	if err != nil {
 		log.Fatalf("error getting MachineConfiguration: %v", err)
 	}
-	mc.Spec.OperatorLogLevel = ocpoperatorv1.Normal
-	mc.Spec.ManagementState = ocpoperatorv1.Managed
-	mc.Spec.LogLevel = ocpoperatorv1.Normal
 	mc.Spec.NodeDisruptionPolicy = ocpoperatorv1.NodeDisruptionPolicyConfig{
 		SSHKey: ocpoperatorv1.NodeDisruptionPolicySpecSSHKey{
 			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{},
@@ -387,5 +386,52 @@ func UpdateMachineConfiguration(c *client.ClientSet) error {
 	}
 
 	fmt.Println("MachineConfiguration updated successfully!")
+	return nil
+}
+
+func WaitForMCPReady(c *client.ClientSet, timeout time.Duration) error {
+	start := time.Now()
+
+	for {
+		mcpList := &machineconfigurationv1.MachineConfigPoolList{}
+
+		err := c.List(context.TODO(), mcpList, &controllersClient.ListOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to list MachineConfigPools: %v", err)
+		}
+
+		allReady := true
+
+		for _, mcp := range mcpList.Items {
+			fmt.Printf("MCP: %s\n", mcp.Name)
+			fmt.Printf("  MachineCount: %d\n", mcp.Status.MachineCount)
+			fmt.Printf("  ReadyMachineCount: %d\n", mcp.Status.ReadyMachineCount)
+			fmt.Printf("  UpdatedMachineCount: %d\n", mcp.Status.UpdatedMachineCount)
+			fmt.Printf("  DegradedMachineCount: %d\n", mcp.Status.DegradedMachineCount)
+
+			// Check if the MCP is not ready according to the required conditions
+			if mcp.Status.ReadyMachineCount != mcp.Status.MachineCount ||
+				mcp.Status.UpdatedMachineCount != mcp.Status.MachineCount ||
+				mcp.Status.DegradedMachineCount != 0 {
+				allReady = false
+				fmt.Printf("  MCP %s is still updating or degraded\n", mcp.Name)
+			}
+		}
+
+		// If all MachineConfigPools are in the desired state, we can exit the loop
+		if allReady {
+			fmt.Println("All MCPs are ready and updated")
+			break
+		}
+
+		// If timeout exceeded, return an error
+		if time.Since(start) > timeout {
+			return fmt.Errorf("timed out waiting for MCPs to reach the desired state")
+		}
+
+		// Wait for a while before checking again
+		time.Sleep(30 * time.Second) // Adjust sleep time as needed
+	}
+
 	return nil
 }
