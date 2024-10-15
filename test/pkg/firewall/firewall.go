@@ -26,6 +26,7 @@ import (
 	"github.com/coreos/butane/config/common"
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/utils"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	controllersClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -345,40 +346,87 @@ func UpdateMachineConfiguration(c *client.ClientSet) error {
 	if err != nil {
 		log.Fatalf("error getting MachineConfiguration: %v", err)
 	}
-	mc.Spec.NodeDisruptionPolicy = ocpoperatorv1.NodeDisruptionPolicyConfig{
-		SSHKey: ocpoperatorv1.NodeDisruptionPolicySpecSSHKey{
-			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{},
-		},
-		Files: []ocpoperatorv1.NodeDisruptionPolicySpecFile{
-			{
-				Path: "/etc/sysconfig/nftables.conf",
-				Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
-					{
-						Type: ocpoperatorv1.RestartSpecAction,
-						Restart: &ocpoperatorv1.RestartService{
-							ServiceName: "nftables.service",
-						},
-					},
-				},
-			},
-		},
-		Units: []ocpoperatorv1.NodeDisruptionPolicySpecUnit{
-			{
-				Name: "nftables.service",
-				Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
-					{
-						Type: ocpoperatorv1.DaemonReloadSpecAction,
-					},
-					{
-						Type: ocpoperatorv1.ReloadSpecAction,
-						Reload: &ocpoperatorv1.ReloadService{
-							ServiceName: "nftables.service",
-						},
-					},
-				},
-			},
-		},
+	if mc.Spec.ManagedBootImages.MachineManagers != nil {
+		fmt.Println("managedBootImages field is present with MachineManagers initialized.")
+
+		// Deleting MachineManagers by setting it to nil
+		mc.Spec.ManagedBootImages.MachineManagers = nil
+	} else {
+		fmt.Println("managedBootImages field is not present.")
+		// Add logic here if needed, based on the absence of managedBootImages.
 	}
+	updateEditPolicy(c)
+	// Ensure NodeDisruptionPolicy is not nil before accessing SSHKey
+	if len(mc.Spec.NodeDisruptionPolicy.SSHKey.Actions) == 0 {
+		fmt.Println("SSHKey is nil, initializing and adding actions.")
+		// Initialize SSHKey with empty actions
+		mc.Spec.NodeDisruptionPolicy.SSHKey = ocpoperatorv1.NodeDisruptionPolicySpecSSHKey{
+			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{},
+		}
+		// You can add actions here if needed
+		// mc.Spec.NodeDisruptionPolicy.SSHKey.Actions = append(mc.Spec.NodeDisruptionPolicy.SSHKey.Actions, ...)
+	} else {
+		fmt.Println("SSHKey is present, keeping it as is.")
+		// Do nothing; SSHKey remains unchanged
+	}
+
+	if mc.Spec.NodeDisruptionPolicy.Files == nil {
+		mc.Spec.NodeDisruptionPolicy.Files = []ocpoperatorv1.NodeDisruptionPolicySpecFile{}
+	}
+	if mc.Spec.NodeDisruptionPolicy.Units == nil {
+		mc.Spec.NodeDisruptionPolicy.Units = []ocpoperatorv1.NodeDisruptionPolicySpecUnit{}
+	}
+
+	// Check if the file /etc/sysconfig/nftables.conf already exists
+	fileExists := false
+	for _, file := range mc.Spec.NodeDisruptionPolicy.Files {
+		if file.Path == "/etc/sysconfig/nftables.conf" {
+			fileExists = true
+			fmt.Println("/etc/sysconfig/nftables.conf already exists, skipping file addition.")
+			break
+		}
+	}
+	if !fileExists {
+		mc.Spec.NodeDisruptionPolicy.Files = append(mc.Spec.NodeDisruptionPolicy.Files, ocpoperatorv1.NodeDisruptionPolicySpecFile{
+			Path: "/etc/sysconfig/nftables.conf",
+			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
+				{
+					Type: ocpoperatorv1.RestartSpecAction,
+					Restart: &ocpoperatorv1.RestartService{
+						ServiceName: "nftables.service",
+					},
+				},
+			},
+		})
+	}
+
+	// Check if the nftables.service unit already exists
+	unitExists := false
+	for _, unit := range mc.Spec.NodeDisruptionPolicy.Units {
+		if unit.Name == "nftables.service" {
+			unitExists = true
+			fmt.Println("nftables.service unit already exists, skipping unit addition.")
+			break
+		}
+	}
+	if !unitExists {
+		mc.Spec.NodeDisruptionPolicy.Units = append(mc.Spec.NodeDisruptionPolicy.Units, ocpoperatorv1.NodeDisruptionPolicySpecUnit{
+			Name: "nftables.service",
+			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
+				{
+					Type: ocpoperatorv1.DaemonReloadSpecAction,
+				},
+				{
+					Type: ocpoperatorv1.ReloadSpecAction,
+					Reload: &ocpoperatorv1.ReloadService{
+						ServiceName: "nftables.service",
+					},
+				},
+			},
+		})
+	}
+
+	// Update the MachineConfiguration
 	if err := c.Update(context.TODO(), mc); err != nil {
 		log.Fatalf("failed to update MachineConfiguration: %v", err)
 	}
@@ -432,4 +480,28 @@ func WaitForMCPReady(c *client.ClientSet, timeout time.Duration) error {
 	}
 
 	return nil
+}
+
+func updateEditPolicy(c *client.ClientSet) {
+	// Define the policy name
+	policyName := "managed-bootimages-platform-check"
+	v := &admissionregistrationv1.ValidatingAdmissionPolicy{}
+	// Get the ValidatingAdmissionPolicy
+	err := c.Get(context.TODO(), types.NamespacedName{Name: policyName}, v)
+
+	if err != nil {
+		log.Fatalf("Error getting ValidatingAdmissionPolicy: %s", err.Error())
+	}
+
+	// Modify the validation expression to add your custom platform
+	newExpression := "!has(object.spec.managedBootImages) || (has(object.spec.managedBootImages) && params.status.platformStatus.type in ['GCP','AWS','None','BareMetal'])"
+	for i := range v.Spec.Validations {
+		v.Spec.Validations[i].Expression = newExpression
+		v.Spec.Validations[i].Message = "This feature is only supported on these platforms: GCP, AWS, MyPlatform"
+	}
+	if err := c.Update(context.TODO(), v); err != nil {
+		log.Fatalf("Error updating ValidatingAdmissionPolicy: %s", err.Error())
+	}
+
+	log.Println("Successfully updated ValidatingAdmissionPolicy.")
 }
