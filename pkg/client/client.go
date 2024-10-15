@@ -4,6 +4,7 @@ import (
 	ocpconfigv1 "github.com/openshift/api/config"
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	ocpoperatorv1 "github.com/openshift/api/operator/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +47,11 @@ func New() (*ClientSet, error) {
 	}
 
 	err = machineconfigurationv1.AddToScheme(myScheme)
+	if err != nil {
+		return nil, err
+	}
+
+	err = admissionregistrationv1.AddToScheme(myScheme)
 	if err != nil {
 		return nil, err
 	}
