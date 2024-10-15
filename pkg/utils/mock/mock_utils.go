@@ -91,6 +91,21 @@ func (mr *MockUtilsInterfaceMockRecorder) DeletePod(pod interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePod", reflect.TypeOf((*MockUtilsInterface)(nil).DeletePod), pod)
 }
 
+// GetClusterVersiona mocks base method.
+func (m *MockUtilsInterface) GetClusterVersiona() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClusterVersiona")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClusterVersiona indicates an expected call of GetClusterVersiona.
+func (mr *MockUtilsInterfaceMockRecorder) GetClusterVersiona() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterVersiona", reflect.TypeOf((*MockUtilsInterface)(nil).GetClusterVersiona))
+}
+
 // IsBMInfra mocks base method.
 func (m *MockUtilsInterface) IsBMInfra() (bool, error) {
 	m.ctrl.T.Helper()
