@@ -114,6 +114,7 @@ func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, 
 	}
 
 	if len(output) == 0 {
+
 		return nil, fmt.Errorf("no nft rules on node %s: ", debugPod.Spec.NodeName)
 	}
 
