@@ -340,8 +340,6 @@ func convertMapInterfaceToString(data interface{}) interface{} {
 }
 
 func UpdateMachineConfiguration(c *client.ClientSet) error {
-	// Define the command to edit the MachineConfiguration
-
 	mc := &ocpoperatorv1.MachineConfiguration{}
 	err := c.Get(context.TODO(), types.NamespacedName{Name: "cluster", Namespace: "openshift-machine-config-operator"}, mc)
 	if err != nil {
