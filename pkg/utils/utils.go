@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -30,6 +31,7 @@ type UtilsInterface interface {
 	WriteFile(path string, data []byte) error
 	IsBMInfra() (bool, error)
 	IsSNOCluster() (bool, error)
+	GetClusterVersiona() (string, error)
 }
 
 type utils struct {
@@ -237,4 +239,14 @@ func (u *utils) IsBMInfra() (bool, error) {
 	}
 
 	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
+}
+
+func (u *utils) GetClusterVersiona() (string, error) {
+	clusterVersion := &configv1.ClusterVersion{}
+	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "version"}, clusterVersion)
+	if err != nil {
+		return "", err
+	}
+	clusterVersionParts := strings.SplitN(clusterVersion.Status.Desired.Version, ".", 3)
+	return strings.Join(clusterVersionParts[:2], "."), nil
 }
