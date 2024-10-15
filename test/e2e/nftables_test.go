@@ -65,7 +65,7 @@ var _ = Describe("Nftables", func() {
 		// Wait for all goroutines to finish
 		err = g.Wait()
 		Expect(err).ToNot(HaveOccurred())
-		waitDuration := 1 * time.Minute
+		waitDuration := 2 * time.Minute
 		fmt.Printf("Waiting for %s after applying MachineConfiguration...\n", waitDuration)
 		time.Sleep(waitDuration)
 		err = firewall.WaitForMCPReady(cs, 20*time.Minute)
