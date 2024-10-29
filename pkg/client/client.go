@@ -72,4 +72,3 @@ func New() (*ClientSet, error) {
 func (cs *ClientSet) GetRestConfig() *rest.Config {
 	return cs.Config
 }
-
