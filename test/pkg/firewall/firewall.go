@@ -341,94 +341,25 @@ func convertMapInterfaceToString(data interface{}) interface{} {
 }
 
 func UpdateMachineConfiguration(c *client.ClientSet) error {
-	mc := &ocpoperatorv1.MachineConfiguration{}
-	err := c.Get(context.TODO(), types.NamespacedName{Name: "cluster", Namespace: "openshift-machine-config-operator"}, mc)
+	machineConfigurationClient := mcopclientset.NewForConfigOrDie(c.GetRestConfig())
+	reloadApplyConfiguration := mcoac.ReloadService().WithServiceName("nftables.service")
+	restartApplyConfiguration := mcoac.RestartService().WithServiceName("nftables.service")
+
+	serviceName := "nftables.service"
+	serviceApplyConfiguration := mcoac.NodeDisruptionPolicySpecUnit().WithName(ocpoperatorv1.NodeDisruptionPolicyServiceName(serviceName)).WithActions(
+		mcoac.NodeDisruptionPolicySpecAction().WithType(ocpoperatorv1.ReloadSpecAction).WithReload(reloadApplyConfiguration),
+	)
+	fileApplyConfiguration := mcoac.NodeDisruptionPolicySpecFile().WithPath("/etc/sysconfig/nftables.conf").WithActions(
+		mcoac.NodeDisruptionPolicySpecAction().WithType(ocpoperatorv1.RestartSpecAction).WithRestart(restartApplyConfiguration),
+	)
+
+	applyConfiguration := mcoac.MachineConfiguration("cluster").WithSpec(mcoac.MachineConfigurationSpec().
+		WithManagementState("Managed").WithNodeDisruptionPolicy(mcoac.NodeDisruptionPolicyConfig().
+		WithUnits(serviceApplyConfiguration).WithFiles(fileApplyConfiguration)))
+
+	_, err := machineConfigurationClient.OperatorV1().MachineConfigurations().Apply(context.TODO(), applyConfiguration, metav1.ApplyOptions{FieldManager: "machine-config-operator"})
 	if err != nil {
-		log.Fatalf("error getting MachineConfiguration: %v", err)
-	}
-	if mc.Spec.ManagedBootImages.MachineManagers != nil {
-		fmt.Println("managedBootImages field is present with MachineManagers initialized.")
-
-		// Deleting MachineManagers by setting it to nil
-		mc.Spec.ManagedBootImages.MachineManagers = nil
-	} else {
-		fmt.Println("managedBootImages field is not present.")
-		// Add logic here if needed, based on the absence of managedBootImages.
-	}
-	updateEditPolicy(c)
-	// Ensure NodeDisruptionPolicy is not nil before accessing SSHKey
-	if len(mc.Spec.NodeDisruptionPolicy.SSHKey.Actions) == 0 {
-		fmt.Println("SSHKey is nil, initializing and adding actions.")
-		// Initialize SSHKey with empty actions
-		mc.Spec.NodeDisruptionPolicy.SSHKey = ocpoperatorv1.NodeDisruptionPolicySpecSSHKey{
-			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{},
-		}
-		// You can add actions here if needed
-		// mc.Spec.NodeDisruptionPolicy.SSHKey.Actions = append(mc.Spec.NodeDisruptionPolicy.SSHKey.Actions, ...)
-	} else {
-		fmt.Println("SSHKey is present, keeping it as is.")
-		// Do nothing; SSHKey remains unchanged
-	}
-
-	if mc.Spec.NodeDisruptionPolicy.Files == nil {
-		mc.Spec.NodeDisruptionPolicy.Files = []ocpoperatorv1.NodeDisruptionPolicySpecFile{}
-	}
-	if mc.Spec.NodeDisruptionPolicy.Units == nil {
-		mc.Spec.NodeDisruptionPolicy.Units = []ocpoperatorv1.NodeDisruptionPolicySpecUnit{}
-	}
-
-	// Check if the file /etc/sysconfig/nftables.conf already exists
-	fileExists := false
-	for _, file := range mc.Spec.NodeDisruptionPolicy.Files {
-		if file.Path == "/etc/sysconfig/nftables.conf" {
-			fileExists = true
-			fmt.Println("/etc/sysconfig/nftables.conf already exists, skipping file addition.")
-			break
-		}
-	}
-	if !fileExists {
-		mc.Spec.NodeDisruptionPolicy.Files = append(mc.Spec.NodeDisruptionPolicy.Files, ocpoperatorv1.NodeDisruptionPolicySpecFile{
-			Path: "/etc/sysconfig/nftables.conf",
-			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
-				{
-					Type: ocpoperatorv1.RestartSpecAction,
-					Restart: &ocpoperatorv1.RestartService{
-						ServiceName: "nftables.service",
-					},
-				},
-			},
-		})
-	}
-
-	// Check if the nftables.service unit already exists
-	unitExists := false
-	for _, unit := range mc.Spec.NodeDisruptionPolicy.Units {
-		if unit.Name == "nftables.service" {
-			unitExists = true
-			fmt.Println("nftables.service unit already exists, skipping unit addition.")
-			break
-		}
-	}
-	if !unitExists {
-		mc.Spec.NodeDisruptionPolicy.Units = append(mc.Spec.NodeDisruptionPolicy.Units, ocpoperatorv1.NodeDisruptionPolicySpecUnit{
-			Name: "nftables.service",
-			Actions: []ocpoperatorv1.NodeDisruptionPolicySpecAction{
-				{
-					Type: ocpoperatorv1.DaemonReloadSpecAction,
-				},
-				{
-					Type: ocpoperatorv1.ReloadSpecAction,
-					Reload: &ocpoperatorv1.ReloadService{
-						ServiceName: "nftables.service",
-					},
-				},
-			},
-		})
-	}
-
-	// Update the MachineConfiguration
-	if err := c.Update(context.TODO(), mc); err != nil {
-		log.Fatalf("failed to update MachineConfiguration: %v", err)
+		log.Fatalf("updating cluster node disruption policy failed %v", err)
 	}
 
 	fmt.Println("MachineConfiguration updated successfully!")
