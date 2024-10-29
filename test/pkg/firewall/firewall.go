@@ -17,16 +17,18 @@ import (
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1" // Adjust the import path as needed
+	mcoac "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
+	mcopclientset "github.com/openshift/client-go/operator/clientset/versioned"
 
 	ocpoperatorv1 "github.com/openshift/api/operator/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	butaneConfig "github.com/coreos/butane/config"
 	"github.com/coreos/butane/config/common"
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/utils"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	controllersClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -357,7 +359,8 @@ func UpdateMachineConfiguration(c *client.ClientSet) error {
 		WithManagementState("Managed").WithNodeDisruptionPolicy(mcoac.NodeDisruptionPolicyConfig().
 		WithUnits(serviceApplyConfiguration).WithFiles(fileApplyConfiguration)))
 
-	_, err := machineConfigurationClient.OperatorV1().MachineConfigurations().Apply(context.TODO(), applyConfiguration, metav1.ApplyOptions{FieldManager: "machine-config-operator"})
+	_, err := machineConfigurationClient.OperatorV1().MachineConfigurations().Apply(context.TODO(), applyConfiguration,
+		metav1.ApplyOptions{FieldManager: "machine-config-operator", Force: true})
 	if err != nil {
 		log.Fatalf("updating cluster node disruption policy failed %v", err)
 	}
@@ -411,28 +414,4 @@ func WaitForMCPReady(c *client.ClientSet, timeout time.Duration) error {
 	}
 
 	return nil
-}
-
-func updateEditPolicy(c *client.ClientSet) {
-	// Define the policy name
-	policyName := "managed-bootimages-platform-check"
-	v := &admissionregistrationv1.ValidatingAdmissionPolicy{}
-	// Get the ValidatingAdmissionPolicy
-	err := c.Get(context.TODO(), types.NamespacedName{Name: policyName}, v)
-
-	if err != nil {
-		log.Fatalf("Error getting ValidatingAdmissionPolicy: %s", err.Error())
-	}
-
-	// Modify the validation expression to add your custom platform
-	newExpression := "!has(object.spec.managedBootImages) || (has(object.spec.managedBootImages) && params.status.platformStatus.type in ['GCP','AWS','None','BareMetal'])"
-	for i := range v.Spec.Validations {
-		v.Spec.Validations[i].Expression = newExpression
-		v.Spec.Validations[i].Message = "This feature is only supported on these platforms: GCP, AWS, MyPlatform"
-	}
-	if err := c.Update(context.TODO(), v); err != nil {
-		log.Fatalf("Error updating ValidatingAdmissionPolicy: %s", err.Error())
-	}
-
-	log.Println("Successfully updated ValidatingAdmissionPolicy.")
 }
