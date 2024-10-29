@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -19,12 +20,14 @@ var (
 	workerNodeRole = "worker"
 	tableName      = "table inet openshift_filter"
 	chainName      = "chain OPENSHIFT"
+	newTCPPorts    = []string{"9000-9999", "30000-32767", "10180", "80"}
+	newUDPPorts    = []string{"9000-9999", "30000-32767", "10180", "80"}
 )
 
 var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
 		masterMat, workerMat := commatrix.SeparateMatrixByRole()
-		var workerNFT []byte
+		var updatedworkerNFT, workerNFT []byte
 
 		By("Creating NFT output for each role")
 		masterNFT, err := masterMat.ToNFTables()
@@ -32,7 +35,13 @@ var _ = Describe("Nftables", func() {
 		if !isSNO {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
+			updatedworkerNFT, err = AddPortsToNFTables(workerNFT, newTCPPorts, newUDPPorts)
+			Expect(err).NotTo(HaveOccurred())
+
 		}
+
+		updatedMasterNFT, err := AddPortsToNFTables(masterNFT, newTCPPorts, newUDPPorts)
+		Expect(err).NotTo(HaveOccurred())
 
 		g := new(errgroup.Group)
 		for _, node := range nodeList.Items {
@@ -40,9 +49,9 @@ var _ = Describe("Nftables", func() {
 			nodeRole, err := types.GetNodeRole(&node)
 			Expect(err).ToNot(HaveOccurred())
 			g.Go(func() error {
-				nftTable := masterNFT
+				nftTable := updatedMasterNFT
 				if nodeRole == workerNodeRole {
-					nftTable = workerNFT
+					nftTable = updatedworkerNFT
 				}
 
 				By("Applying firewall on node: " + nodeName)
@@ -88,3 +97,23 @@ var _ = Describe("Nftables", func() {
 		}
 	})
 })
+
+func AddPortsToNFTables(nftables []byte, newTCPPorts, newUDPPorts []string) ([]byte, error) {
+	nftStr := string(nftables)
+
+	newTCPPortsStr := strings.Join(newTCPPorts, ", ")
+	newUDPPortsStr := strings.Join(newUDPPorts, ", ")
+
+	insertPoint := "# Logging and default drop"
+	if !strings.Contains(nftStr, insertPoint) {
+		return nftables, fmt.Errorf("insert point not found in nftables configuration")
+	}
+
+	newRules := fmt.Sprintf(
+		"            # Allow specific TCP ports\n            tcp dport { %s } accept\n\n            # Allow specific UDP ports\n            udp dport { %s } accept\n",
+		newTCPPortsStr, newUDPPortsStr)
+
+	nftStr = strings.Replace(nftStr, insertPoint, newRules+insertPoint, 1)
+
+	return []byte(nftStr), nil
+}
