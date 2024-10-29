@@ -68,3 +68,8 @@ func New() (*ClientSet, error) {
 
 	return clientSet, nil
 }
+
+func (cs *ClientSet) GetRestConfig() *rest.Config {
+	return cs.Config
+}
+
