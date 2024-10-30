@@ -44,12 +44,18 @@ var _ = Describe("Nftables", func() {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
 
-			updatedworkerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesFile)
-			Expect(err).NotTo(HaveOccurred())
+			updatedworkerNFT = workerNFT
+			if extraNFTablesFile != "" {
+				updatedworkerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesFile)
+				Expect(err).NotTo(HaveOccurred())
+			}
 		}
 
-		updatedMasterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesFile)
-		Expect(err).NotTo(HaveOccurred())
+		updatedMasterNFT = masterNFT
+		if extraNFTablesFile != "" {
+			updatedMasterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesFile)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		g := new(errgroup.Group)
 		for _, node := range nodeList.Items {
