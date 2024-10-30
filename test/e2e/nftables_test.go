@@ -18,24 +18,15 @@ import (
 )
 
 var (
-	workerNodeRole    = "worker"
-	tableName         = "table inet openshift_filter"
-	chainName         = "chain OPENSHIFT"
-	extraNFTablesFile = getEnv("EXTRA_NFTABLES_FILE", "")
+	workerNodeRole = "worker"
+	tableName      = "table inet openshift_filter"
+	chainName      = "chain OPENSHIFT"
 )
-
-func getEnv(envVar string, defaultVal string) string {
-	val, exists := os.LookupEnv(envVar)
-	if !exists {
-		return defaultVal
-	}
-	return val
-}
 
 var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
 		masterMat, workerMat := commatrix.SeparateMatrixByRole()
-		var updatedMasterNFT, updatedworkerNFT, workerNFT []byte
+		var workerNFT []byte
 
 		By("Creating NFT output for each role")
 		masterNFT, err := masterMat.ToNFTables()
@@ -44,16 +35,14 @@ var _ = Describe("Nftables", func() {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
 
-			updatedworkerNFT = workerNFT
 			if extraNFTablesFile != "" {
-				updatedworkerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesFile)
+				workerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesFile)
 				Expect(err).NotTo(HaveOccurred())
 			}
 		}
 
-		updatedMasterNFT = masterNFT
 		if extraNFTablesFile != "" {
-			updatedMasterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesFile)
+			masterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesFile)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -63,9 +52,9 @@ var _ = Describe("Nftables", func() {
 			nodeRole, err := types.GetNodeRole(&node)
 			Expect(err).ToNot(HaveOccurred())
 			g.Go(func() error {
-				nftTable := updatedMasterNFT
+				nftTable := masterNFT
 				if nodeRole == workerNodeRole {
-					nftTable = updatedworkerNFT
+					nftTable = workerNFT
 				}
 
 				By("Applying firewall on node: " + nodeName)
@@ -112,14 +101,6 @@ var _ = Describe("Nftables", func() {
 	})
 })
 
-func readExtraNFTablesFromFile(filename string) (string, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
-}
-
 func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, error) {
 	nftStr := string(nftables)
 
@@ -128,15 +109,27 @@ func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, erro
 		return nftables, fmt.Errorf("insert point not found in nftables configuration")
 	}
 
-	extraNFTablesValue, err := readExtraNFTablesFromFile(extraNFTablesFile)
+	/*
+			   example of extraNFTablesFile content:
+			   tcp dport { 9000-9999 } accept
+			   tcp dport { 30000-32767 } accept
+			   tcp dport { 10180 } accept
+			   tcp dport { 80 } accept
+			   udp dport { 9000-9999 } accept
+			   udp dport { 30000-32767 } accept
+			   udp dport { 10180 } accept
+		       udp dport { 80 } accept
+	*/
+
+	extraNFTablesValue, err := os.ReadFile(extraNFTablesFile)
 	if err != nil {
 		return nftables, fmt.Errorf("failed to read extra nftables from file: %v", err)
 	}
 
 	// Append extra nftables values if provided
 	newRules := ""
-	if extraNFTablesValue != "" {
-		newRules = fmt.Sprintf("            %s\n", extraNFTablesValue)
+	if string(extraNFTablesValue) != "" {
+		newRules = fmt.Sprintf("            %s\n", string(extraNFTablesValue))
 	}
 
 	nftStr = strings.Replace(nftStr, insertPoint, newRules+insertPoint, 1)
