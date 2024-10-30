@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -17,17 +18,24 @@ import (
 )
 
 var (
-	workerNodeRole = "worker"
-	tableName      = "table inet openshift_filter"
-	chainName      = "chain OPENSHIFT"
-	newTCPPorts    = []string{"9000-9999", "30000-32767", "10180", "80"}
-	newUDPPorts    = []string{"9000-9999", "30000-32767", "10180", "80"}
+	workerNodeRole     = "worker"
+	tableName          = "table inet openshift_filter"
+	chainName          = "chain OPENSHIFT"
+	extraNFTablesValue = getEnv("EXTRA_NFTABLES_VALUE", "")
 )
+
+func getEnv(envVar string, defaultVal string) string {
+	val, exists := os.LookupEnv(envVar)
+	if !exists {
+		return defaultVal
+	}
+	return val
+}
 
 var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
 		masterMat, workerMat := commatrix.SeparateMatrixByRole()
-		var updatedworkerNFT, workerNFT []byte
+		var updatedMasterNFT, updatedworkerNFT, workerNFT []byte
 
 		By("Creating NFT output for each role")
 		masterNFT, err := masterMat.ToNFTables()
@@ -35,12 +43,12 @@ var _ = Describe("Nftables", func() {
 		if !isSNO {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
-			updatedworkerNFT, err = AddPortsToNFTables(workerNFT, newTCPPorts, newUDPPorts)
-			Expect(err).NotTo(HaveOccurred())
 
+			updatedworkerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesValue)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
-		updatedMasterNFT, err := AddPortsToNFTables(masterNFT, newTCPPorts, newUDPPorts)
+		updatedMasterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesValue)
 		Expect(err).NotTo(HaveOccurred())
 
 		g := new(errgroup.Group)
@@ -98,20 +106,19 @@ var _ = Describe("Nftables", func() {
 	})
 })
 
-func AddPortsToNFTables(nftables []byte, newTCPPorts, newUDPPorts []string) ([]byte, error) {
+func AddPortsToNFTables(nftables []byte, extraNFTablesValue string) ([]byte, error) {
 	nftStr := string(nftables)
-
-	newTCPPortsStr := strings.Join(newTCPPorts, ", ")
-	newUDPPortsStr := strings.Join(newUDPPorts, ", ")
 
 	insertPoint := "# Logging and default drop"
 	if !strings.Contains(nftStr, insertPoint) {
 		return nftables, fmt.Errorf("insert point not found in nftables configuration")
 	}
 
-	newRules := fmt.Sprintf(
-		"            # Allow specific TCP ports\n            tcp dport { %s } accept\n\n            # Allow specific UDP ports\n            udp dport { %s } accept\n",
-		newTCPPortsStr, newUDPPortsStr)
+	// Append extra nftables values if provided
+	newRules := ""
+	if extraNFTablesValue != "" {
+		newRules = fmt.Sprintf("            %s\n", extraNFTablesValue)
+	}
 
 	nftStr = strings.Replace(nftStr, insertPoint, newRules+insertPoint, 1)
 
