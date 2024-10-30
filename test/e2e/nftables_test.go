@@ -18,10 +18,10 @@ import (
 )
 
 var (
-	workerNodeRole     = "worker"
-	tableName          = "table inet openshift_filter"
-	chainName          = "chain OPENSHIFT"
-	extraNFTablesValue = getEnv("EXTRA_NFTABLES_VALUE", "")
+	workerNodeRole    = "worker"
+	tableName         = "table inet openshift_filter"
+	chainName         = "chain OPENSHIFT"
+	extraNFTablesFile = getEnv("EXTRA_NFTABLES_FILE", "")
 )
 
 func getEnv(envVar string, defaultVal string) string {
@@ -44,11 +44,11 @@ var _ = Describe("Nftables", func() {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
 
-			updatedworkerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesValue)
+			updatedworkerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesFile)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
-		updatedMasterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesValue)
+		updatedMasterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesFile)
 		Expect(err).NotTo(HaveOccurred())
 
 		g := new(errgroup.Group)
@@ -106,12 +106,25 @@ var _ = Describe("Nftables", func() {
 	})
 })
 
-func AddPortsToNFTables(nftables []byte, extraNFTablesValue string) ([]byte, error) {
+func readExtraNFTablesFromFile(filename string) (string, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, error) {
 	nftStr := string(nftables)
 
 	insertPoint := "# Logging and default drop"
 	if !strings.Contains(nftStr, insertPoint) {
 		return nftables, fmt.Errorf("insert point not found in nftables configuration")
+	}
+
+	extraNFTablesValue, err := readExtraNFTablesFromFile(extraNFTablesFile)
+	if err != nil {
+		return nftables, fmt.Errorf("failed to read extra nftables from file: %v", err)
 	}
 
 	// Append extra nftables values if provided
