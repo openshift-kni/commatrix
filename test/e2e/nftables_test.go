@@ -1,7 +1,9 @@
 package e2e
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,6 +33,16 @@ var _ = Describe("Nftables", func() {
 		Expect(err).NotTo(HaveOccurred())
 		if !isSNO {
 			workerNFT, err = workerMat.ToNFTables()
+			Expect(err).NotTo(HaveOccurred())
+
+			if extraNFTablesFile != "" {
+				workerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesFile)
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}
+
+		if extraNFTablesFile != "" {
+			masterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesFile)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -88,3 +100,27 @@ var _ = Describe("Nftables", func() {
 		}
 	})
 })
+
+func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, error) {
+	nftStr := string(nftables)
+
+	insertPoint := "# Logging and default drop"
+	if !strings.Contains(nftStr, insertPoint) {
+		return nftables, fmt.Errorf("insert point not found in nftables configuration")
+	}
+
+	extraNFTablesValue, err := os.ReadFile(extraNFTablesFile)
+	if err != nil {
+		return nftables, fmt.Errorf("failed to read extra nftables from file: %v", err)
+	}
+
+	// Append extra nftables values if provided
+	newRules := ""
+	if string(extraNFTablesValue) != "" {
+		newRules = fmt.Sprintf("            %s\n", string(extraNFTablesValue))
+	}
+
+	nftStr = strings.Replace(nftStr, insertPoint, newRules+insertPoint, 1)
+
+	return []byte(nftStr), nil
+}
