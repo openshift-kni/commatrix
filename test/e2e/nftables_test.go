@@ -109,18 +109,6 @@ func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, erro
 		return nftables, fmt.Errorf("insert point not found in nftables configuration")
 	}
 
-	/*
-			   example of extraNFTablesFile content:
-			   tcp dport { 9000-9999 } accept
-			   tcp dport { 30000-32767 } accept
-			   tcp dport { 10180 } accept
-			   tcp dport { 80 } accept
-			   udp dport { 9000-9999 } accept
-			   udp dport { 30000-32767 } accept
-			   udp dport { 10180 } accept
-		       udp dport { 80 } accept
-	*/
-
 	extraNFTablesValue, err := os.ReadFile(extraNFTablesFile)
 	if err != nil {
 		return nftables, fmt.Errorf("failed to read extra nftables from file: %v", err)
