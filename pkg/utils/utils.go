@@ -31,7 +31,7 @@ type UtilsInterface interface {
 	WriteFile(path string, data []byte) error
 	IsBMInfra() (bool, error)
 	IsSNOCluster() (bool, error)
-	GetClusterVersiona() (string, error)
+	GetClusterVersion() (string, error)
 }
 
 type utils struct {
@@ -241,7 +241,7 @@ func (u *utils) IsBMInfra() (bool, error) {
 	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
 }
 
-func (u *utils) GetClusterVersiona() (string, error) {
+func (u *utils) GetClusterVersion() (string, error) {
 	clusterVersion := &configv1.ClusterVersion{}
 	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "version"}, clusterVersion)
 	if err != nil {

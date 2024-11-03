@@ -36,10 +36,10 @@ var _ = Describe("Nftables", func() {
 			Expect(err).NotTo(HaveOccurred())
 		}
 		g := new(errgroup.Group)
-		versionMajorMinor, err := utilsHelpers.GetClusterVersiona()
+		versionMajorMinor, err := utilsHelpers.GetClusterVersion()
 		Expect(err).ToNot(HaveOccurred())
 
-		if firewall.IsVersionGreaterThan(versionMajorMinor, "4.16") {
+		if firewall.IsVersionGreaterThan(versionMajorMinor, "4.16") { // if version more than 4.16 need to change cluster MachineConfiguration.
 			if err = firewall.UpdateMachineConfiguration(cs); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				Expect(err).ToNot(HaveOccurred())
@@ -54,7 +54,7 @@ var _ = Describe("Nftables", func() {
 				if noderole == workerNodeRole {
 					nftTable = workerNFT
 				}
-				err := firewall.MachineconfigWay(cs, nftTable, artifactsDir, noderole, utilsHelpers)
+				err := firewall.Apply(cs, nftTable, artifactsDir, noderole, utilsHelpers)
 				if err != nil {
 					return err
 				}
