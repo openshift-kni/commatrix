@@ -4,7 +4,7 @@ import (
 	ocpconfigv1 "github.com/openshift/api/config"
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	ocpoperatorv1 "github.com/openshift/api/operator/v1"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	mcopclientset "github.com/openshift/client-go/operator/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,7 +17,8 @@ import (
 type ClientSet struct {
 	runtimeclient.Client
 	corev1client.CoreV1Interface
-	Config *rest.Config
+	Config      *rest.Config
+	MCInterface mcopclientset.Interface
 }
 
 func New() (*ClientSet, error) {
@@ -27,6 +28,7 @@ func New() (*ClientSet, error) {
 	clientSet := &ClientSet{}
 
 	clientSet.CoreV1Interface = corev1client.NewForConfigOrDie(restConfig)
+	clientSet.MCInterface = mcopclientset.NewForConfigOrDie(restConfig)
 	clientSet.Config = restConfig
 
 	myScheme := runtime.NewScheme()
@@ -51,11 +53,6 @@ func New() (*ClientSet, error) {
 		return nil, err
 	}
 
-	err = admissionregistrationv1.AddToScheme(myScheme)
-	if err != nil {
-		return nil, err
-	}
-
 	err = ocpconfigv1.Install(myScheme)
 	if err != nil {
 		return nil, err
@@ -67,8 +64,4 @@ func New() (*ClientSet, error) {
 	}
 
 	return clientSet, nil
-}
-
-func (cs *ClientSet) GetRestConfig() *rest.Config {
-	return cs.Config
 }
