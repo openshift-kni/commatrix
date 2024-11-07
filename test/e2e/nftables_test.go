@@ -35,14 +35,14 @@ var _ = Describe("Nftables", func() {
 			workerNFT, err = workerMat.ToNFTables()
 			Expect(err).NotTo(HaveOccurred())
 
-			if extraNFTablesFile != "" {
-				workerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesFile)
+			if extraNFTablesWorkerFile != "" {
+				workerNFT, err = AddPortsToNFTables(workerNFT, extraNFTablesWorkerFile)
 				Expect(err).NotTo(HaveOccurred())
 			}
 		}
 
-		if extraNFTablesFile != "" {
-			masterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesFile)
+		if extraNFTablesMasterFile != "" {
+			masterNFT, err = AddPortsToNFTables(masterNFT, extraNFTablesMasterFile)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
