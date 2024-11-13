@@ -217,30 +217,29 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 	udpPortsStr := strings.Join(udpPorts, ", ")
 
 	result := fmt.Sprintf(`#!/usr/sbin/nft -f
-
-	table inet openshift_filter {
-		chain OPENSHIFT {
-			type filter hook input priority 1; policy accept;
-
-			# Allow loopback traffic
-			iif lo accept
-	
-			# Allow established and related traffic
-			ct state established,related accept
-	
-			# Allow ICMP on ipv4
-			ip protocol icmp accept
-			# Allow ICMP on ipv6
-			ip6 nexthdr ipv6-icmp accept
-
-			# Allow specific TCP and UDP ports
-			tcp dport  { %s } accept
-			udp dport { %s } accept
-
-			# Logging and default drop
-			log prefix "firewall " drop
-		}
-	}`, tcpPortsStr, udpPortsStr)
+      table inet openshift_filter {
+          chain OPENSHIFT {
+					type filter hook input priority 1; policy accept;
+			
+					# Allow loopback traffic
+					iif lo accept
+			
+					# Allow established and related traffic
+					ct state established,related accept
+			
+					# Allow ICMP on ipv4
+					ip protocol icmp accept
+					# Allow ICMP on ipv6
+					ip6 nexthdr ipv6-icmp accept
+			
+					# Allow specific TCP and UDP ports
+					tcp dport { %s } accept
+					udp dport { %s } accept
+			
+					# Logging and default drop
+					log prefix "firewall " drop
+				  }
+			    }`, tcpPortsStr, udpPortsStr)
 
 	return []byte(result), nil
 }
