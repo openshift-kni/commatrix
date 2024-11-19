@@ -71,6 +71,7 @@ func createButaneConfig(nftablesRules, nodeRole, clusterVersion string) []byte {
 	if len(lines) > 1 {
 		nftablesRulesWithoutFirstLine = strings.Join(lines[1:], "\n")
 	}
+	indentedRules := indentContent(nftablesRulesWithoutFirstLine, 10)
 
 	butaneConfig := fmt.Sprintf(`variant: openshift
 version: %s.0
@@ -107,8 +108,17 @@ storage:
         inline: |
           table inet openshift_filter
           delete table inet openshift_filter
-		%s
-        `, clusterVersion, nodeRole, nodeRole, nftablesRulesWithoutFirstLine)
+%s
+        `, clusterVersion, nodeRole, nodeRole, indentedRules)
 	butaneConfig = strings.ReplaceAll(butaneConfig, "\t", "  ")
 	return []byte(butaneConfig)
+}
+
+func indentContent(content string, indentSize int) string {
+	lines := strings.Split(content, "\n")
+	indent := strings.Repeat(" ", indentSize)
+	for i, line := range lines {
+		lines[i] = indent + line
+	}
+	return strings.Join(lines, "\n")
 }
