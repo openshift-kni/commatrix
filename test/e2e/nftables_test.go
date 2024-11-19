@@ -114,13 +114,7 @@ func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, erro
 		return nftables, fmt.Errorf("failed to read extra nftables from file: %v", err)
 	}
 
-	// Append extra nftables values if provided
-	newRules := ""
-	if string(extraNFTablesValue) != "" {
-		newRules = fmt.Sprintf("            %s\n", string(extraNFTablesValue))
-	}
-
-	nftStr = strings.Replace(nftStr, insertPoint, newRules+insertPoint, 1)
+	nftStr = strings.Replace(nftStr, insertPoint, string(extraNFTablesValue)+"\n"+insertPoint, 1)
 
 	return []byte(nftStr), nil
 }
