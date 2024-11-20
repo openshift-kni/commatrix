@@ -139,24 +139,24 @@ func ApplyMachineConfig(yamlInput []byte, c *client.ClientSet) error {
 	return nil
 }
 
-func ValidateClusterVersionAndMachineConfiguration(cs *client.ClientSet) (string, error) {
+func ValidateClusterVersionAndMachineConfiguration(cs *client.ClientSet) error {
 	thresholdVersionSemver := semver.MustParse(thresholdVersion)
 	clusterVersion, err := GetClusterVersion(cs)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	currentVersion, err := semver.NewVersion(clusterVersion)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if currentVersion.GreaterThan(thresholdVersionSemver) {
 		log.Printf("Version Greater Than " + thresholdVersion + " - Updating Machine Configuration")
 		err = AddNFTSvcToNodeDisruptionPolicy(cs)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
-	return clusterVersion, nil
+	return nil
 }

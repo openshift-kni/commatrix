@@ -13,6 +13,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+const butaneVersion = "4.16.0"
+
 func RunRootCommandOnPod(debugPod *v1.Pod, command string, chrootDir bool, utilsHelpers utils.UtilsInterface) ([]byte, error) {
 	if chrootDir {
 		// Format the command for chroot
@@ -45,9 +47,9 @@ func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, 
 	return output, nil
 }
 
-func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde, clusterVersion string,
+func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde string,
 	utilsHelpers utils.UtilsInterface) (machineConfig []byte, err error) {
-	butaneConfigVar := createButaneConfig(string(NFTtable), nodeRolde, clusterVersion)
+	butaneConfigVar := createButaneConfig(string(NFTtable), nodeRolde)
 	options := common.TranslateBytesOptions{}
 
 	machineConfig, _, err = butaneConfig.TranslateBytes(butaneConfigVar, options)
@@ -65,7 +67,7 @@ func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nod
 	return machineConfig, nil
 }
 
-func createButaneConfig(nftablesRules, nodeRole, clusterVersion string) []byte {
+func createButaneConfig(nftablesRules, nodeRole string) []byte {
 	lines := strings.Split(nftablesRules, "\n")
 	nftablesRulesWithoutFirstLine := ""
 	if len(lines) > 1 {
@@ -74,7 +76,7 @@ func createButaneConfig(nftablesRules, nodeRole, clusterVersion string) []byte {
 	indentedRules := indentContent(nftablesRulesWithoutFirstLine, 10)
 
 	butaneConfig := fmt.Sprintf(`variant: openshift
-version: %s.0
+version: %s
 metadata:
   name: 98-nftables-commatrix-%s
   labels:
@@ -109,7 +111,7 @@ storage:
           table inet openshift_filter
           delete table inet openshift_filter
 %s
-        `, clusterVersion, nodeRole, nodeRole, indentedRules)
+        `, butaneVersion, nodeRole, nodeRole, indentedRules)
 	butaneConfig = strings.ReplaceAll(butaneConfig, "\t", "  ")
 	return []byte(butaneConfig)
 }
