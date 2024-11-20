@@ -35,6 +35,11 @@ var (
 const testNS = "openshift-commatrix-test"
 
 var _ = BeforeSuite(func() {
+	kubeconfig := os.Getenv("KUBECONFIG")
+	if kubeconfig == "" {
+		Fail("KUBECONFIG not set")
+	}
+
 	By("Creating output folder")
 	artifactsDir = os.Getenv("ARTIFACT_DIR")
 	if artifactsDir == "" {
