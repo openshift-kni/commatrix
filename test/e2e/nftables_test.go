@@ -56,14 +56,14 @@ var _ = Describe("Nftables", func() {
 			}
 		}
 
-		clusterVersion, err := cluster.ValidateClusterVersionAndMachineConfiguration(cs)
+		err := cluster.ValidateClusterVersionAndMachineConfiguration(cs)
 		Expect(err).ToNot(HaveOccurred())
 
 		for role, nftablesConfig := range nodeRoleToNFTables {
 			By(fmt.Sprintf("Applying firewall on %s nodes", role))
 
 			machineConfig, err := firewall.CreateMachineConfig(cs, nftablesConfig, artifactsDir,
-				role, clusterVersion, utilsHelpers)
+				role, utilsHelpers)
 			Expect(err).ToNot(HaveOccurred())
 
 			err = cluster.ApplyMachineConfig(machineConfig, cs)
