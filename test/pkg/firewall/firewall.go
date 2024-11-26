@@ -13,7 +13,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-const butaneVersion = "4.16.0"
+const butaneVersion = "4.17.0"
 
 func RunRootCommandOnPod(debugPod *v1.Pod, command string, chrootDir bool, utilsHelpers utils.UtilsInterface) ([]byte, error) {
 	if chrootDir {
