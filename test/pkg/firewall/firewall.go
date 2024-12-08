@@ -2,6 +2,7 @@ package firewall
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 
@@ -43,6 +44,22 @@ func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, 
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("nft output is %s", output)
+
+	command = "journalctl -u nftables"
+	output2, err := RunRootCommandOnPod(debugPod, command, true, utilsHelpers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list NFT ruleset on node %s: %w", debugPod.Spec.NodeName, err)
+	}
+
+	log.Printf("journalctl output is %s", output2)
+
+	command = "nft list ruleset"
+	output, err = RunRootCommandOnPod(debugPod, command, true, utilsHelpers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list NFT ruleset on node %s: %w", debugPod.Spec.NodeName, err)
+	}
+	log.Printf("sec output is nft output is %s", output)
 
 	return output, nil
 }
