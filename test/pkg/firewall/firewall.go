@@ -2,8 +2,12 @@ package firewall
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/onsi/gomega"
 
 	butaneConfig "github.com/coreos/butane/config"
 
@@ -28,23 +32,60 @@ func RunRootCommandOnPod(debugPod *v1.Pod, command string, chrootDir bool, utils
 	return output, nil
 }
 
-func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, artifactsDir, fileName string) ([]byte, error) {
+func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, artifactsDir, fileName, tableName, chainName string) (bool, error) {
+	var output []byte
+	var cmdErr error
+
 	command := "nft list ruleset"
-	output, err := RunRootCommandOnPod(debugPod, command, true, utilsHelpers)
+	gomega.Eventually(func() bool {
+		output, cmdErr = RunRootCommandOnPod(debugPod, command, true, utilsHelpers)
+		if cmdErr != nil {
+			log.Printf("Error listing nft ruleset: %v", cmdErr)
+			return false
+		}
+
+		if len(output) == 0 {
+			log.Println("No nft rules found in output.")
+			return false
+		}
+
+		if !strings.Contains(string(output), tableName) || !strings.Contains(string(output), chainName) {
+			log.Printf("Required table %s or chain %s not found in nftables output.", tableName, chainName)
+			return false
+		}
+
+		return true
+	}, 2*time.Minute, 10*time.Second).Should(gomega.BeTrue(), "Timeout while waiting for nftables to contain table %s and chain %s", tableName, chainName)
+
+	if cmdErr != nil {
+		return false, fmt.Errorf("failed to list nft ruleset: %w", cmdErr)
+	}
+
+	if !strings.Contains(string(output), tableName) || !strings.Contains(string(output), chainName) {
+		log.Printf("Retrying with journalctl for diagnostics.")
+		journalCommand := "journalctl -u nftables"
+		journalOutput, err := RunRootCommandOnPod(debugPod, journalCommand, true, utilsHelpers)
+		if err != nil {
+			return false, fmt.Errorf("failed to run journalctl command: %w", err)
+		}
+
+		err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "journalctl"), journalOutput)
+		if err != nil {
+			log.Printf("Failed to write journalctl to file: %v", err)
+			return false, fmt.Errorf("failed to write journalctl to file: %w", err)
+		}
+
+		return false, fmt.Errorf("required table %s or chain %s not found in nftables output", tableName, chainName)
+	}
+
+	err := utilsHelpers.WriteFile(filepath.Join(artifactsDir, fileName), output)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list NFT ruleset on node %s: %w", debugPod.Spec.NodeName, err)
+		log.Printf("Failed to write nft ruleset to file: %v", err)
+		return false, fmt.Errorf("failed to write nft ruleset to file: %w", err)
 	}
 
-	if len(output) == 0 {
-		return nil, fmt.Errorf("no nft rules on node %s: ", debugPod.Spec.NodeName)
-	}
-
-	err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, fileName), output)
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
+	log.Printf("nft output is %s", output)
+	return true, nil
 }
 
 func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde string,
