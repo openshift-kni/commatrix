@@ -68,7 +68,6 @@ var _ = Describe("Nftables", func() {
 
 			err = cluster.ApplyMachineConfig(machineConfig, cs)
 			Expect(err).ToNot(HaveOccurred())
-
 		}
 
 		// waiting for mcp start updating
