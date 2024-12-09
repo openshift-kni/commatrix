@@ -152,7 +152,7 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 		Stdin:  os.Stdin,
 		Stdout: &buf,
 		Stderr: os.Stderr,
-		Tty:    false,
+		Tty:    true,
 	})
 	if err != nil {
 		return buf.Bytes(), fmt.Errorf("remote command %v error [%w]. output [%s]", command, err, buf.String())
