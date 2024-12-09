@@ -49,34 +49,18 @@ func (mr *MockUtilsInterfaceMockRecorder) CreateNamespace(namespace interface{})
 }
 
 // CreatePodOnNode mocks base method.
-func (m *MockUtilsInterface) CreatePodOnNode(nodeName, namespace, image string) (*v1.Pod, error) {
+func (m *MockUtilsInterface) CreatePodOnNode(nodeName, namespace, image string, command []string) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePodOnNode", nodeName, namespace, image)
+	ret := m.ctrl.Call(m, "CreatePodOnNode", nodeName, namespace, image, command)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreatePodOnNode indicates an expected call of CreatePodOnNode.
-func (mr *MockUtilsInterfaceMockRecorder) CreatePodOnNode(nodeName, namespace, image interface{}) *gomock.Call {
+func (mr *MockUtilsInterfaceMockRecorder) CreatePodOnNode(nodeName, namespace, image, command interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePodOnNode", reflect.TypeOf((*MockUtilsInterface)(nil).CreatePodOnNode), nodeName, namespace, image)
-}
-
-// CreatePodOnNodeWithCommand mocks base method.
-func (m *MockUtilsInterface) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*v1.Pod, string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePodOnNodeWithCommand", nodeName, namespace, image, command)
-	ret0, _ := ret[0].(*v1.Pod)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// CreatePodOnNodeWithCommand indicates an expected call of CreatePodOnNodeWithCommand.
-func (mr *MockUtilsInterfaceMockRecorder) CreatePodOnNodeWithCommand(nodeName, namespace, image, command interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePodOnNodeWithCommand", reflect.TypeOf((*MockUtilsInterface)(nil).CreatePodOnNodeWithCommand), nodeName, namespace, image, command)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePodOnNode", reflect.TypeOf((*MockUtilsInterface)(nil).CreatePodOnNode), nodeName, namespace, image, command)
 }
 
 // DeleteNamespace mocks base method.
@@ -105,6 +89,21 @@ func (m *MockUtilsInterface) DeletePod(pod *v1.Pod) error {
 func (mr *MockUtilsInterfaceMockRecorder) DeletePod(pod interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePod", reflect.TypeOf((*MockUtilsInterface)(nil).DeletePod), pod)
+}
+
+// GetPodLogs mocks base method.
+func (m *MockUtilsInterface) GetPodLogs(namespace string, pod *v1.Pod) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPodLogs", namespace, pod)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPodLogs indicates an expected call of GetPodLogs.
+func (mr *MockUtilsInterfaceMockRecorder) GetPodLogs(namespace, pod interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPodLogs", reflect.TypeOf((*MockUtilsInterface)(nil).GetPodLogs), namespace, pod)
 }
 
 // IsBMInfra mocks base method.
@@ -150,6 +149,20 @@ func (m *MockUtilsInterface) RunCommandOnPod(pod *v1.Pod, command []string) ([]b
 func (mr *MockUtilsInterfaceMockRecorder) RunCommandOnPod(pod, command interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunCommandOnPod", reflect.TypeOf((*MockUtilsInterface)(nil).RunCommandOnPod), pod, command)
+}
+
+// WaitForPodStatus mocks base method.
+func (m *MockUtilsInterface) WaitForPodStatus(namespace string, pod *v1.Pod, PodPhase v1.PodPhase) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForPodStatus", namespace, pod, PodPhase)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForPodStatus indicates an expected call of WaitForPodStatus.
+func (mr *MockUtilsInterfaceMockRecorder) WaitForPodStatus(namespace, pod, PodPhase interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForPodStatus", reflect.TypeOf((*MockUtilsInterface)(nil).WaitForPodStatus), namespace, pod, PodPhase)
 }
 
 // WriteFile mocks base method.
