@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -28,7 +29,8 @@ type UtilsInterface interface {
 	CreatePodOnNode(nodeName, namespace, image string) (pod *corev1.Pod, err error)
 	DeletePod(pod *corev1.Pod) error
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
-	CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, string, error)
+	CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error)
+	GetPodLogs(namespace string, pod *corev1.Pod) (string, error)
 	WriteFile(path string, data []byte) error
 	IsBMInfra() (bool, error)
 	IsSNOCluster() (bool, error)
@@ -106,21 +108,14 @@ func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod,
 	return u.createPod(namespace, pod)
 }
 
-func (u *utils) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, string, error) {
-	log.Print("on CreatePodOnNodeWithCommand")
+func (u *utils) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error) {
 	pod := getPodDefinition(nodeName, namespace, image, command)
 	pod, err := u.createPod(namespace, pod)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to get pod: %w", err)
-	}
-	log.Print("pod on Created")
-
-	podLogs, err := u.getPodLogs(namespace, pod.Name)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to get pod logs: %w", err)
+		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
 
-	return pod, podLogs, nil
+	return pod, nil
 }
 
 func (u *utils) DeletePod(pod *corev1.Pod) error {
@@ -170,7 +165,6 @@ func getPodDefinition(node string, namespace string, image string, command []str
 	if len(command) == 0 {
 		command = []string{"/bin/sh", "-c", "sleep INF"}
 	}
-
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -266,29 +260,23 @@ func (u *utils) IsBMInfra() (bool, error) {
 }
 
 // getPodLogs fetches logs from a pod once it is running.
-func (u *utils) getPodLogs(namespace, podName string) (string, error) {
+func (u *utils) GetPodLogs(namespace string, pod *corev1.Pod) (string, error) {
 	log.Print("getting log of pod")
 	podLogOptions := &corev1.PodLogOptions{}
 
-	logsRequest := u.ClientSet.Pods(namespace).GetLogs(podName, podLogOptions)
+	logsRequest := u.ClientSet.Pods(namespace).GetLogs(pod.Name, podLogOptions)
 	logStream, err := logsRequest.Stream(context.TODO())
 	if err != nil {
 		return "", fmt.Errorf("failed to get log stream: %w", err)
 	}
 	defer logStream.Close()
 
-	var logs []byte
-	buf := make([]byte, 1024)
-	for {
-		n, err := logStream.Read(buf)
-		if err != nil && err.Error() != "EOF" {
-			return "", fmt.Errorf("failed to read logs: %w", err)
-		}
-		logs = append(logs, buf[:n]...)
-		if err != nil {
-			break
-		}
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, logStream)
+
+	if err != nil {
+		return "", err
 	}
 
-	return string(logs), nil
+	return buf.String(), nil
 }

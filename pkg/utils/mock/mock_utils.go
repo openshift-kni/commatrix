@@ -64,13 +64,12 @@ func (mr *MockUtilsInterfaceMockRecorder) CreatePodOnNode(nodeName, namespace, i
 }
 
 // CreatePodOnNodeWithCommand mocks base method.
-func (m *MockUtilsInterface) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*v1.Pod, string, error) {
+func (m *MockUtilsInterface) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePodOnNodeWithCommand", nodeName, namespace, image, command)
 	ret0, _ := ret[0].(*v1.Pod)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreatePodOnNodeWithCommand indicates an expected call of CreatePodOnNodeWithCommand.
@@ -105,6 +104,21 @@ func (m *MockUtilsInterface) DeletePod(pod *v1.Pod) error {
 func (mr *MockUtilsInterfaceMockRecorder) DeletePod(pod interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePod", reflect.TypeOf((*MockUtilsInterface)(nil).DeletePod), pod)
+}
+
+// GetPodLogs mocks base method.
+func (m *MockUtilsInterface) GetPodLogs(namespace string, pod *v1.Pod) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPodLogs", namespace, pod)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPodLogs indicates an expected call of GetPodLogs.
+func (mr *MockUtilsInterfaceMockRecorder) GetPodLogs(namespace, pod interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPodLogs", reflect.TypeOf((*MockUtilsInterface)(nil).GetPodLogs), namespace, pod)
 }
 
 // IsBMInfra mocks base method.

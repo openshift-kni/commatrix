@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -87,12 +88,16 @@ var _ = Describe("Nftables", func() {
 		By("Waiting for node to be ready")
 		node.WaitForNodeReady(nodeName, cs)
 
+		By("Listing nftables rules")
 		command := []string{
 			"chroot", "/host", "/bin/bash", "-c", "nft list ruleset; sleep INF",
 		}
 
-		debugPod, logPod, err := utilsHelpers.CreatePodOnNodeWithCommand(nodeName, testNS,
+		debugPod, err := utilsHelpers.CreatePodOnNodeWithCommand(nodeName, testNS,
 			consts.DefaultDebugPodImage, command)
+		Expect(err).ToNot(HaveOccurred())
+
+		podLogs, err := utilsHelpers.GetPodLogs(testNS, debugPod)
 		Expect(err).ToNot(HaveOccurred())
 
 		defer func() {
@@ -100,13 +105,12 @@ var _ = Describe("Nftables", func() {
 			Expect(err).ToNot(HaveOccurred())
 		}()
 
-		By("Listing nftables rules")
-		err = firewall.WriteToFile([]byte(logPod), utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
+		err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "nftables-after-reboot-"+nodeName), []byte(podLogs))
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if nftables contain the chain OPENSHIFT")
-		if strings.Contains((logPod), tableName) &&
-			strings.Contains((logPod), chainName) {
+		if strings.Contains(podLogs, tableName) &&
+			strings.Contains(podLogs, chainName) {
 			log.Println("OPENSHIFT chain found in nftables.")
 		} else {
 			Fail("OPENSHIFT chain not found in nftables")
