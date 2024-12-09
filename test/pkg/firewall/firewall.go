@@ -10,50 +10,9 @@ import (
 	"github.com/coreos/butane/config/common"
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/utils"
-	v1 "k8s.io/api/core/v1"
 )
 
 const butaneVersion = "4.16.0"
-
-func RunRootCommandOnPod(debugPod *v1.Pod, command string, chrootDir bool, utilsHelpers utils.UtilsInterface) ([]byte, error) {
-	if chrootDir {
-		// Format the command for chroot
-		command = fmt.Sprintf("chroot /host /bin/bash -c '%s'", command)
-	}
-
-	output, err := utilsHelpers.RunCommandOnPod(debugPod, []string{"bash", "-c", command})
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute command '%s' on node %s: %w", command, debugPod.Spec.NodeName, err)
-	}
-	return output, nil
-}
-
-func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, artifactsDir, fileName string) ([]byte, error) {
-	command := "nft list ruleset"
-	output, err := RunRootCommandOnPod(debugPod, command, true, utilsHelpers)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list NFT ruleset on node %s: %w", debugPod.Spec.NodeName, err)
-	}
-
-	if len(output) == 0 {
-		return nil, fmt.Errorf("no nft rules on node %s: ", debugPod.Spec.NodeName)
-	}
-
-	err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, fileName), output)
-	if err != nil {
-		return nil, err
-	}
-
-	return output, nil
-}
-func WriteToFile(output []byte, utilsHelpers utils.UtilsInterface, artifactsDir, fileName string) error {
-	err := utilsHelpers.WriteFile(filepath.Join(artifactsDir, fileName), output)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde string,
 	utilsHelpers utils.UtilsInterface) (machineConfig []byte, err error) {
