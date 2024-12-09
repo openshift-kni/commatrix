@@ -141,9 +141,10 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 		VersionedParams(&corev1.PodExecOptions{
 			Container: containerName,
 			Command:   command,
+			Stdin:     true,
 			Stdout:    true,
 			Stderr:    true,
-			TTY:       false,
+			TTY:       true,
 		}, scheme.ParameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(u.Config, "POST", req.URL())
@@ -152,6 +153,7 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 	}
 
 	err = exec.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
+		Stdin:  os.Stdin,
 		Stdout: &buf,
 		Stderr: os.Stderr,
 		Tty:    false,

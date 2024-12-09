@@ -13,6 +13,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/test/pkg/cluster"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
+	"github.com/openshift-kni/commatrix/test/pkg/node"
 )
 
 var (
@@ -78,6 +79,13 @@ var _ = Describe("Nftables", func() {
 		cluster.WaitForMCPReadyState(cs)
 
 		nodeName := nodeList.Items[0].Name
+
+		By("Rebooting first node: " + nodeName + "and waiting for disconnect")
+		err = node.SoftRebootNodeAndWaitForDisconnect(utilsHelpers, cs, nodeName)
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Waiting for node to be ready")
+		node.WaitForNodeReady(nodeName, cs)
 
 		command := []string{
 			"chroot", "/host", "/bin/bash", "-c", "nft list ruleset; sleep INF",
