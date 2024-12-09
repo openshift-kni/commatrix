@@ -68,7 +68,6 @@ var _ = Describe("Nftables", func() {
 
 			err = cluster.ApplyMachineConfig(machineConfig, cs)
 			Expect(err).ToNot(HaveOccurred())
-
 		}
 
 		// waiting for mcp start updating
@@ -88,12 +87,12 @@ var _ = Describe("Nftables", func() {
 		}()
 
 		By("Listing nftables rules")
-		output, err := firewall.NftListAndWriteToFile(debugPod, utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
+		output, err := firewall.NftListAndWriteToFile(debugPod, utilsHelpers, artifactsDir,
+			"nftables-after-reboot-"+nodeName, tableName, chainName)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if nftables contain the chain OPENSHIFT")
-		if strings.Contains(string(output), tableName) &&
-			strings.Contains(string(output), chainName) {
+		if output {
 			log.Println("OPENSHIFT chain found in nftables.")
 		} else {
 			Fail("OPENSHIFT chain not found in nftables")
