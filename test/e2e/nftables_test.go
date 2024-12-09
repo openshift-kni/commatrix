@@ -79,7 +79,12 @@ var _ = Describe("Nftables", func() {
 
 		nodeName := nodeList.Items[0].Name
 
-		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS, consts.DefaultDebugPodImage)
+		command := []string{
+			"chroot", "/host", "/bin/bash", "-c", "nft list ruleset; sleep INF",
+		}
+
+		debugPod, logPod, err := utilsHelpers.CreatePodOnNodeWithCommand(nodeName, testNS,
+			consts.DefaultDebugPodImage, command)
 		Expect(err).ToNot(HaveOccurred())
 
 		defer func() {
@@ -88,12 +93,12 @@ var _ = Describe("Nftables", func() {
 		}()
 
 		By("Listing nftables rules")
-		output, err := firewall.NftListAndWriteToFile(debugPod, utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
+		err = firewall.WriteToFile([]byte(logPod), utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if nftables contain the chain OPENSHIFT")
-		if strings.Contains(string(output), tableName) &&
-			strings.Contains(string(output), chainName) {
+		if strings.Contains((logPod), tableName) &&
+			strings.Contains((logPod), chainName) {
 			log.Println("OPENSHIFT chain found in nftables.")
 		} else {
 			Fail("OPENSHIFT chain not found in nftables")

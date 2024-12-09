@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -27,6 +28,7 @@ type UtilsInterface interface {
 	CreatePodOnNode(nodeName, namespace, image string) (pod *corev1.Pod, err error)
 	DeletePod(pod *corev1.Pod) error
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
+	CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, string, error)
 	WriteFile(path string, data []byte) error
 	IsBMInfra() (bool, error)
 	IsSNOCluster() (bool, error)
@@ -69,8 +71,7 @@ func (u *utils) DeleteNamespace(namespace string) error {
 	return nil
 }
 
-func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod, error) {
-	pod := getPodDefinition(nodeName, namespace, image)
+func (u *utils) createPod(namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
 	err := u.Create(context.TODO(), pod)
 	if err != nil {
 		return nil, err
@@ -100,6 +101,28 @@ func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod,
 	return pod, nil
 }
 
+func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod, error) {
+	pod := getPodDefinition(nodeName, namespace, image, []string{})
+	return u.createPod(namespace, pod)
+}
+
+func (u *utils) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, string, error) {
+	log.Print("on CreatePodOnNodeWithCommand")
+	pod := getPodDefinition(nodeName, namespace, image, command)
+	pod, err := u.createPod(namespace, pod)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get pod: %w", err)
+	}
+	log.Print("pod on Created")
+
+	podLogs, err := u.getPodLogs(namespace, pod.Name)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get pod logs: %w", err)
+	}
+
+	return pod, podLogs, nil
+}
+
 func (u *utils) DeletePod(pod *corev1.Pod) error {
 	return u.Delete(context.TODO(), pod)
 }
@@ -118,10 +141,9 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 		VersionedParams(&corev1.PodExecOptions{
 			Container: containerName,
 			Command:   command,
-			Stdin:     true,
 			Stdout:    true,
 			Stderr:    true,
-			TTY:       true,
+			TTY:       false,
 		}, scheme.ParameterCodec)
 
 	exec, err := remotecommand.NewSPDYExecutor(u.Config, "POST", req.URL())
@@ -130,10 +152,9 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 	}
 
 	err = exec.StreamWithContext(context.TODO(), remotecommand.StreamOptions{
-		Stdin:  os.Stdin,
 		Stdout: &buf,
 		Stderr: os.Stderr,
-		Tty:    true,
+		Tty:    false,
 	})
 	if err != nil {
 		return buf.Bytes(), fmt.Errorf("remote command %v error [%w]. output [%s]", command, err, buf.String())
@@ -142,8 +163,11 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 	return buf.Bytes(), nil
 }
 
-func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
+func getPodDefinition(node string, namespace string, image string, command []string) *corev1.Pod {
 	tolerationSeconds := int64(300)
+	if len(command) == 0 {
+		command = []string{"/bin/sh", "-c", "sleep INF"}
+	}
 
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -157,7 +181,7 @@ func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
 			Containers: []corev1.Container{
 				{
 					Name:    "container",
-					Command: []string{"/bin/sh", "-c", "sleep INF"},
+					Command: command,
 					Image:   image,
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: ptr.To(true),
@@ -237,4 +261,32 @@ func (u *utils) IsBMInfra() (bool, error) {
 	}
 
 	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
+}
+
+// getPodLogs fetches logs from a pod once it is running.
+func (u *utils) getPodLogs(namespace, podName string) (string, error) {
+	log.Print("getting log of pod")
+	podLogOptions := &corev1.PodLogOptions{}
+
+	logsRequest := u.ClientSet.Pods(namespace).GetLogs(podName, podLogOptions)
+	logStream, err := logsRequest.Stream(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("failed to get log stream: %w", err)
+	}
+	defer logStream.Close()
+
+	var logs []byte
+	buf := make([]byte, 1024)
+	for {
+		n, err := logStream.Read(buf)
+		if err != nil && err.Error() != "EOF" {
+			return "", fmt.Errorf("failed to read logs: %w", err)
+		}
+		logs = append(logs, buf[:n]...)
+		if err != nil {
+			break
+		}
+	}
+
+	return string(logs), nil
 }
