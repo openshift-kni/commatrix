@@ -49,18 +49,33 @@ func (mr *MockUtilsInterfaceMockRecorder) CreateNamespace(namespace interface{})
 }
 
 // CreatePodOnNode mocks base method.
-func (m *MockUtilsInterface) CreatePodOnNode(nodeName, namespace, image string, command []string) (*v1.Pod, error) {
+func (m *MockUtilsInterface) CreatePodOnNode(nodeName, namespace, image string) (*v1.Pod, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePodOnNode", nodeName, namespace, image, command)
+	ret := m.ctrl.Call(m, "CreatePodOnNode", nodeName, namespace, image)
 	ret0, _ := ret[0].(*v1.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreatePodOnNode indicates an expected call of CreatePodOnNode.
-func (mr *MockUtilsInterfaceMockRecorder) CreatePodOnNode(nodeName, namespace, image, command interface{}) *gomock.Call {
+func (mr *MockUtilsInterfaceMockRecorder) CreatePodOnNode(nodeName, namespace, image interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePodOnNode", reflect.TypeOf((*MockUtilsInterface)(nil).CreatePodOnNode), nodeName, namespace, image, command)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePodOnNode", reflect.TypeOf((*MockUtilsInterface)(nil).CreatePodOnNode), nodeName, namespace, image)
+}
+
+// CreatePodOnNodeWithCommand mocks base method.
+func (m *MockUtilsInterface) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*v1.Pod, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreatePodOnNodeWithCommand", nodeName, namespace, image, command)
+	ret0, _ := ret[0].(*v1.Pod)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreatePodOnNodeWithCommand indicates an expected call of CreatePodOnNodeWithCommand.
+func (mr *MockUtilsInterfaceMockRecorder) CreatePodOnNodeWithCommand(nodeName, namespace, image, command interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePodOnNodeWithCommand", reflect.TypeOf((*MockUtilsInterface)(nil).CreatePodOnNodeWithCommand), nodeName, namespace, image, command)
 }
 
 // DeleteNamespace mocks base method.

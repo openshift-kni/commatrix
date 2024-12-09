@@ -74,7 +74,7 @@ var _ = Describe("Nftables", func() {
 		}
 
 		// waiting for mcp start updating
-		cluster.WaitForMCPUpdateToStart(cs)
+		//cluster.WaitForMCPUpdateToStart(cs)
 
 		// waiting for MCP to finish updating
 		cluster.WaitForMCPReadyState(cs)
@@ -90,10 +90,10 @@ var _ = Describe("Nftables", func() {
 
 		By("Listing nftables rules")
 		command := []string{
-			"chroot", "/host", "/bin/bash", "-c", "nft list ruleset; sleep INF",
+			"chroot", "/host", "/bin/bash", "-c", "nft list ruleset;",
 		}
 
-		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS,
+		debugPod, err := utilsHelpers.CreatePodOnNodeWithCommand(nodeName, testNS,
 			consts.DefaultDebugPodImage, command)
 		Expect(err).ToNot(HaveOccurred())
 

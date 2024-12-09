@@ -26,7 +26,8 @@ import (
 type UtilsInterface interface {
 	CreateNamespace(namespace string) error
 	DeleteNamespace(namespace string) error
-	CreatePodOnNode(nodeName, namespace, image string, command []string) (pod *corev1.Pod, err error)
+	CreatePodOnNode(nodeName, namespace, image string) (pod *corev1.Pod, err error)
+	CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error)
 	DeletePod(pod *corev1.Pod) error
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
 	GetPodLogs(namespace string, pod *corev1.Pod) (string, error)
@@ -72,11 +73,12 @@ func (u *utils) DeleteNamespace(namespace string) error {
 	return nil
 }
 
-func (u *utils) createPod(namespace string, pod *corev1.Pod) (*corev1.Pod, error) {
+func (u *utils) createPod(namespace string, pod *corev1.Pod, runningStatus bool) (*corev1.Pod, error) {
 	err := u.Create(context.TODO(), pod)
 	if err != nil {
 		return nil, err
 	}
+
 	err = wait.PollUntilContextTimeout(context.TODO(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		err := u.Get(context.TODO(), clientOptions.ObjectKey{Name: pod.Name, Namespace: namespace}, pod)
 
@@ -87,9 +89,14 @@ func (u *utils) createPod(namespace string, pod *corev1.Pod) (*corev1.Pod, error
 		if err != nil {
 			return true, err
 		}
-
-		if pod.Status.Phase != corev1.PodRunning {
-			return false, nil
+		if runningStatus {
+			if pod.Status.Phase != corev1.PodRunning {
+				return false, nil
+			}
+		} else {
+			if pod.Status.Phase != corev1.PodSucceeded {
+				return false, nil
+			}
 		}
 
 		return true, nil
@@ -102,9 +109,14 @@ func (u *utils) createPod(namespace string, pod *corev1.Pod) (*corev1.Pod, error
 	return pod, nil
 }
 
-func (u *utils) CreatePodOnNode(nodeName, namespace, image string, command []string) (*corev1.Pod, error) {
+func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod, error) {
+	pod := getPodDefinition(nodeName, namespace, image, []string{})
+	return u.createPod(namespace, pod, true)
+}
+
+func (u *utils) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error) {
 	pod := getPodDefinition(nodeName, namespace, image, command)
-	return u.createPod(namespace, pod)
+	return u.createPod(namespace, pod, false)
 }
 
 func (u *utils) DeletePod(pod *corev1.Pod) error {

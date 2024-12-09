@@ -157,7 +157,7 @@ var _ = Describe("GenerateSS", func() {
 			AnyTimes()
 
 		mockUtils.EXPECT().
-			CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, consts.DefaultDebugPodImage, []string{}).
+			CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, consts.DefaultDebugPodImage).
 			Return(mockPod, nil).AnyTimes()
 
 		mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
