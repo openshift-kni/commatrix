@@ -46,6 +46,14 @@ func NftListAndWriteToFile(debugPod *v1.Pod, utilsHelpers utils.UtilsInterface, 
 
 	return output, nil
 }
+func WriteToFile(output []byte, utilsHelpers utils.UtilsInterface, artifactsDir, fileName string) error {
+	err := utilsHelpers.WriteFile(filepath.Join(artifactsDir, fileName), output)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde string,
 	utilsHelpers utils.UtilsInterface) (machineConfig []byte, err error) {
