@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"time"
 
@@ -25,8 +27,10 @@ type UtilsInterface interface {
 	CreateNamespace(namespace string) error
 	DeleteNamespace(namespace string) error
 	CreatePodOnNode(nodeName, namespace, image string) (pod *corev1.Pod, err error)
+	CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error)
 	DeletePod(pod *corev1.Pod) error
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
+	GetPodLogs(namespace string, pod *corev1.Pod) (string, error)
 	WriteFile(path string, data []byte) error
 	IsBMInfra() (bool, error)
 	IsSNOCluster() (bool, error)
@@ -69,12 +73,12 @@ func (u *utils) DeleteNamespace(namespace string) error {
 	return nil
 }
 
-func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod, error) {
-	pod := getPodDefinition(nodeName, namespace, image)
+func (u *utils) createPod(namespace string, pod *corev1.Pod, runningStatus bool) (*corev1.Pod, error) {
 	err := u.Create(context.TODO(), pod)
 	if err != nil {
 		return nil, err
 	}
+
 	err = wait.PollUntilContextTimeout(context.TODO(), interval, timeout, true, func(ctx context.Context) (bool, error) {
 		err := u.Get(context.TODO(), clientOptions.ObjectKey{Name: pod.Name, Namespace: namespace}, pod)
 
@@ -85,9 +89,14 @@ func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod,
 		if err != nil {
 			return true, err
 		}
-
-		if pod.Status.Phase != corev1.PodRunning {
-			return false, nil
+		if runningStatus {
+			if pod.Status.Phase != corev1.PodRunning {
+				return false, nil
+			}
+		} else {
+			if pod.Status.Phase != corev1.PodSucceeded {
+				return false, nil
+			}
 		}
 
 		return true, nil
@@ -98,6 +107,16 @@ func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod,
 	}
 
 	return pod, nil
+}
+
+func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod, error) {
+	pod := getPodDefinition(nodeName, namespace, image, []string{})
+	return u.createPod(namespace, pod, true)
+}
+
+func (u *utils) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error) {
+	pod := getPodDefinition(nodeName, namespace, image, command)
+	return u.createPod(namespace, pod, false)
 }
 
 func (u *utils) DeletePod(pod *corev1.Pod) error {
@@ -142,9 +161,11 @@ func (u *utils) RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, erro
 	return buf.Bytes(), nil
 }
 
-func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
+func getPodDefinition(node string, namespace string, image string, command []string) *corev1.Pod {
 	tolerationSeconds := int64(300)
-
+	if len(command) == 0 {
+		command = []string{"/bin/sh", "-c", "sleep INF"}
+	}
 	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
@@ -157,7 +178,7 @@ func getPodDefinition(node string, namespace string, image string) *corev1.Pod {
 			Containers: []corev1.Container{
 				{
 					Name:    "container",
-					Command: []string{"/bin/sh", "-c", "sleep INF"},
+					Command: command,
 					Image:   image,
 					SecurityContext: &corev1.SecurityContext{
 						Privileged: ptr.To(true),
@@ -237,4 +258,26 @@ func (u *utils) IsBMInfra() (bool, error) {
 	}
 
 	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
+}
+
+// getPodLogs fetches logs from a pod once it is running.
+func (u *utils) GetPodLogs(namespace string, pod *corev1.Pod) (string, error) {
+	log.Print("getting log of pod")
+	podLogOptions := &corev1.PodLogOptions{}
+
+	logsRequest := u.ClientSet.Pods(namespace).GetLogs(pod.Name, podLogOptions)
+	logStream, err := logsRequest.Stream(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("failed to get log stream: %w", err)
+	}
+	defer logStream.Close()
+
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, logStream)
+
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
