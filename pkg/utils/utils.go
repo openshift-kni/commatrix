@@ -26,10 +26,9 @@ import (
 type UtilsInterface interface {
 	CreateNamespace(namespace string) error
 	DeleteNamespace(namespace string) error
-	CreatePodOnNode(nodeName, namespace, image string) (pod *corev1.Pod, err error)
+	CreatePodOnNode(nodeName, namespace, image string, command []string) (pod *corev1.Pod, err error)
 	DeletePod(pod *corev1.Pod) error
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
-	CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error)
 	GetPodLogs(namespace string, pod *corev1.Pod) (string, error)
 	WriteFile(path string, data []byte) error
 	IsBMInfra() (bool, error)
@@ -103,19 +102,9 @@ func (u *utils) createPod(namespace string, pod *corev1.Pod) (*corev1.Pod, error
 	return pod, nil
 }
 
-func (u *utils) CreatePodOnNode(nodeName, namespace, image string) (*corev1.Pod, error) {
-	pod := getPodDefinition(nodeName, namespace, image, []string{})
-	return u.createPod(namespace, pod)
-}
-
-func (u *utils) CreatePodOnNodeWithCommand(nodeName, namespace, image string, command []string) (*corev1.Pod, error) {
+func (u *utils) CreatePodOnNode(nodeName, namespace, image string, command []string) (*corev1.Pod, error) {
 	pod := getPodDefinition(nodeName, namespace, image, command)
-	pod, err := u.createPod(namespace, pod)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get pod: %w", err)
-	}
-
-	return pod, nil
+	return u.createPod(namespace, pod)
 }
 
 func (u *utils) DeletePod(pod *corev1.Pod) error {

@@ -93,7 +93,7 @@ var _ = Describe("Nftables", func() {
 			"chroot", "/host", "/bin/bash", "-c", "nft list ruleset; sleep INF",
 		}
 
-		debugPod, err := utilsHelpers.CreatePodOnNodeWithCommand(nodeName, testNS,
+		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS,
 			consts.DefaultDebugPodImage, command)
 		Expect(err).ToNot(HaveOccurred())
 

@@ -22,7 +22,7 @@ const (
 
 // SoftRebootNodeAndWaitForDisconnect soft reboots given node and wait for node to be unreachable.
 func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName, ns string) error {
-	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage)
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage, []string{})
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
 	}
