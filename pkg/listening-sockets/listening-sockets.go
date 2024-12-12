@@ -66,10 +66,16 @@ func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byt
 	for nodeName := range cc.nodeToRole {
 		name := nodeName
 		g.Go(func() error {
-			debugPod, err := cc.podUtils.CreatePodOnNode(name, namespace, consts.DefaultDebugPodImage)
+			debugPod, err := cc.podUtils.CreatePodOnNode(name, namespace, consts.DefaultDebugPodImage, []string{})
 			if err != nil {
 				return err
 			}
+
+			err = cc.podUtils.WaitForPodStatus(namespace, debugPod, corev1.PodRunning)
+			if err != nil {
+				return err
+			}
+
 			defer func() {
 				err := cc.podUtils.DeletePod(debugPod)
 				if err != nil {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -13,6 +14,8 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/test/pkg/cluster"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
+	"github.com/openshift-kni/commatrix/test/pkg/node"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -79,7 +82,26 @@ var _ = Describe("Nftables", func() {
 
 		nodeName := nodeList.Items[0].Name
 
-		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS, consts.DefaultDebugPodImage)
+		By("Rebooting first node: " + nodeName + "and waiting for disconnect \n")
+		err = node.SoftRebootNodeAndWaitForDisconnect(utilsHelpers, cs, nodeName, testNS)
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Waiting for node to be ready")
+		node.WaitForNodeReady(nodeName, cs)
+
+		By("Listing nftables rules")
+		command := []string{
+			"chroot", "/host", "/bin/bash", "-c", "nft list ruleset",
+		}
+
+		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS,
+			consts.DefaultDebugPodImage, command)
+		Expect(err).ToNot(HaveOccurred())
+
+		err = utilsHelpers.WaitForPodStatus(testNS, debugPod, corev1.PodSucceeded)
+		Expect(err).ToNot(HaveOccurred())
+
+		podLogs, err := utilsHelpers.GetPodLogs(testNS, debugPod)
 		Expect(err).ToNot(HaveOccurred())
 
 		defer func() {
@@ -87,13 +109,12 @@ var _ = Describe("Nftables", func() {
 			Expect(err).ToNot(HaveOccurred())
 		}()
 
-		By("Listing nftables rules")
-		output, err := firewall.NftListAndWriteToFile(debugPod, utilsHelpers, artifactsDir, "nftables-after-reboot-"+nodeName)
+		err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "nftables-after-reboot-"+nodeName), []byte(podLogs))
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Checking if nftables contain the chain OPENSHIFT")
-		if strings.Contains(string(output), tableName) &&
-			strings.Contains(string(output), chainName) {
+		if strings.Contains(podLogs, tableName) &&
+			strings.Contains(podLogs, chainName) {
 			log.Println("OPENSHIFT chain found in nftables.")
 		} else {
 			Fail("OPENSHIFT chain not found in nftables")
