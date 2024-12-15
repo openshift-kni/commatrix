@@ -2,8 +2,12 @@ package node
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/onsi/gomega"
@@ -21,9 +25,8 @@ const (
 )
 
 // SoftRebootNodeAndWaitForDisconnect soft reboots given node and wait for node to be unreachable.
-func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName, ns string) error {
-	rebootCmd := []string{"chroot", "/host", "reboot"}
-	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage, rebootCmd)
+func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName, ns string, isSNO bool) error {
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage, []string{})
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
 	}
@@ -35,18 +38,34 @@ func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *c
 		}
 	}()
 
-	WaitForNodeNotReady(nodeName, cs)
+	rebootCmd := []string{"chroot", "/host", "reboot"}
+	_, err = utilsHelpers.RunCommandOnPod(debugPod, rebootCmd)
+	if err != nil {
+		return fmt.Errorf("failed to reboot node: %s with error %w", nodeName, err)
+	}
+
+	WaitForNodeNotReady(nodeName, cs, isSNO)
 	return nil
 }
 
 // WaitForNodeNotReady waits for the node to be in the NotReady state.
-func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
+func WaitForNodeNotReady(nodeName string, cs *client.ClientSet, isSNO bool) {
 	log.Printf("Waiting for node %s to be in NotReady state", nodeName)
 
 	gomega.Eventually(func() bool {
 		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
-			log.Printf("Error getting node %s: %v", node.Name, err)
+			// Check for specific error patterns like "connection refused" or "connection reset by peer" (for sno).
+			if isSNO {
+				if (errors.Is(err, &url.Error{}) || errors.Is(err, net.ErrClosed) ||
+					strings.Contains(err.Error(), "connection reset by peer") ||
+					strings.Contains(err.Error(), "connection refused")) {
+					log.Printf("API server unreachable (node may be down): %v", err)
+					return true // Treat the node as NotReady.
+				}
+			}
+
+			log.Printf("Error getting node %s: %v", nodeName, err)
 			return false
 		}
 
