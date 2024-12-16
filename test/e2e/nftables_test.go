@@ -83,7 +83,7 @@ var _ = Describe("Nftables", func() {
 		nodeName := nodeList.Items[0].Name
 
 		By("Rebooting first node: " + nodeName + "and waiting for disconnect \n")
-		err = node.SoftRebootNodeAndWaitForDisconnect(utilsHelpers, cs, nodeName, testNS, isSNO)
+		err = node.SoftRebootNodeAndWaitForDisconnect(utilsHelpers, cs, nodeName, testNS)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Waiting for node to be ready")
