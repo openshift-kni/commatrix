@@ -22,8 +22,7 @@ const (
 
 // SoftRebootNodeAndWaitForDisconnect soft reboots given node and wait for node to be unreachable.
 func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName, ns string) error {
-	rebootCmd := []string{"chroot", "/host", "reboot"}
-	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage, rebootCmd)
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage, []string{})
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
 	}
@@ -34,6 +33,17 @@ func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *c
 			log.Printf("failed cleaning debug pod %s: %v", debugPod, err)
 		}
 	}()
+
+	err = utilsHelpers.WaitForPodStatus(ns, debugPod, v1.PodRunning)
+	if err != nil {
+		return err
+	}
+
+	rebootCmd := []string{"chroot", "/host", "reboot"}
+	_, err = utilsHelpers.RunCommandOnPod(debugPod, rebootCmd)
+	if err != nil {
+		return fmt.Errorf("failed to reboot node: %s with error %w", nodeName, err)
+	}
 
 	WaitForNodeNotReady(nodeName, cs)
 	return nil
@@ -46,7 +56,7 @@ func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
 	gomega.Eventually(func() bool {
 		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
-			log.Printf("Error getting node %s: %v", node.Name, err)
+			log.Printf("Error getting node %s: %v", nodeName, err)
 			return false
 		}
 
