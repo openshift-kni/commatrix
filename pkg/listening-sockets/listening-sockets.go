@@ -215,7 +215,7 @@ func (cc *ConnectionCheck) extractContainerID(debugPod *corev1.Pod, pid string) 
 func (cc *ConnectionCheck) extractContainerName(debugPod *corev1.Pod, containerID string) (string, error) {
 	containerInfo := &types.ContainerInfo{}
 	cmd := fmt.Sprintf("crictl ps -o json --id %s", containerID)
-	out, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"/bin/sh", "-c", cmd})
+	out, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"chroot", "/host", "/bin/sh", "-c", cmd})
 	if err != nil {
 		return "", err
 	}
