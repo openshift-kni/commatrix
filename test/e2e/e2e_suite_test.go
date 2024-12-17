@@ -17,16 +17,16 @@ import (
 )
 
 var (
-	cs                      *client.ClientSet
-	commatrix               *types.ComMatrix
-	isSNO                   bool
-	isBM                    bool
-	deployment              types.Deployment
-	infra                   types.Env
-	utilsHelpers            utils.UtilsInterface
-	epExporter              *endpointslices.EndpointSlicesExporter
-	nodeList                *corev1.NodeList
-	artifactsDir            string
+	cs           *client.ClientSet
+	commatrix    *types.ComMatrix
+	isSNO        bool
+	isBM         bool
+	deployment   types.Deployment
+	infra        types.Env
+	utilsHelpers utils.UtilsInterface
+	epExporter   *endpointslices.EndpointSlicesExporter
+	nodeList     *corev1.NodeList
+	artifactsDir string
 )
 
 const testNS = "openshift-commatrix-test"
