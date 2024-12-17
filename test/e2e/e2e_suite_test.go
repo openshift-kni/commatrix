@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openshift-kni/commatrix/pkg/client"
-	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
@@ -28,8 +27,6 @@ var (
 	epExporter              *endpointslices.EndpointSlicesExporter
 	nodeList                *corev1.NodeList
 	artifactsDir            string
-	extraNFTablesMasterFile = ""
-	extraNFTablesWorkerFile = ""
 )
 
 const testNS = "openshift-commatrix-test"
@@ -75,13 +72,6 @@ var _ = BeforeSuite(func() {
 	epExporter, err = endpointslices.New(cs)
 	Expect(err).ToNot(HaveOccurred())
 
-	By("Generating comMatrix")
-	commMatrixCreator, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
-	Expect(err).NotTo(HaveOccurred())
-
-	commatrix, err = commMatrixCreator.CreateEndpointMatrix()
-	Expect(err).NotTo(HaveOccurred())
-
 	By("Creating test namespace")
 	err = utilsHelpers.CreateNamespace(testNS)
 	Expect(err).ToNot(HaveOccurred())
@@ -89,17 +79,6 @@ var _ = BeforeSuite(func() {
 	nodeList = &corev1.NodeList{}
 	err = cs.List(context.TODO(), nodeList)
 	Expect(err).ToNot(HaveOccurred())
-
-	// get the EXTRA_NFTABLES_FILE if it not exist value is ""
-	val, exists := os.LookupEnv("EXTRA_NFTABLES_MASTER_FILE")
-	if exists {
-		extraNFTablesMasterFile = val
-	}
-
-	val, exists = os.LookupEnv("EXTRA_NFTABLES_WORKER_FILE")
-	if exists {
-		extraNFTablesWorkerFile = val
-	}
 })
 
 var _ = AfterSuite(func() {
