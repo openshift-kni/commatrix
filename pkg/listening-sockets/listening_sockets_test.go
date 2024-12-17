@@ -152,7 +152,7 @@ var _ = Describe("GenerateSS", func() {
 
 		// Mock expectation for crictl command
 		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
-			[]string{"/bin/sh", "-c", "crictl ps -o json --id 123abcd"}).
+			[]string{"chroot", "/host", "/bin/sh", "-c", "crictl ps -o json --id 123abcd"}).
 			Return([]byte(crictlExecCommandOut), nil).
 			AnyTimes()
 
