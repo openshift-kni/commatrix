@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/test/pkg/cluster"
@@ -19,13 +20,22 @@ import (
 )
 
 var (
-	workerNodeRole = "worker"
-	tableName      = "table inet openshift_filter"
-	chainName      = "chain OPENSHIFT"
+	workerNodeRole          = "worker"
+	tableName               = "table inet openshift_filter"
+	chainName               = "chain OPENSHIFT"
+	extraNFTablesMasterFile = ""
+	extraNFTablesWorkerFile = ""
 )
 
 var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
+		By("Generating comMatrix")
+		commMatrixCreator, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
+		Expect(err).NotTo(HaveOccurred())
+
+		commatrix, err = commMatrixCreator.CreateEndpointMatrix()
+		Expect(err).NotTo(HaveOccurred())
+
 		masterMat, workerMat := commatrix.SeparateMatrixByRole()
 		nodeRoleToNFTables := make(map[string][]byte)
 
@@ -41,6 +51,11 @@ var _ = Describe("Nftables", func() {
 					nftablesConfig, err = workerMat.ToNFTables()
 					Expect(err).NotTo(HaveOccurred())
 
+					val, exists := os.LookupEnv("EXTRA_NFTABLES_WORKER_FILE")
+					if exists {
+						extraNFTablesWorkerFile = val
+					}
+
 					if extraNFTablesWorkerFile != "" {
 						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesWorkerFile)
 						Expect(err).NotTo(HaveOccurred())
@@ -48,6 +63,11 @@ var _ = Describe("Nftables", func() {
 				} else {
 					nftablesConfig, err = masterMat.ToNFTables()
 					Expect(err).NotTo(HaveOccurred())
+
+					val, exists := os.LookupEnv("EXTRA_NFTABLES_MASTER_FILE")
+					if exists {
+						extraNFTablesMasterFile = val
+					}
 
 					if extraNFTablesMasterFile != "" {
 						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesMasterFile)
@@ -59,7 +79,7 @@ var _ = Describe("Nftables", func() {
 			}
 		}
 
-		err := cluster.ValidateClusterVersionAndMachineConfiguration(cs)
+		err = cluster.ValidateClusterVersionAndMachineConfiguration(cs)
 		Expect(err).ToNot(HaveOccurred())
 
 		for role, nftablesConfig := range nodeRoleToNFTables {
