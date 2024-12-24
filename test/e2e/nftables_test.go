@@ -69,19 +69,23 @@ var _ = Describe("Nftables", func() {
 				role, utilsHelpers)
 			Expect(err).ToNot(HaveOccurred())
 
-			err = cluster.ApplyMachineConfig(machineConfig, cs)
+			needWaitToMCP, err := cluster.ApplyMachineConfigAndCheckChange(machineConfig, cs)
 			Expect(err).ToNot(HaveOccurred())
 
+			if needWaitToMCP {
+				// wait to MCP to start the update.
+				cluster.WaitForMCPUpdateToStart(cs, role)
+
+				// Wait for MCP update to be ready.
+				cluster.WaitForMCPReadyState(cs, role)
+
+				log.Println("MCP update completed successfully.")
+			} else {
+				log.Println("No update needed. MCP update skipped.")
+			}
 		}
 
-		// waiting for mcp start updating
-		cluster.WaitForMCPUpdateToStart(cs)
-
-		// waiting for MCP to finish updating
-		cluster.WaitForMCPReadyState(cs)
-
 		nodeName := nodeList.Items[0].Name
-
 		By("Rebooting first node: " + nodeName + "and waiting for disconnect \n")
 		err = node.SoftRebootNodeAndWaitForDisconnect(utilsHelpers, cs, nodeName, testNS)
 		Expect(err).ToNot(HaveOccurred())
