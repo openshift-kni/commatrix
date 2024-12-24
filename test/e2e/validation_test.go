@@ -27,11 +27,6 @@ import (
 )
 
 var (
-	extraEndpointSlicesFilePath   = ""
-	extraEndpointSlicesFileFormat = ""
-)
-
-var (
 	// Entries which are open on the worker node instead of master in standard cluster.
 	// Will be excluded in diff generatation between documented and generated comMatrix.
 	StandardExcludedMasterComDetails = []types.ComDetails{
