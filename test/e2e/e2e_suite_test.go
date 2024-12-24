@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openshift-kni/commatrix/pkg/client"
+	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
@@ -17,16 +18,19 @@ import (
 )
 
 var (
-	cs           *client.ClientSet
-	commatrix    *types.ComMatrix
-	isSNO        bool
-	isBM         bool
-	deployment   types.Deployment
-	infra        types.Env
-	utilsHelpers utils.UtilsInterface
-	epExporter   *endpointslices.EndpointSlicesExporter
-	nodeList     *corev1.NodeList
-	artifactsDir string
+	cs                      *client.ClientSet
+	commatrix               *types.ComMatrix
+	isSNO                   bool
+	isBM                    bool
+	deployment              types.Deployment
+	infra                   types.Env
+	utilsHelpers            utils.UtilsInterface
+	epExporter              *endpointslices.EndpointSlicesExporter
+	nodeList                *corev1.NodeList
+	artifactsDir            string
+	openPortsToIgnoreFile   = ""
+	openPortsToIgnoreFormat = ""
+	portsToIgnoreCommatrix  *types.ComMatrix
 )
 
 const testNS = "openshift-commatrix-test"
@@ -72,6 +76,16 @@ var _ = BeforeSuite(func() {
 	epExporter, err = endpointslices.New(cs)
 	Expect(err).ToNot(HaveOccurred())
 
+	By("Generating comMatrix")
+	commMatrixCreator, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
+	Expect(err).NotTo(HaveOccurred())
+
+	commatrix, err = commMatrixCreator.CreateEndpointMatrix()
+	Expect(err).NotTo(HaveOccurred())
+
+	err = commatrix.WriteMatrixToFileByType(utilsHelpers, "communication-matrix", types.FormatCSV, deployment, artifactsDir)
+	Expect(err).ToNot(HaveOccurred())
+
 	By("Creating test namespace")
 	err = utilsHelpers.CreateNamespace(testNS)
 	Expect(err).ToNot(HaveOccurred())
@@ -79,6 +93,23 @@ var _ = BeforeSuite(func() {
 	nodeList = &corev1.NodeList{}
 	err = cs.List(context.TODO(), nodeList)
 	Expect(err).ToNot(HaveOccurred())
+
+	portsToIgnoreCommatrix = nil
+	val, exists := os.LookupEnv("OPEN_PORTS_TO_IGNORE_FILE")
+	if exists {
+		openPortsToIgnoreFile = val
+		val, exists = os.LookupEnv("OPEN_PORTS_TO_IGNORE_FORMAT")
+		if exists {
+			openPortsToIgnoreFormat = val
+
+			// generate open ports to ignore commatrix
+			portsToIgnoreCommatrixCreator, err := commatrixcreator.New(epExporter, openPortsToIgnoreFile, openPortsToIgnoreFormat, infra, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			portsToIgnoreComDetails, err := portsToIgnoreCommatrixCreator.GetComDetailsListFromFile()
+			Expect(err).ToNot(HaveOccurred())
+			portsToIgnoreCommatrix = &types.ComMatrix{Matrix: portsToIgnoreComDetails}
+		}
+	}
 })
 
 var _ = AfterSuite(func() {

@@ -73,13 +73,6 @@ const (
 
 var _ = Describe("Validation", func() {
 	It("generated communication matrix should be equal to documented communication matrix", func() {
-		By("Generating comMatrix")
-		commMatrixCreator, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
-		Expect(err).NotTo(HaveOccurred())
-
-		commatrix, err = commMatrixCreator.CreateEndpointMatrix()
-		Expect(err).NotTo(HaveOccurred())
-
 		By("get cluster's version and check if it's suitable for test")
 		clusterVersion, err := cluster.GetClusterVersion(cs)
 		Expect(err).NotTo(HaveOccurred())
@@ -90,10 +83,6 @@ var _ = Describe("Validation", func() {
 			Skip(fmt.Sprintf("If the cluster version is lower than the lowest version that "+
 				"has a documented communication matrix (%v), skip test", minimalDocCommatrixVersion))
 		}
-
-		By("write commatrix to artifact file")
-		err = commatrix.WriteMatrixToFileByType(utilsHelpers, "new-commatrix", types.FormatCSV, deployment, artifactsDir)
-		Expect(err).ToNot(HaveOccurred())
 
 		By(fmt.Sprintf("get documented commatrix version %s", clusterVersion))
 		// get documented commatrix from URL
@@ -165,26 +154,6 @@ var _ = Describe("Validation", func() {
 	})
 
 	It("should validate the communication matrix ports match the node's listening ports", func() {
-		val, exists := os.LookupEnv("ENDPOINT_SLICE_EXTRA_OPEN_PORTS_FILE")
-		if exists {
-			extraEndpointSlicesFilePath = val
-		}
-
-		val, exists = os.LookupEnv("ENDPOINT_SLICE_EXTRA_OPEN_PORTS_FORMAT")
-		if exists {
-			extraEndpointSlicesFileFormat = val
-		}
-
-		By("Generating comMatrix")
-		commMatrixCreator, err := commatrixcreator.New(epExporter, extraEndpointSlicesFilePath, extraEndpointSlicesFileFormat, infra, deployment)
-		Expect(err).NotTo(HaveOccurred())
-
-		commatrix, err = commMatrixCreator.CreateEndpointMatrix()
-		Expect(err).NotTo(HaveOccurred())
-
-		err = commatrix.WriteMatrixToFileByType(utilsHelpers, "communication-matrix", types.FormatCSV, deployment, artifactsDir)
-		Expect(err).ToNot(HaveOccurred())
-
 		listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, artifactsDir)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -214,7 +183,9 @@ var _ = Describe("Validation", func() {
 			logrus.Warningf("the following ports are not used: \n %s", notUsedEPSMat)
 		}
 
-		missingEPSMat := diff.GenerateUniqueSecondary()
+		// generate the diff matrix between the open ports to ignore matrix and the missing endpoint slice matrix (based on the diff between the enpointslice and the ss matrix)
+		diffIgonre := matrixdiff.Generate(diff.GenerateUniqueSecondary(), portsToIgnoreCommatrix)
+		missingEPSMat := diffIgonre.GenerateUniquePrimary()
 		if len(missingEPSMat.Matrix) > 0 {
 			err := fmt.Errorf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat)
 			Expect(err).ToNot(HaveOccurred())

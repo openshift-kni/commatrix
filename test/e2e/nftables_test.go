@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/test/pkg/cluster"
@@ -20,23 +19,20 @@ import (
 )
 
 var (
-	workerNodeRole          = "worker"
-	tableName               = "table inet openshift_filter"
-	chainName               = "chain OPENSHIFT"
-	extraNFTablesMasterFile = ""
-	extraNFTablesWorkerFile = ""
+	workerNodeRole = "worker"
+	tableName      = "table inet openshift_filter"
+	chainName      = "chain OPENSHIFT"
 )
 
 var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
-		By("Generating comMatrix")
-		commMatrixCreator, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
-		Expect(err).NotTo(HaveOccurred())
-
-		commatrix, err = commMatrixCreator.CreateEndpointMatrix()
-		Expect(err).NotTo(HaveOccurred())
-
 		masterMat, workerMat := commatrix.SeparateMatrixByRole()
+
+		var podsToIgnoreMasterMat, podsToIgnoreWorkerMat types.ComMatrix
+		if portsToIgnoreCommatrix != nil {
+			podsToIgnoreMasterMat, podsToIgnoreWorkerMat = portsToIgnoreCommatrix.SeparateMatrixByRole()
+		}
+
 		nodeRoleToNFTables := make(map[string][]byte)
 
 		By("Creating NFT output for each role")
@@ -44,46 +40,47 @@ var _ = Describe("Nftables", func() {
 			role, err := types.GetNodeRole(&node)
 			Expect(err).NotTo(HaveOccurred())
 
+			var roleMat, podsToIgnoreMat types.ComMatrix
+			var extraNftablesFileEnv string
+
 			if _, exists := nodeRoleToNFTables[role]; !exists {
-				var nftablesConfig []byte
-
 				if role == workerNodeRole {
-					nftablesConfig, err = workerMat.ToNFTables()
-					Expect(err).NotTo(HaveOccurred())
-
-					val, exists := os.LookupEnv("EXTRA_NFTABLES_WORKER_FILE")
-					if exists {
-						extraNFTablesWorkerFile = val
-					}
-
-					if extraNFTablesWorkerFile != "" {
-						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesWorkerFile)
-						Expect(err).NotTo(HaveOccurred())
-					}
+					roleMat = workerMat
+					podsToIgnoreMat = podsToIgnoreWorkerMat
+					extraNftablesFileEnv = "EXTRA_NFTABLES_WORKER_FILE"
 				} else {
-					nftablesConfig, err = masterMat.ToNFTables()
-					Expect(err).NotTo(HaveOccurred())
-
-					val, exists := os.LookupEnv("EXTRA_NFTABLES_MASTER_FILE")
-					if exists {
-						extraNFTablesMasterFile = val
-					}
-
-					if extraNFTablesMasterFile != "" {
-						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesMasterFile)
-						Expect(err).NotTo(HaveOccurred())
-					}
+					roleMat = masterMat
+					podsToIgnoreMat = podsToIgnoreMasterMat
+					extraNftablesFileEnv = "EXTRA_NFTABLES_MASTER_FILE"
 				}
 
-				nodeRoleToNFTables[role] = nftablesConfig
+				nftablesRules := roleMat.ToNFTablesRules()
+				Expect(err).NotTo(HaveOccurred())
+
+				extraNFTablesFile, _ := os.LookupEnv(extraNftablesFileEnv)
+				if extraNFTablesFile != "" {
+					extraNFTablesValue, err := os.ReadFile(extraNFTablesFile)
+					Expect(err).NotTo(HaveOccurred())
+					nftablesRules += "\n\t\t\t\t\t" + string(extraNFTablesValue)
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				if podsToIgnoreMat.Matrix != nil {
+					nftablesRules += "\n\t\t\t\t\t" + podsToIgnoreMat.ToNFTablesRules()
+				}
+				nftableConfig := createNftableFromRules(nftablesRules)
+				nodeRoleToNFTables[role] = []byte(nftableConfig)
 			}
 		}
 
-		err = cluster.ValidateClusterVersionAndMachineConfiguration(cs)
+		err := cluster.ValidateClusterVersionAndMachineConfiguration(cs)
 		Expect(err).ToNot(HaveOccurred())
 
 		for role, nftablesConfig := range nodeRoleToNFTables {
 			By(fmt.Sprintf("Applying firewall on %s nodes", role))
+
+			err = os.WriteFile(filepath.Join(artifactsDir, "config"), nftablesConfig, 0644)
+			Expect(err).ToNot(HaveOccurred())
 
 			machineConfig, err := firewall.CreateMachineConfig(cs, nftablesConfig, artifactsDir,
 				role, utilsHelpers)
@@ -95,7 +92,7 @@ var _ = Describe("Nftables", func() {
 		}
 
 		// waiting for mcp start updating
-		cluster.WaitForMCPUpdateToStart(cs)
+		// cluster.WaitForMCPUpdateToStart(cs)
 
 		// waiting for MCP to finish updating
 		cluster.WaitForMCPReadyState(cs)
@@ -142,20 +139,37 @@ var _ = Describe("Nftables", func() {
 	})
 })
 
-func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, error) {
-	nftStr := string(nftables)
-
-	insertPoint := "# Logging and default drop"
-	if !strings.Contains(nftStr, insertPoint) {
-		return nftables, fmt.Errorf("insert point not found in nftables configuration")
-	}
-
+func appendNftableRulesFromFile(nftablesRules string, extraNFTablesFile string) (string, error) {
 	extraNFTablesValue, err := os.ReadFile(extraNFTablesFile)
 	if err != nil {
-		return nftables, fmt.Errorf("failed to read extra nftables from file: %v", err)
+		return "", fmt.Errorf("failed to read extra nftables from file: %v", err)
 	}
 
-	nftStr = strings.Replace(nftStr, insertPoint, string(extraNFTablesValue)+"\n"+insertPoint, 1)
+	return nftablesRules + "\n" + string(extraNFTablesValue), nil
+}
 
-	return []byte(nftStr), nil
+func createNftableFromRules(rules string) string {
+	return fmt.Sprintf(`#!/usr/sbin/nft -f
+      table inet openshift_filter {
+          chain OPENSHIFT {
+					type filter hook input priority 1; policy accept;
+			
+					# Allow loopback traffic
+					iif lo accept
+			
+					# Allow established and related traffic
+					ct state established,related accept
+			
+					# Allow ICMP on ipv4
+					ip protocol icmp accept
+					# Allow ICMP on ipv6
+					ip6 nexthdr ipv6-icmp accept
+			
+					# Allow specific TCP and UDP ports
+					%s
+			
+					# Logging and default drop
+					log prefix "firewall " drop
+				  }
+			    }`, rules)
 }

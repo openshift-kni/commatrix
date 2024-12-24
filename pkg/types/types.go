@@ -202,6 +202,23 @@ func (m *ComMatrix) Contains(cd ComDetails) bool {
 	return false
 }
 
+func (m *ComMatrix) ToNFTablesRules() string {
+	var tcpPorts []string
+	var udpPorts []string
+	for _, line := range m.Matrix {
+		if line.Protocol == "TCP" {
+			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
+		} else if line.Protocol == "UDP" {
+			udpPorts = append(udpPorts, fmt.Sprint(line.Port))
+		}
+	}
+
+	tcpPortsStr := strings.Join(tcpPorts, ", ")
+	udpPortsStr := strings.Join(udpPorts, ", ")
+
+	return fmt.Sprintf("tcp dport { %s } accept\nudp dport { %s } accept", tcpPortsStr, udpPortsStr)
+}
+
 func (m *ComMatrix) ToNFTables() ([]byte, error) {
 	var tcpPorts []string
 	var udpPorts []string
