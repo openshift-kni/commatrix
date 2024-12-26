@@ -178,9 +178,15 @@ var _ = Describe("Validation", func() {
 			logrus.Warningf("the following ports are not used: \n %s", notUsedEPSMat)
 		}
 
-		// generate the diff matrix between the open ports to ignore matrix and the missing endpoint slice matrix (based on the diff between the enpointslice and the ss matrix)
-		diffIgonre := matrixdiff.Generate(diff.GenerateUniqueSecondary(), portsToIgnoreCommatrix)
-		missingEPSMat := diffIgonre.GenerateUniquePrimary()
+		var missingEPSMat *types.ComMatrix
+		if portsToIgnoreCommatrix != nil && portsToIgnoreCommatrix.Matrix != nil {
+			// generate the diff matrix between the open ports to ignore matrix and the missing endpoint slice matrix (based on the diff between the enpointslice and the ss matrix)
+			diffIgonre := matrixdiff.Generate(diff.GenerateUniqueSecondary(), portsToIgnoreCommatrix)
+			missingEPSMat = diffIgonre.GenerateUniquePrimary()
+		} else {
+			missingEPSMat = diff.GenerateUniqueSecondary()
+		}
+
 		if len(missingEPSMat.Matrix) > 0 {
 			err := fmt.Errorf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat)
 			Expect(err).ToNot(HaveOccurred())
