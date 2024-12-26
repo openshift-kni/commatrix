@@ -139,15 +139,6 @@ var _ = Describe("Nftables", func() {
 	})
 })
 
-func appendNftableRulesFromFile(nftablesRules string, extraNFTablesFile string) (string, error) {
-	extraNFTablesValue, err := os.ReadFile(extraNFTablesFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to read extra nftables from file: %v", err)
-	}
-
-	return nftablesRules + "\n" + string(extraNFTablesValue), nil
-}
-
 func createNftableFromRules(rules string) string {
 	return fmt.Sprintf(`#!/usr/sbin/nft -f
       table inet openshift_filter {
