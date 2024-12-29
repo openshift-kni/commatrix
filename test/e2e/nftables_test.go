@@ -92,7 +92,7 @@ var _ = Describe("Nftables", func() {
 		}
 
 		// waiting for mcp start updating
-		// cluster.WaitForMCPUpdateToStart(cs)
+		cluster.WaitForMCPUpdateToStart(cs)
 
 		// waiting for MCP to finish updating
 		cluster.WaitForMCPReadyState(cs)
