@@ -28,9 +28,9 @@ var _ = Describe("Nftables", func() {
 	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
 		masterMat, workerMat := commatrix.SeparateMatrixByRole()
 
-		var podsToIgnoreMasterMat, podsToIgnoreWorkerMat types.ComMatrix
+		var portsToIgnoreMasterMat, portsToIgnoreWorkerMat types.ComMatrix
 		if portsToIgnoreCommatrix != nil {
-			podsToIgnoreMasterMat, podsToIgnoreWorkerMat = portsToIgnoreCommatrix.SeparateMatrixByRole()
+			portsToIgnoreMasterMat, portsToIgnoreWorkerMat = portsToIgnoreCommatrix.SeparateMatrixByRole()
 		}
 
 		nodeRoleToNFTables := make(map[string][]byte)
@@ -46,23 +46,21 @@ var _ = Describe("Nftables", func() {
 			if _, exists := nodeRoleToNFTables[role]; !exists {
 				if role == workerNodeRole {
 					roleMat = workerMat
-					podsToIgnoreMat = podsToIgnoreWorkerMat
+					podsToIgnoreMat = portsToIgnoreWorkerMat
 					extraNftablesFileEnv = "EXTRA_NFTABLES_WORKER_FILE"
 				} else {
 					roleMat = masterMat
-					podsToIgnoreMat = podsToIgnoreMasterMat
+					podsToIgnoreMat = portsToIgnoreMasterMat
 					extraNftablesFileEnv = "EXTRA_NFTABLES_MASTER_FILE"
 				}
 
 				nftablesRules := roleMat.ToNFTablesRules()
-				Expect(err).NotTo(HaveOccurred())
 
 				extraNFTablesFile, _ := os.LookupEnv(extraNftablesFileEnv)
 				if extraNFTablesFile != "" {
 					extraNFTablesValue, err := os.ReadFile(extraNFTablesFile)
 					Expect(err).NotTo(HaveOccurred())
 					nftablesRules += "\n\t\t\t\t\t" + string(extraNFTablesValue)
-					Expect(err).NotTo(HaveOccurred())
 				}
 
 				if podsToIgnoreMat.Matrix != nil {
