@@ -79,9 +79,6 @@ var _ = Describe("Nftables", func() {
 		for role, nftablesConfig := range nodeRoleToNFTables {
 			By(fmt.Sprintf("Applying firewall on %s nodes", role))
 
-			err = os.WriteFile(filepath.Join(artifactsDir, "config"), nftablesConfig, 0644)
-			Expect(err).ToNot(HaveOccurred())
-
 			machineConfig, err := firewall.CreateMachineConfig(cs, nftablesConfig, artifactsDir,
 				role, utilsHelpers)
 			Expect(err).ToNot(HaveOccurred())
