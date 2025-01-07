@@ -79,10 +79,6 @@ var _ = Describe("Validation", func() {
 				"has a documented communication matrix (%v), skip test", minimalDocCommatrixVersion))
 		}
 
-		By("write commatrix to artifact file")
-		err = commatrix.WriteMatrixToFileByType(utilsHelpers, "new-commatrix", types.FormatCSV, deployment, artifactsDir)
-		Expect(err).ToNot(HaveOccurred())
-
 		By(fmt.Sprintf("get documented commatrix version %s", clusterVersion))
 		// get documented commatrix from URL
 		resp, err := http.Get(strings.Replace(docCommatrixBaseURL, "VERSION", clusterVersion, 1))
@@ -131,21 +127,41 @@ var _ = Describe("Validation", func() {
 		docComMatrix := &types.ComMatrix{Matrix: docComDetailsList}
 
 		By("generating diff between matrices for testing purposes")
-		diff := matrixdiff.Generate(commatrix, docComMatrix)
-		diffStr, err := diff.String()
+		endpointslicesDiffWithDocMat := matrixdiff.Generate(commatrix, docComMatrix)
+		diffStr, err := endpointslicesDiffWithDocMat.String()
 		Expect(err).ToNot(HaveOccurred())
 		err = os.WriteFile(filepath.Join(artifactsDir, "doc-diff-new"), []byte(diffFileComments+diffStr), 0644)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("comparing new and documented commatrices")
 		// Get ports that are in the documented commatrix but not in the generated commatrix.
-		notUsedPortsMat := diff.GenerateUniqueSecondary()
+		notUsedPortsMat := endpointslicesDiffWithDocMat.GenerateUniqueSecondary()
 		if len(notUsedPortsMat.Matrix) > 0 {
 			logrus.Warningf("the following ports are documented but are not used:\n%s", notUsedPortsMat)
 		}
 
-		// Get ports that are in the generated commatrix but not in the documented commatrix.
-		missingPortsMat := diff.GenerateUniquePrimary()
+		var portsToIgnoreMat *types.ComMatrix
+
+		openPortsToIgnoreFile, _ := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FILE")
+		openPortsToIgnoreFormat, _ := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FORMAT")
+
+		// Get ports that are in the generated commatrix but not in the documented commatrix,
+		// and ignore the ports in given file (if exists)
+		missingPortsMat := endpointslicesDiffWithDocMat.GenerateUniquePrimary()
+		if openPortsToIgnoreFile != "" && openPortsToIgnoreFormat != "" {
+			// generate open ports to ignore commatrix
+			portsToIgnoreCommatrixCreator, err := commatrixcreator.New(epExporter, openPortsToIgnoreFile, openPortsToIgnoreFormat, infra, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			portsToIgnoreComDetails, err := portsToIgnoreCommatrixCreator.GetComDetailsListFromFile()
+			Expect(err).ToNot(HaveOccurred())
+			portsToIgnoreMat = &types.ComMatrix{Matrix: portsToIgnoreComDetails}
+
+			// generate the diff matrix between the open ports to ignore matrix and the missing ports in the documented commatrix (based on the diff between the enpointslice and the doc matrix)
+			nonDocumentedEndpointslicesMat := endpointslicesDiffWithDocMat.GenerateUniquePrimary()
+			endpointslicesDiffWithIgnoredPorts := matrixdiff.Generate(nonDocumentedEndpointslicesMat, portsToIgnoreMat)
+			missingPortsMat = endpointslicesDiffWithIgnoredPorts.GenerateUniquePrimary()
+		}
+
 		if len(missingPortsMat.Matrix) > 0 {
 			err := fmt.Errorf("the following ports are used but are not documented:\n%s", missingPortsMat)
 			Expect(err).ToNot(HaveOccurred())
@@ -153,9 +169,6 @@ var _ = Describe("Validation", func() {
 	})
 
 	It("should validate the communication matrix ports match the node's listening ports", func() {
-		err := commatrix.WriteMatrixToFileByType(utilsHelpers, "communication-matrix", types.FormatCSV, deployment, artifactsDir)
-		Expect(err).ToNot(HaveOccurred())
-
 		listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, artifactsDir)
 		Expect(err).ToNot(HaveOccurred())
 
