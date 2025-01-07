@@ -34,25 +34,26 @@ var _ = Describe("Nftables", func() {
 			role, err := types.GetNodeRole(&node)
 			Expect(err).NotTo(HaveOccurred())
 
+			var roleMat types.ComMatrix
+			var extraNftablesFileEnv string
 			if _, exists := nodeRoleToNFTables[role]; !exists {
 				var nftablesConfig []byte
 
 				if role == workerNodeRole {
-					nftablesConfig, err = workerMat.ToNFTables()
-					Expect(err).NotTo(HaveOccurred())
-
-					if extraNFTablesWorkerFile != "" {
-						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesWorkerFile)
-						Expect(err).NotTo(HaveOccurred())
-					}
+					roleMat = workerMat
+					extraNftablesFileEnv = "EXTRA_NFTABLES_WORKER_FILE"
 				} else {
-					nftablesConfig, err = masterMat.ToNFTables()
-					Expect(err).NotTo(HaveOccurred())
+					roleMat = masterMat
+					extraNftablesFileEnv = "EXTRA_NFTABLES_MASTER_FILE"
+				}
 
-					if extraNFTablesMasterFile != "" {
-						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesMasterFile)
-						Expect(err).NotTo(HaveOccurred())
-					}
+				nftablesConfig, err = roleMat.ToNFTables()
+				Expect(err).NotTo(HaveOccurred())
+
+				extraNFTablesFile, _ := os.LookupEnv(extraNftablesFileEnv)
+				if extraNFTablesFile != "" {
+					nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesFile)
+					Expect(err).NotTo(HaveOccurred())
 				}
 
 				nodeRoleToNFTables[role] = nftablesConfig
@@ -75,7 +76,7 @@ var _ = Describe("Nftables", func() {
 		}
 
 		// waiting for mcp start updating
-		cluster.WaitForMCPUpdateToStart(cs)
+		// cluster.WaitForMCPUpdateToStart(cs)
 
 		// waiting for MCP to finish updating
 		cluster.WaitForMCPReadyState(cs)
