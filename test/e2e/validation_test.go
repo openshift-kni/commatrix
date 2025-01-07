@@ -144,10 +144,10 @@ var _ = Describe("Validation", func() {
 
 		// Get ports that are in the generated commatrix but not in the documented commatrix,
 		// and ignore the ports in given file (if exists)
-		openPortsToIgnoreFile, fileExists := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FILE")
-		openPortsToIgnoreFormat, formatExists := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FORMAT")
+		openPortsToIgnoreFile, _ := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FILE")
+		openPortsToIgnoreFormat, _ := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FORMAT")
 
-		if fileExists && formatExists {
+		if openPortsToIgnoreFile != "" && openPortsToIgnoreFormat != "" {
 			// generate open ports to ignore commatrix
 			portsToIgnoreCommatrixCreator, err := commatrixcreator.New(epExporter, openPortsToIgnoreFile, openPortsToIgnoreFormat, infra, deployment)
 			Expect(err).ToNot(HaveOccurred())
