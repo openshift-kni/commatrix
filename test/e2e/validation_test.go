@@ -55,10 +55,15 @@ var (
 )
 
 const (
-	minimalDocCommatrixVersion = 4.16
-	docCommatrixBaseURL        = "https://raw.githubusercontent.com/openshift/openshift-docs/enterprise-VERSION/snippets/network-flow-matrix.csv"
+	versionHolder              = "VERSION"
+	docTypeHolder              = "DOC-TYPE"
+	minimalDocCommatrixVersion = 4.18
 	diffFileComments           = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
+)
+
+var (
+	docCommatrixBaseURL = fmt.Sprintf("https://raw.githubusercontent.com/openshift-kni/commatrix/refs/heads/release-%s/docs/stable/raw/%s.csv", versionHolder, docTypeHolder)
 )
 
 const (
@@ -84,13 +89,24 @@ var _ = Describe("Validation", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		By(fmt.Sprintf("get documented commatrix version %s", clusterVersion))
+		// generate documented commatrix URL
+		docType := "aws"
+		if isBM {
+			docType = "bm"
+		}
+		if isSNO {
+			docType += "-sno"
+		}
+		docCommatrixURL := strings.Replace(docCommatrixBaseURL, docTypeHolder, docType, 1)
+		docCommatrixURL = strings.Replace(docCommatrixURL, versionHolder, clusterVersion, 1)
+
 		// get documented commatrix from URL
-		resp, err := http.Get(strings.Replace(docCommatrixBaseURL, "VERSION", clusterVersion, 1))
+		resp, err := http.Get(docCommatrixURL)
 		Expect(err).ToNot(HaveOccurred())
 		defer resp.Body.Close()
 		// if response status code equals to "status not found", compare generated commatrix to the main documented commatrix
 		if resp.StatusCode == http.StatusNotFound {
-			resp, err = http.Get(strings.Replace(docCommatrixBaseURL, "enterprise-VERSION", "main", 1))
+			resp, err = http.Get(strings.Replace(docCommatrixURL, fmt.Sprintf("release-%s", clusterVersion), "main", 1))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(resp.StatusCode).ToNot(Equal(http.StatusNotFound))
 		}
