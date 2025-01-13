@@ -140,13 +140,14 @@ var _ = Describe("Validation", func() {
 			logrus.Warningf("the following ports are documented but are not used:\n%s", notUsedPortsMat)
 		}
 
-		var portsToIgnoreCommatrix, missingPortsMat *types.ComMatrix
+		var portsToIgnoreCommatrix *types.ComMatrix
 
 		// Get ports that are in the generated commatrix but not in the documented commatrix,
 		// and ignore the ports in given file (if exists)
 		openPortsToIgnoreFile, _ := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FILE")
 		openPortsToIgnoreFormat, _ := os.LookupEnv("OPEN_PORTS_TO_IGNORE_IN_DOC_TEST_FORMAT")
 
+		missingPortsMat := diff.GenerateUniquePrimary()
 		if openPortsToIgnoreFile != "" && openPortsToIgnoreFormat != "" {
 			// generate open ports to ignore commatrix
 			portsToIgnoreCommatrixCreator, err := commatrixcreator.New(epExporter, openPortsToIgnoreFile, openPortsToIgnoreFormat, infra, deployment)
@@ -158,8 +159,6 @@ var _ = Describe("Validation", func() {
 			// generate the diff matrix between the open ports to ignore matrix and the missing ports in the documented commatrix (based on the diff between the enpointslice and the doc matrix)
 			diffIgonre := matrixdiff.Generate(diff.GenerateUniquePrimary(), portsToIgnoreCommatrix)
 			missingPortsMat = diffIgonre.GenerateUniquePrimary()
-		} else {
-			missingPortsMat = diff.GenerateUniquePrimary()
 		}
 
 		if len(missingPortsMat.Matrix) > 0 {

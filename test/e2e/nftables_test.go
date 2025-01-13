@@ -34,17 +34,14 @@ var _ = Describe("Nftables", func() {
 			role, err := types.GetNodeRole(&node)
 			Expect(err).NotTo(HaveOccurred())
 
-			var roleMat types.ComMatrix
-			var extraNftablesFileEnv string
 			if _, exists := nodeRoleToNFTables[role]; !exists {
 				var nftablesConfig []byte
 
+				roleMat := masterMat
+				extraNftablesFileEnv := "EXTRA_NFTABLES_MASTER_FILE"
 				if role == workerNodeRole {
 					roleMat = workerMat
 					extraNftablesFileEnv = "EXTRA_NFTABLES_WORKER_FILE"
-				} else {
-					roleMat = masterMat
-					extraNftablesFileEnv = "EXTRA_NFTABLES_MASTER_FILE"
 				}
 
 				nftablesConfig, err = roleMat.ToNFTables()
