@@ -60,15 +60,12 @@ const (
 	minimalDocCommatrixVersion = 4.18
 	diffFileComments           = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
+	serviceNodePortMin = 30000
+	serviceNodePortMax = 32767
 )
 
 var (
 	docCommatrixBaseURL = fmt.Sprintf("https://raw.githubusercontent.com/openshift-kni/commatrix/refs/heads/release-%s/docs/stable/raw/%s.csv", versionHolder, docTypeHolder)
-)
-
-const (
-	serviceNodePortMin = 30000
-	serviceNodePortMax = 32767
 )
 
 var _ = Describe("Validation", func() {
