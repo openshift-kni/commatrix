@@ -52,8 +52,8 @@ var (
 )
 
 const (
-	docCommatrixBaseDir = "../../docs/stable/raw/%s.csv"
-	diffFileComments    = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
+	docCommatrixBaseFilePath = "../../docs/stable/raw/%s.csv"
+	diffFileComments         = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
@@ -66,8 +66,7 @@ var _ = Describe("Validation", func() {
 		err := commatrix.WriteMatrixToFileByType(utilsHelpers, "new-commatrix", types.FormatCSV, deployment, artifactsDir)
 		Expect(err).ToNot(HaveOccurred())
 
-		By("get documented commatrix directory")
-		// generate documented commatrix URL
+		By("generate documented commatrix file path")
 		docType := "aws"
 		if isBM {
 			docType = "bm"
@@ -75,11 +74,11 @@ var _ = Describe("Validation", func() {
 		if isSNO {
 			docType += "-sno"
 		}
-		docCommatrixDir := fmt.Sprintf(docCommatrixBaseDir, docType)
+		docCommatrixFilePath := fmt.Sprintf(docCommatrixBaseFilePath, docType)
 
 		By(fmt.Sprintf("Filter documented commatrix type %s for diff generation", docType))
 		// get origin documented commatrix details
-		docComMatrixCreator, err := commatrixcreator.New(epExporter, docCommatrixDir, types.FormatCSV, infra, deployment)
+		docComMatrixCreator, err := commatrixcreator.New(epExporter, docCommatrixFilePath, types.FormatCSV, infra, deployment)
 		Expect(err).ToNot(HaveOccurred())
 		docComDetailsList, err := docComMatrixCreator.GetComDetailsListFromFile()
 		Expect(err).ToNot(HaveOccurred())
