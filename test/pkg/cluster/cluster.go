@@ -15,10 +15,9 @@ import (
 	ocpoperatorv1 "github.com/openshift/api/operator/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	mcoac "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sTypes "k8s.io/apimachinery/pkg/types"
 	controllersClient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -38,48 +37,21 @@ func GetClusterVersion(cs *client.ClientSet) (string, error) {
 	return strings.Join(clusterVersionParts[:2], "."), nil
 }
 
-func WaitForMCPUpdateToStart(cs *client.ClientSet) {
+func WaitForMCPUpdateToStart(cs *client.ClientSet, role string) {
 	gomega.Eventually(func() (bool, error) {
-		mcpList := &machineconfigurationv1.MachineConfigPoolList{}
-		err := cs.List(context.TODO(), mcpList, &controllersClient.ListOptions{})
+		mcp := &machineconfigurationv1.MachineConfigPool{}
+		err := cs.Get(context.TODO(), controllersClient.ObjectKey{Name: role}, mcp)
 		if err != nil {
-			return false, fmt.Errorf("failed to list MachineConfigPools: %v", err)
+			return false, fmt.Errorf("failed to get %s MachineConfigPool: %v", role, err)
 		}
 
-		for _, mcp := range mcpList.Items {
-			if mcp.Status.UpdatedMachineCount != mcp.Status.MachineCount {
-				log.Printf("MCP %s has started updating", mcp.Name)
-				return true, nil // At least one MCP has started updating
-			}
+		if mcp.Status.UpdatedMachineCount != mcp.Status.MachineCount {
+			log.Printf("MCP %s has started updating", mcp.Name)
+			return true, nil
 		}
 
 		return false, nil
 	}, timeout, 30*time.Second).Should(gomega.BeTrue(), "Timed out waiting for MCP to start updating")
-}
-
-func WaitForMCPReadyState(c *client.ClientSet) {
-	gomega.Eventually(func() (bool, error) {
-		mcpList := &machineconfigurationv1.MachineConfigPoolList{}
-		err := c.List(context.TODO(), mcpList, &controllersClient.ListOptions{})
-		if err != nil {
-			return false, fmt.Errorf("failed to list MachineConfigPools: %v", err)
-		}
-
-		mcpsReady := true
-		for _, mcp := range mcpList.Items {
-			if mcp.Status.ReadyMachineCount != mcp.Status.MachineCount {
-				mcpsReady = false
-				log.Printf("MCP %s is still updating or degraded\n", mcp.Name)
-				break
-			}
-		}
-
-		if mcpsReady {
-			log.Println("All MCPs are ready and updated")
-		}
-
-		return mcpsReady, nil
-	}, timeout, 30*time.Second).Should(gomega.BeTrue(), "Timed out waiting for MCPs to reach the desired state")
 }
 
 func AddNFTSvcToNodeDisruptionPolicy(cs *client.ClientSet) error {
@@ -109,34 +81,47 @@ func AddNFTSvcToNodeDisruptionPolicy(cs *client.ClientSet) error {
 	return nil
 }
 
-func ApplyMachineConfig(yamlInput []byte, c *client.ClientSet) error {
+// ApplyMachineConfig applies the MachineConfig and returns true if created or updated.
+// False if unchanged, and an error if there is error.
+func ApplyMachineConfig(yamlInput []byte, c *client.ClientSet) (bool, error) {
 	obj := &machineconfigurationv1.MachineConfig{}
 	if err := yaml.Unmarshal(yamlInput, obj); err != nil {
-		return fmt.Errorf("failed to unmarshal YAML: %w", err)
+		return false, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	err := c.Create(context.TODO(), obj)
+	modifiedConfig := obj.Spec.Config.DeepCopy()
+	operationResult, err := controllerutil.CreateOrUpdate(context.TODO(), c, obj, func() error {
+		obj.Spec.Config = *modifiedConfig
+		return nil
+	})
+
 	if err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create MachineConfig: %w", err)
-		}
-
-		// If it already exists, retrieve the current version to update
-		existingMC := &machineconfigurationv1.MachineConfig{}
-		if err = c.Get(context.TODO(), k8sTypes.NamespacedName{Name: obj.Name}, existingMC); err != nil {
-			return fmt.Errorf("failed to get existing MachineConfig: %w", err)
-		}
-
-		obj.ResourceVersion = existingMC.ResourceVersion
-		if updateErr := c.Update(context.TODO(), obj); updateErr != nil {
-			return fmt.Errorf("failed to update MachineConfig: %w", updateErr)
-		}
-		log.Println("MachineConfig updated successfully.")
-	} else {
-		log.Println("MachineConfig created successfully.")
+		return false, fmt.Errorf("failed to apply MachineConfig: %w", err)
 	}
 
-	return nil
+	if operationResult == controllerutil.OperationResultNone {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func WaitForMCPReadyState(c *client.ClientSet, role string) {
+	gomega.Eventually(func() (bool, error) {
+		mcp := &machineconfigurationv1.MachineConfigPool{}
+		err := c.Get(context.TODO(), controllersClient.ObjectKey{Name: role}, mcp)
+		if err != nil {
+			return false, fmt.Errorf("failed to get %s MachineConfigPool: %v", role, err)
+		}
+
+		if mcp.Status.ReadyMachineCount != mcp.Status.MachineCount {
+			log.Printf("MCP %s is still updating or degraded\n", mcp.Name)
+			return false, nil
+		}
+
+		log.Println("All MCPs are ready and updated")
+		return true, nil
+	}, timeout, 30*time.Second).Should(gomega.BeTrue(), "Timed out waiting for MCPs to reach the ready state")
 }
 
 func ValidateClusterVersionAndMachineConfiguration(cs *client.ClientSet) error {
