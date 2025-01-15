@@ -13,6 +13,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/net"
 )
 
 const (
@@ -21,7 +22,7 @@ const (
 )
 
 // SoftRebootNodeAndWaitForDisconnect soft reboots given node and wait for node to be unreachable.
-func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName, ns string) error {
+func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName, ns string, isSNO bool) error {
 	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage, []string{})
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
@@ -45,17 +46,20 @@ func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *c
 		return fmt.Errorf("failed to reboot node: %s with error %w", nodeName, err)
 	}
 
-	WaitForNodeNotReady(nodeName, cs)
+	WaitForNodeNotReady(nodeName, cs, isSNO)
 	return nil
 }
 
 // WaitForNodeNotReady waits for the node to be in the NotReady state.
-func WaitForNodeNotReady(nodeName string, cs *client.ClientSet) {
+func WaitForNodeNotReady(nodeName string, cs *client.ClientSet, isSNO bool) {
 	log.Printf("Waiting for node %s to be in NotReady state", nodeName)
 
 	gomega.Eventually(func() bool {
 		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
+			if isSNO {
+				return net.IsConnectionRefused(err)
+			}
 			log.Printf("Error getting node %s: %v", nodeName, err)
 			return false
 		}
