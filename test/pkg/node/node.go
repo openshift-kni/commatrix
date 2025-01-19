@@ -2,11 +2,8 @@ package node
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
-	"os"
-	"syscall"
 	"time"
 
 	"github.com/onsi/gomega"
@@ -16,6 +13,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/net"
 )
 
 const (
@@ -60,10 +58,7 @@ func WaitForNodeNotReady(nodeName string, cs *client.ClientSet, isSNO bool) {
 		node, err := cs.Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 		if err != nil {
 			if isSNO {
-				var syscallErr *os.SyscallError
-				if errors.As(err, &syscallErr) && syscallErr.Err == syscall.ECONNREFUSED {
-					return true
-				}
+				return net.IsConnectionRefused(err)
 			}
 			log.Printf("Error getting node %s: %v", nodeName, err)
 			return false
