@@ -3,9 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"io"
 
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,7 +17,6 @@ import (
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
-	"github.com/openshift-kni/commatrix/test/pkg/cluster"
 
 	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
@@ -55,56 +52,33 @@ var (
 )
 
 const (
-	minimalDocCommatrixVersion = 4.16
-	docCommatrixBaseURL        = "https://raw.githubusercontent.com/openshift/openshift-docs/enterprise-VERSION/snippets/network-flow-matrix.csv"
-	diffFileComments           = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
+	docCommatrixBaseFilePath = "../../docs/stable/raw/%s.csv"
+	diffFileComments         = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
-)
-
-const (
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
 )
 
 var _ = Describe("Validation", func() {
 	It("generated communication matrix should be equal to documented communication matrix", func() {
-		By("get cluster's version and check if it's suitable for test")
-		clusterVersion, err := cluster.GetClusterVersion(cs)
-		Expect(err).NotTo(HaveOccurred())
-		floatClusterVersion, err := strconv.ParseFloat(clusterVersion, 64)
-		Expect(err).ToNot(HaveOccurred())
-
-		if floatClusterVersion < minimalDocCommatrixVersion {
-			Skip(fmt.Sprintf("If the cluster version is lower than the lowest version that "+
-				"has a documented communication matrix (%v), skip test", minimalDocCommatrixVersion))
-		}
 
 		By("write commatrix to artifact file")
-		err = commatrix.WriteMatrixToFileByType(utilsHelpers, "new-commatrix", types.FormatCSV, deployment, artifactsDir)
+		err := commatrix.WriteMatrixToFileByType(utilsHelpers, "new-commatrix", types.FormatCSV, deployment, artifactsDir)
 		Expect(err).ToNot(HaveOccurred())
 
-		By(fmt.Sprintf("get documented commatrix version %s", clusterVersion))
-		// get documented commatrix from URL
-		resp, err := http.Get(strings.Replace(docCommatrixBaseURL, "VERSION", clusterVersion, 1))
-		Expect(err).ToNot(HaveOccurred())
-		defer resp.Body.Close()
-		// if response status code equals to "status not found", compare generated commatrix to the main documented commatrix
-		if resp.StatusCode == http.StatusNotFound {
-			resp, err = http.Get(strings.Replace(docCommatrixBaseURL, "enterprise-VERSION", "main", 1))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(resp.StatusCode).ToNot(Equal(http.StatusNotFound))
+		By("generate documented commatrix file path")
+		docType := "aws"
+		if isBM {
+			docType = "bm"
 		}
+		if isSNO {
+			docType += "-sno"
+		}
+		docCommatrixFilePath := fmt.Sprintf(docCommatrixBaseFilePath, docType)
 
-		By("write documented commatrix to artifact file")
-		docCommatrixContent, err := io.ReadAll(resp.Body)
-		Expect(err).ToNot(HaveOccurred())
-		docFilePath := filepath.Join(artifactsDir, "doc-commatrix.csv")
-		err = os.WriteFile(docFilePath, docCommatrixContent, 0644)
-		Expect(err).ToNot(HaveOccurred())
-
-		By("Filter documented commatrix for diff generation")
+		By(fmt.Sprintf("Filter documented commatrix type %s for diff generation", docType))
 		// get origin documented commatrix details
-		docComMatrixCreator, err := commatrixcreator.New(epExporter, docFilePath, types.FormatCSV, infra, deployment)
+		docComMatrixCreator, err := commatrixcreator.New(epExporter, docCommatrixFilePath, types.FormatCSV, infra, deployment)
 		Expect(err).ToNot(HaveOccurred())
 		docComDetailsList, err := docComMatrixCreator.GetComDetailsListFromFile()
 		Expect(err).ToNot(HaveOccurred())
