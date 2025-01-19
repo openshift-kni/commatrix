@@ -37,22 +37,20 @@ var _ = Describe("Nftables", func() {
 			if _, exists := nodeRoleToNFTables[role]; !exists {
 				var nftablesConfig []byte
 
+				roleMat := masterMat
+				extraNftablesFileEnv := "EXTRA_NFTABLES_MASTER_FILE"
 				if role == workerNodeRole {
-					nftablesConfig, err = workerMat.ToNFTables()
-					Expect(err).NotTo(HaveOccurred())
+					roleMat = workerMat
+					extraNftablesFileEnv = "EXTRA_NFTABLES_WORKER_FILE"
+				}
 
-					if extraNFTablesWorkerFile != "" {
-						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesWorkerFile)
-						Expect(err).NotTo(HaveOccurred())
-					}
-				} else {
-					nftablesConfig, err = masterMat.ToNFTables()
-					Expect(err).NotTo(HaveOccurred())
+				nftablesConfig, err = roleMat.ToNFTables()
+				Expect(err).NotTo(HaveOccurred())
 
-					if extraNFTablesMasterFile != "" {
-						nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesMasterFile)
-						Expect(err).NotTo(HaveOccurred())
-					}
+				extraNFTablesFile, _ := os.LookupEnv(extraNftablesFileEnv)
+				if extraNFTablesFile != "" {
+					nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesFile)
+					Expect(err).NotTo(HaveOccurred())
 				}
 
 				nodeRoleToNFTables[role] = nftablesConfig

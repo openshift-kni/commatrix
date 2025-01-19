@@ -18,18 +18,16 @@ import (
 )
 
 var (
-	cs                      *client.ClientSet
-	commatrix               *types.ComMatrix
-	isSNO                   bool
-	isBM                    bool
-	deployment              types.Deployment
-	infra                   types.Env
-	utilsHelpers            utils.UtilsInterface
-	epExporter              *endpointslices.EndpointSlicesExporter
-	nodeList                *corev1.NodeList
-	artifactsDir            string
-	extraNFTablesMasterFile = ""
-	extraNFTablesWorkerFile = ""
+	cs           *client.ClientSet
+	commatrix    *types.ComMatrix
+	isSNO        bool
+	isBM         bool
+	deployment   types.Deployment
+	infra        types.Env
+	utilsHelpers utils.UtilsInterface
+	epExporter   *endpointslices.EndpointSlicesExporter
+	nodeList     *corev1.NodeList
+	artifactsDir string
 )
 
 const testNS = "openshift-commatrix-test"
@@ -82,6 +80,9 @@ var _ = BeforeSuite(func() {
 	commatrix, err = commMatrixCreator.CreateEndpointMatrix()
 	Expect(err).NotTo(HaveOccurred())
 
+	err = commatrix.WriteMatrixToFileByType(utilsHelpers, "communication-matrix", types.FormatCSV, deployment, artifactsDir)
+	Expect(err).ToNot(HaveOccurred())
+
 	By("Creating test namespace")
 	err = utilsHelpers.CreateNamespace(testNS)
 	Expect(err).ToNot(HaveOccurred())
@@ -89,17 +90,6 @@ var _ = BeforeSuite(func() {
 	nodeList = &corev1.NodeList{}
 	err = cs.List(context.TODO(), nodeList)
 	Expect(err).ToNot(HaveOccurred())
-
-	// get the EXTRA_NFTABLES_FILE if it not exist value is ""
-	val, exists := os.LookupEnv("EXTRA_NFTABLES_MASTER_FILE")
-	if exists {
-		extraNFTablesMasterFile = val
-	}
-
-	val, exists = os.LookupEnv("EXTRA_NFTABLES_WORKER_FILE")
-	if exists {
-		extraNFTablesWorkerFile = val
-	}
 })
 
 var _ = AfterSuite(func() {
