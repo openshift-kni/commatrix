@@ -18,7 +18,7 @@ GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 # golangci-lint version should be updated periodically
 # we keep it fixed to avoid it from unexpectedly failing on the project
 # in case of a version bump
-GOLANGCI_LINT_VER = v1.55.2
+GOLANGCI_LINT_VER = v1.63.4
 
 .PHONY: build
 build:
