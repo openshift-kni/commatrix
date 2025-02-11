@@ -115,7 +115,7 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
-	cmd.Flags().BoolVar(&o.openPorts, "host-open-ports", false, "Generate communication matrices: EndpointSlice matrix, SS matrix, and their difference.")
+	cmd.Flags().BoolVar(&o.openPorts, "host-open-ports", false, "Generate communication matrices: EndpointSlice matrix, host open ports matrix, and their difference.")
 
 	return cmd
 }

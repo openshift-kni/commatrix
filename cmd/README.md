@@ -42,7 +42,7 @@ Flags:
       --debug                        Debug logs (default is false)
       --destDir string               Output files dir 
       --format string                Desired format (json,yaml,csv,nft) (default "csv")
-      --host-open-ports              Generate communication matrices: EndpointSlice matrix, SS matrix, and their difference.
+      --host-open-ports              Generate communication matrices: EndpointSlice matrix, host open port matrix, and their difference.
   ```
 
 
