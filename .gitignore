@@ -1,5 +1,6 @@
 communication-matrix/*
 commatrix-gen
+oc-commatrix
 
 bin/
 vendor/
