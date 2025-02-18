@@ -12,7 +12,7 @@ referencing host-networked pods, Node Port services, and LoadBalancer services.
 
 ### Creating Custom ComDetails with ss Command
 
-The `ss` command, a Linux utility, lists listening ports on  
+The `ss` command, a Linux utility, lists open ports on  
 the host with `ss -anplt` for TCP or `ss -anplu` for UDP.
 For example, consider the following ss entry:
 ```

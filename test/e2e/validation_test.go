@@ -141,7 +141,7 @@ var _ = Describe("Validation", func() {
 		}
 	})
 
-	It("should validate the communication matrix ports match the node's listening ports", func() {
+	It("should validate the communication matrix ports match the node's open ports", func() {
 		listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, artifactsDir)
 		Expect(err).ToNot(HaveOccurred())
 

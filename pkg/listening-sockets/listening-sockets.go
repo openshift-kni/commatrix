@@ -263,7 +263,7 @@ func filterEntries(ssEntries []string) []string {
 func parseComDetail(ssEntry string) *types.ComDetails {
 	serviceName, err := extractServiceName(ssEntry)
 	if err != nil {
-		log.Debugf(err.Error())
+		log.Debug(err.Error())
 	}
 
 	fields := strings.Fields(ssEntry)
@@ -272,7 +272,7 @@ func parseComDetail(ssEntry string) *types.ComDetails {
 
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		log.Debugf(err.Error())
+		log.Debug(err.Error())
 		return nil
 	}
 
