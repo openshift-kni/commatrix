@@ -3,7 +3,7 @@ DEST_DIR ?= .
 DEBUG ?=
 SUITE ?= all
 GO_SRC := cmd/main.go
-EXECUTABLE := commatrix-gen
+EXECUTABLE := oc-commatrix
 export GOLANGCI_LINT_CACHE = /tmp/.cache
 
 .DEFAULT_GOAL := run
@@ -12,12 +12,13 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 CURPATH=$(PWD)
 BIN_DIR=$(CURPATH)/bin
+INSTALL_DIR = /usr/local/bin
 
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 # golangci-lint version should be updated periodically
 # we keep it fixed to avoid it from unexpectedly failing on the project
 # in case of a version bump
-GOLANGCI_LINT_VER = v1.55.2
+GOLANGCI_LINT_VER = v1.63.4
 
 .PHONY: build
 build:
@@ -27,7 +28,12 @@ build:
 generate: build
 	rm -rf $(DEST_DIR)/communication-matrix
 	mkdir -p $(DEST_DIR)/communication-matrix
-	./$(EXECUTABLE) -format=$(FORMAT) -destDir=$(DEST_DIR)/communication-matrix -customEntriesPath=$(CUSTOM_ENTRIES_PATH) -customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) $(if $(DEBUG),-debug=true)
+	./$(EXECUTABLE) generate --format=$(FORMAT) --destDir=$(DEST_DIR)/communication-matrix --customEntriesPath=$(CUSTOM_ENTRIES_PATH) --customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) --host-open-ports $(if $(DEBUG),--debug=true)
+
+.PHONY: install
+install:
+	install $(EXECUTABLE) $(INSTALL_DIR)
+
 
 .PHONY: clean
 clean:
@@ -67,6 +73,8 @@ lint: | $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run golangci-l
 .PHONY: test
 test:
 	GOFLAGS="" go test ./pkg/...
+	GOFLAGS="" go test ./cmd/...
+
 
 .PHONY: e2e-test
 e2e-test: ginkgo
