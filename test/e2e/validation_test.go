@@ -53,7 +53,9 @@ var (
 
 const (
 	docCommatrixBaseFilePath = "../../docs/stable/raw/%s.csv"
-	diffFileComments         = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
+	ignorePortsFile          = "../../docs/ignore-ports/ports-to-ignore-in-host-port-matrix.csv"
+
+	diffFileComments = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
@@ -159,7 +161,19 @@ var _ = Describe("Validation", func() {
 		ssFilteredMat, err := filterSSMatrix(ssMat)
 		Expect(err).ToNot(HaveOccurred())
 
-		diff := matrixdiff.Generate(commatrix, ssFilteredMat)
+		// filter just the external ports to compare with
+		ssFilterExternal, err := listeningCheck.FilterExternalPorts(ssFilteredMat)
+		Expect(err).ToNot(HaveOccurred())
+
+		portsToIgnoreComMatrixCreator, err := commatrixcreator.New(epExporter, ignorePortsFile, types.FormatCSV, infra, deployment)
+		Expect(err).ToNot(HaveOccurred())
+
+		portsToIgnoreComDetails, err := portsToIgnoreComMatrixCreator.GetComDetailsListFromFile()
+		Expect(err).ToNot(HaveOccurred())
+
+		portsToIgnoreMat := types.ComMatrix{Matrix: portsToIgnoreComDetails}
+		ssDiffWithIgnoredPorts := matrixdiff.Generate(ssFilterExternal, &portsToIgnoreMat)
+		diff := matrixdiff.Generate(commatrix, ssDiffWithIgnoredPorts.GenerateUniquePrimary())
 		diffStr, err := diff.String()
 		Expect(err).ToNot(HaveOccurred())
 

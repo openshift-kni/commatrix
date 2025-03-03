@@ -94,7 +94,7 @@ func (ep *EndpointSlicesExporter) LoadEndpointSlicesInfo() error {
 			continue
 		}
 
-		if !filterServiceTypes(service) && !filterHostNetwork(pods.Items[0]) {
+		if !FilterServiceTypes(service) && !FilterHostNetwork(pods.Items[0]) {
 			continue
 		}
 
