@@ -14,9 +14,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
+	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 )
@@ -295,4 +298,52 @@ func extractServiceName(ssEntry string) (string, error) {
 	serviceName := match[re.SubexpIndex("servicename")]
 
 	return serviceName, nil
+}
+
+func (cc *ConnectionCheck) FilterExternalPorts(matrix *types.ComMatrix) (*types.ComMatrix, error) {
+	var ssComDetails []types.ComDetails
+	for _, cd := range matrix.Matrix {
+		serviceList := &corev1.ServiceList{}
+		err := cc.List(context.TODO(), serviceList)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list services: %w", err)
+		}
+
+		var foundService *corev1.Service
+		for _, service := range serviceList.Items {
+			for _, port := range service.Spec.Ports {
+				if int32(cd.Port) == port.Port {
+					foundService = &service
+					break
+				}
+			}
+			if foundService != nil {
+				break
+			}
+		}
+
+		if foundService == nil {
+			ssComDetails = append(ssComDetails, cd)
+			continue
+		}
+
+		label := labels.SelectorFromSet(foundService.Spec.Selector)
+		pods := &corev1.PodList{}
+		err = cc.List(context.TODO(), pods, &clientOptions.ListOptions{Namespace: foundService.Namespace, LabelSelector: label})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list pods, %v", err)
+		}
+
+		if len(pods.Items) == 0 {
+			ssComDetails = append(ssComDetails, cd)
+			continue
+		}
+
+		if !endpointslices.FilterServiceTypes(*foundService) && endpointslices.FilterHostNetwork(pods.Items[0]) {
+			continue
+		} // dont include ports that are internal and host network.
+
+		ssComDetails = append(ssComDetails, cd)
+	}
+	return &types.ComMatrix{Matrix: ssComDetails}, nil
 }

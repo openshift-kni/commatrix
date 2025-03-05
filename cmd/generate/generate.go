@@ -204,13 +204,32 @@ func Run(o *GenerateOptions) (err error) {
 	}
 
 	if o.openPorts {
-		ssMat, err := generateSS(o, deployment)
+		ssMat, err := generateAndReturnFilterSS(o, deployment)
 		if err != nil {
 			return fmt.Errorf("failed to generate SS matrix: %v", err)
 		}
 
+		ignorePortsFile := "docs/ignore-ports/ports-to-ignore-in-host-port-matrix.csv"
+		epExporter, err := endpointslices.New(o.cs)
+		if err != nil {
+			return fmt.Errorf("failed creating the endpointslices exporter %s", err)
+		}
+
+		portsToIgnoreComMatrixCreator, err := commatrixcreator.New(epExporter, ignorePortsFile, types.FormatCSV, infra, deployment)
+		if err != nil {
+			return fmt.Errorf("failed creating the portsToIgnore ComMatrixCreator %s", err)
+		}
+
+		portsToIgnoreComDetails, err := portsToIgnoreComMatrixCreator.GetComDetailsListFromFile()
+		if err != nil {
+			return fmt.Errorf("failed to create portsToIgnore ComDetails %s", err)
+		}
+
+		portsToIgnoreMat := types.ComMatrix{Matrix: portsToIgnoreComDetails}
+		ssDiffWithIgnoredPorts := matrixdiff.Generate(ssMat, &portsToIgnoreMat)
+
 		log.Debug("Generating diff between the endpoint slice and SS matrix")
-		diff := matrixdiff.Generate(matrix, ssMat)
+		diff := matrixdiff.Generate(matrix, ssDiffWithIgnoredPorts.GenerateUniquePrimary())
 		diffStr, err := diff.String()
 		if err != nil {
 			return fmt.Errorf("error while generating matrix diff string: %v", err)
@@ -257,7 +276,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, infra types
 	return matrix, nil
 }
 
-func generateSS(o *GenerateOptions, deployment types.Deployment) (*types.ComMatrix, error) {
+func generateAndReturnFilterSS(o *GenerateOptions, deployment types.Deployment) (*types.ComMatrix, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -292,5 +311,9 @@ func generateSS(o *GenerateOptions, deployment types.Deployment) (*types.ComMatr
 		return nil, fmt.Errorf("error while writing SS matrix to file: %v", err)
 	}
 
-	return ssMat, nil
+	ssFilter, err := listeningCheck.FilterExternalPorts(ssMat)
+	if err != nil {
+		return nil, fmt.Errorf("failed to filter the external ports from ss matrix: %v", err)
+	}
+	return ssFilter, nil
 }

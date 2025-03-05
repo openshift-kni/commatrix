@@ -8,7 +8,6 @@ Ingress,TCP,6443,openshift-kube-apiserver,apiserver,kube-apiserver,kube-apiserve
 Ingress,TCP,8080,openshift-network-operator,,network-operator,network-operator,master,FALSE
 Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,master,FALSE
 Ingress,TCP,9001,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,kube-rbac-proxy,master,FALSE
-Ingress,TCP,9099,openshift-cluster-version,cluster-version-operator,cluster-version-operator,cluster-version-operator,master,FALSE
 Ingress,TCP,9100,openshift-monitoring,node-exporter,node-exporter,kube-rbac-proxy,master,FALSE
 Ingress,TCP,9103,openshift-ovn-kubernetes,ovn-kubernetes-node,ovnkube-node,kube-rbac-proxy-node,master,FALSE
 Ingress,TCP,9104,openshift-network-operator,metrics,network-operator,network-operator,master,FALSE
@@ -28,8 +27,6 @@ Ingress,TCP,10257,openshift-kube-controller-manager,kube-controller-manager,kube
 Ingress,TCP,10258,openshift-cloud-controller-manager-operator,cloud-controller,cloud-controller-manager,cloud-controller-manager,master,FALSE
 Ingress,TCP,10259,openshift-kube-scheduler,scheduler,openshift-kube-scheduler,kube-scheduler,master,FALSE
 Ingress,TCP,10260,openshift-cloud-controller-manager-operator,cloud-controller,cloud-controller-manager,cloud-controller-manager,master,FALSE
-Ingress,TCP,10300,openshift-cluster-csi-drivers,csi-livenessprobe,csi-driver-node,csi-driver,master,FALSE
-Ingress,TCP,10309,openshift-cluster-csi-drivers,csi-node-driver,csi-driver-node,csi-node-driver-registrar,master,FALSE
 Ingress,TCP,10357,openshift-kube-apiserver,openshift-kube-apiserver-healthz,kube-apiserver,kube-apiserver-check-endpoints,master,FALSE
 Ingress,TCP,17697,openshift-kube-apiserver,openshift-kube-apiserver-healthz,kube-apiserver,kube-apiserver-check-endpoints,master,FALSE
 Ingress,TCP,22623,openshift-machine-config-operator,machine-config-server,machine-config-server,machine-config-server,master,FALSE
@@ -50,7 +47,5 @@ Ingress,TCP,9537,Host system service,crio-metrics,,,worker,FALSE
 Ingress,TCP,9637,openshift-machine-config-operator,kube-rbac-proxy-crio,kube-rbac-proxy-crio,kube-rbac-proxy-crio,worker,FALSE
 Ingress,TCP,10250,Host system service,kubelet,,,worker,FALSE
 Ingress,TCP,10256,openshift-ovn-kubernetes,ovnkube,ovnkube,ovnkube-controller,worker,FALSE
-Ingress,TCP,10300,openshift-cluster-csi-drivers,csi-livenessprobe,csi-driver-node,csi-driver,worker,FALSE
-Ingress,TCP,10309,openshift-cluster-csi-drivers,csi-node-driver,csi-driver-node,csi-node-driver-registrar,worker,FALSE
 Ingress,UDP,111,Host system service,rpcbind,,,worker,TRUE
 Ingress,UDP,6081,openshift-ovn-kubernetes,ovn-kubernetes geneve,,,worker,FALSE
