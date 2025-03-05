@@ -17,13 +17,22 @@ For additional details, please refer to the [commatrix documentation](https://gi
 
 ---
 
-## Running
-build the code locally and install it in `/usr/local/bin`:
+## Install
+This plugin can be installed with the [Krew](https://sigs.k8s.io/krew) plugin manager:
+
+```sh
+wget https://github.com/openshift-kni/commatrix/blob/main/cmd/.krew.yaml
+oc krew install --manifest=.krew.yaml
+```
+
+Or build the code locally and install it in `/usr/local/bin`:
 ```sh
 $ make build
 $ sudo make install
+```
 
-# you can now begin using this plugin as:
+You can now begin using this plugin as:
+```sh
 $ oc commatrix generate
 ```
 
