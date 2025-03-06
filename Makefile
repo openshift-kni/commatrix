@@ -20,9 +20,47 @@ GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 # in case of a version bump
 GOLANGCI_LINT_VER = v1.63.4
 
+# Output directory
+BIN_DIR := bin
+
+# Supported platforms
+PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
+
+# Setting of GOOS and GOARCH for the build
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
+GOOS := $(if $(GOOS),$(GOOS),linux)   
+GOARCH := $(if $(GOARCH),$(GOARCH),amd64)
+
+# Default goal
+.DEFAULT_GOAL := build
+
+# Build for current platform
 .PHONY: build
 build:
-	go build -o $(EXECUTABLE) $(GO_SRC) 
+	GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=0 go build -o $(EXECUTABLE) $(GO_SRC)
+
+# Build for all platforms
+.PHONY: cross-build
+cross-build:
+	@mkdir -p $(BIN_DIR)
+	@for platform in $(PLATFORMS); do \
+		GOOS=$$(echo $$platform | cut -d'/' -f1); \
+		GOARCH=$$(echo $$platform | cut -d'/' -f2); \
+		EXT=""; \
+		if [ "$$GOOS" = "windows" ]; then EXT=".exe"; fi; \
+		OUTPUT="$(BIN_DIR)/$(EXECUTABLE)_$${GOOS}_$${GOARCH}$${EXT}"; \
+		echo "Building for $$GOOS/$$GOARCH..."; \
+		echo "Generating: $$OUTPUT"; \
+		GOOS=$$GOOS GOARCH=$$GOARCH CGO_ENABLED=0 go build -o $$OUTPUT $(GO_SRC); \
+	done
+
+# Clean built executables
+.PHONY: clean-cross-build
+clean-cross-build:
+	rm -rf $(BIN_DIR) $(EXECUTABLE)
+
 
 .PHONY: generate
 generate: build
