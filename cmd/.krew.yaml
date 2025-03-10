@@ -6,9 +6,7 @@ spec:
   version: v0.0.1
   homepage: https://github.com/openshift-kni/commatrix
   shortDescription: Generate a communication matrix for OpenShift clusters.
-  description: |
-    The `oc commatrix generate` generates an up-to-date communication flows matrix for all ingress flows 
-    of OpenShift (multi-node and single-node deployments) and Operators.
+  description: "The `oc commatrix generate` generates an up-to-date communication flows matrix for all ingress flows \nof OpenShift (multi-node and single-node deployments) and Operators.\n"
   platforms:
     - selector:
         matchLabels:
@@ -30,7 +28,7 @@ spec:
           arch: arm64
       uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_v0.0.1_darwin_arm64.tar.gz
       sha256: 163f3dfbecc4836d7b81dff530299baf0dedc1a8d51f1e702068504da0b14d75
-      bin: oc-commatrix 
+      bin: oc-commatrix
     - selector:
         matchLabels:
           os: windows
