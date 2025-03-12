@@ -178,7 +178,7 @@ func (ei *EndpointSlicesInfo) toComDetails(nodesRoles map[string]string) ([]type
 		containerName, err := getContainerName(int(*port.Port), ei.Pods)
 		if err != nil {
 			log.Warningf("failed to get container name for EndpointSlice %s/%s: %s", namespace, name, err)
-			continue
+			containerName = "" // Default to an empty string if the container is not found.
 		}
 
 		for _, role := range roles {
