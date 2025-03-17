@@ -13,33 +13,33 @@ spec:
           os: linux
           arch: amd64
       uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_amd64.tar.gz
-      sha256: 46b0efd00d59083a784612c9c9019f10f12392cc0b01edd0e9c4c3b27297eaee
+      sha256: a372311b4d66a951bfa9179f474e64325290f3705d3b5fcd40029bc811ee9274
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: darwin
           arch: amd64
       uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_amd64.tar.gz
-      sha256: 449e31426af42297750bf7843e291f203bd100d99c31a9a78bd837e1bdf284c0
+      sha256: a98756e4748990138a1b71d17bd608ae6faad13a1f7f7f6e9333054f1f6ec126
       bin: oc-commatrix   
     - selector:
         matchLabels:
           os: linux
           arch: arm64
       uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_arm64.tar.gz
-      sha256: 094e78e528be84a1cc15c3ba8609e8b504a07ed3b9b8196f9ead7bc6d159b4e8
+      sha256: 816e317b5f72905dfcf893c854c36a2fa3ce49641d5c27d05440d05a406bd0e9
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: darwin
           arch: arm64
       uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_arm64.tar.gz
-      sha256: 163f3dfbecc4836d7b81dff530299baf0dedc1a8d51f1e702068504da0b14d75
+      sha256: 76cfef9bcc0dec25afae8837a9f562f41b01189d143306147bd8a9ee6defc8cf
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: windows
           arch: amd64
       uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_windows_amd64.tar.gz
-      sha256: 15956741f6fd18a37d22a859eddf2bccc51d27b638c19e99fadd8f6649edcebf
+      sha256: cf7613c38ee260473eed7a3511446cd385cbc7145f92de46d609e68b83f13962
       bin: oc-commatrix.exe
