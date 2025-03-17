@@ -158,12 +158,19 @@ func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string,
 	for _, ssEntry := range ssOutput {
 		cd := parseComDetail(ssEntry)
 
-		name, err := cc.getContainerName(debugPod, ssEntry)
+		containerName, nameSpace, podName := "", "", ""
+		containerInfo, err := cc.getContainerInfo(debugPod, ssEntry)
 		if err != nil {
 			log.Debugf("failed to identify container for ss entry: %serr: %s", ssEntry, err)
+		} else {
+			containerName = containerInfo.Containers[0].Labels.ContainerName
+			nameSpace = containerInfo.Containers[0].Labels.PodNamespace
+			podName = containerInfo.Containers[0].Labels.PodName
 		}
 
-		cd.Container = name
+		cd.Container = containerName
+		cd.Namespace = nameSpace
+		cd.Pod = podName
 		cd.Protocol = protocol
 		cd.NodeRole = nodeRole
 		cd.Optional = false
@@ -172,24 +179,24 @@ func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string,
 	return res
 }
 
-// getContainerName receives an ss entry and gets the name of the container exposing this port.
-func (cc *ConnectionCheck) getContainerName(debugPod *corev1.Pod, ssEntry string) (string, error) {
+// getContainerInfo receives an ss entry and gets the ContainerInfo obj of the container exposing this port.
+func (cc *ConnectionCheck) getContainerInfo(debugPod *corev1.Pod, ssEntry string) (*types.ContainerInfo, error) {
 	pid, err := extractPID(ssEntry)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	containerID, err := cc.extractContainerID(debugPod, pid)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	res, err := cc.extractContainerName(debugPod, containerID)
+	containerInfo, err := cc.extractContainerInfo(debugPod, containerID)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return res, nil
+	return containerInfo, nil
 }
 
 // extractContainerID receives a PID of a container, and returns its CRI-O ID.
@@ -211,26 +218,24 @@ func (cc *ConnectionCheck) extractContainerID(debugPod *corev1.Pod, pid string) 
 	return containerID, nil
 }
 
-// extractContainerName receives CRI-O container ID and returns the container's name.
-func (cc *ConnectionCheck) extractContainerName(debugPod *corev1.Pod, containerID string) (string, error) {
+// extractContainerInfo receives CRI-O container ID and returns the container's Info obj.
+func (cc *ConnectionCheck) extractContainerInfo(debugPod *corev1.Pod, containerID string) (*types.ContainerInfo, error) {
 	containerInfo := &types.ContainerInfo{}
 	cmd := fmt.Sprintf("crictl ps -o json --id %s", containerID)
 	out, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"chroot", "/host", "/bin/sh", "-c", cmd})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	err = json.Unmarshal(out, &containerInfo)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if len(containerInfo.Containers) != 1 {
-		return "", fmt.Errorf("failed extracting pod info, got %d results expected 1. got output:\n%s", len(containerInfo.Containers), string(out))
+		return nil, fmt.Errorf("failed extracting pod info, got %d results expected 1. got output:\n%s", len(containerInfo.Containers), string(out))
 	}
 
-	containerName := containerInfo.Containers[0].Labels.ContainerName
-
-	return containerName, nil
+	return containerInfo, nil
 }
 
 // extractPID receives an ss entry and returns the PID number of it.
