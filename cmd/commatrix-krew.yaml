@@ -12,34 +12,34 @@ spec:
         matchLabels:
           os: linux
           arch: amd64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix-linux-amd64.tar.gz
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_amd64.tar.gz
       sha256: a372311b4d66a951bfa9179f474e64325290f3705d3b5fcd40029bc811ee9274
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: darwin
           arch: amd64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix-darwin-amd64.tar.gz
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_amd64.tar.gz
       sha256: a98756e4748990138a1b71d17bd608ae6faad13a1f7f7f6e9333054f1f6ec126
       bin: oc-commatrix   
     - selector:
         matchLabels:
           os: linux
           arch: arm64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix-linux-arm64.tar.gz
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_arm64.tar.gz
       sha256: 816e317b5f72905dfcf893c854c36a2fa3ce49641d5c27d05440d05a406bd0e9
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: darwin
           arch: arm64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix-darwin-arm64.tar.gz
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_arm64.tar.gz
       sha256: 76cfef9bcc0dec25afae8837a9f562f41b01189d143306147bd8a9ee6defc8cf
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: windows
           arch: amd64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix-windows-amd64.tar.gz
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_windows_amd64.tar.gz
       sha256: cf7613c38ee260473eed7a3511446cd385cbc7145f92de46d609e68b83f13962
       bin: oc-commatrix.exe
