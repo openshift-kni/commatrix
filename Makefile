@@ -21,7 +21,7 @@ GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 GOLANGCI_LINT_VER = v1.63.4
 
 # Output directory
-BIN_DIR := bin
+OUTPUT_DIR=$(CURPATH)/cross-build-output
 
 # Supported platforms
 PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64
@@ -44,13 +44,13 @@ build:
 # Build for all platforms
 .PHONY: cross-build
 cross-build:
-	@mkdir -p $(BIN_DIR)
+	@mkdir -p $(OUTPUT_DIR)
 	@for platform in $(PLATFORMS); do \
 		GOOS=$$(echo $$platform | cut -d'/' -f1); \
 		GOARCH=$$(echo $$platform | cut -d'/' -f2); \
 		EXT=""; \
 		if [ "$$GOOS" = "windows" ]; then EXT=".exe"; fi; \
-		OUTPUT="$(BIN_DIR)/$(EXECUTABLE)_$${GOOS}_$${GOARCH}$${EXT}"; \
+		OUTPUT="$(OUTPUT_DIR)/$(EXECUTABLE)_$${GOOS}_$${GOARCH}$${EXT}"; \
 		echo "Building for $$GOOS/$$GOARCH..."; \
 		echo "Generating: $$OUTPUT"; \
 		GOOS=$$GOOS GOARCH=$$GOARCH CGO_ENABLED=0 go build -o $$OUTPUT $(GO_SRC); \
@@ -59,7 +59,7 @@ cross-build:
 # Clean built executables
 .PHONY: clean-cross-build
 clean-cross-build:
-	rm -rf $(BIN_DIR) $(EXECUTABLE)
+	rm -rf $(OUTPUT_DIR) $(EXECUTABLE)
 
 
 .PHONY: generate
