@@ -1,0 +1,45 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: commatrix
+spec:
+  version: v0.0.1
+  homepage: https://github.com/openshift-kni/commatrix
+  shortDescription: Generate a communication matrix for OpenShift clusters.
+  description: "The `oc commatrix generate` generates an up-to-date communication flows matrix for all ingress flows \nof OpenShift (multi-node and single-node deployments) and Operators.\n"
+  platforms:
+    - selector:
+        matchLabels:
+          os: linux
+          arch: amd64
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_amd64.tar.gz
+      sha256: f9c82bcfa1a136353f3168fbaf5d3c4ef2ca59c28ae72721ea51f0aa14f2216e
+      bin: oc-commatrix
+    - selector:
+        matchLabels:
+          os: darwin
+          arch: amd64
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_amd64.tar.gz
+      sha256: 6a7102ee19e6aeeea134e24c79fd1516f4d05889cd9fd214d37c643e9b32ac74
+      bin: oc-commatrix   
+    - selector:
+        matchLabels:
+          os: linux
+          arch: arm64
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_arm64.tar.gz
+      sha256: c85467dd75a297a923d8c02d95b4b744f42d2c48065e7da845ca7ea0526fbdaa
+      bin: oc-commatrix
+    - selector:
+        matchLabels:
+          os: darwin
+          arch: arm64
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_arm64.tar.gz
+      sha256: 9ce3d6b6de95b1cb9044fe621391650ed97ec3be1368154f51c7b407f874a56f
+      bin: oc-commatrix
+    - selector:
+        matchLabels:
+          os: windows
+          arch: amd64
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_windows_amd64.tar.gz
+      sha256: a23a65307191b2ae712a870ba46b92fed7b290f437c227f6a080adb3f8588249
+      bin: oc-commatrix.exe
