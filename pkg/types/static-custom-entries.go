@@ -326,16 +326,6 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 	}, {
 		Direction: "Ingress",
 		Protocol:  "TCP",
-		Port:      5050,
-		NodeRole:  "master",
-		Service:   "",
-		Namespace: "openshift-machine-api",
-		Pod:       "ironic-proxy",
-		Container: "ironic-proxy",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
 		Port:      9444,
 		NodeRole:  "master",
 		Service:   "",
@@ -372,16 +362,6 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Namespace: "openshift-kni-infra",
 		Pod:       "coredns",
 		Container: "coredns",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      9447,
-		NodeRole:  "master",
-		Service:   "",
-		Namespace: "openshift-machine-api",
-		Pod:       "metal3-baremetal-operator",
-		Container: "",
 		Optional:  false,
 	},
 }
