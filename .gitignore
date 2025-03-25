@@ -3,6 +3,7 @@ commatrix-gen
 oc-commatrix
 
 bin/
+cross-build-output/
 vendor/
 .vscode/
 
