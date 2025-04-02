@@ -326,16 +326,6 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 	}, {
 		Direction: "Ingress",
 		Protocol:  "TCP",
-		Port:      5050,
-		NodeRole:  "master",
-		Service:   "",
-		Namespace: "openshift-machine-api",
-		Pod:       "ironic-proxy",
-		Container: "ironic-proxy",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
 		Port:      9444,
 		NodeRole:  "master",
 		Service:   "",
