@@ -159,21 +159,33 @@ func Validate(o *GenerateOptions) error {
 			o.format, strings.Join(validFormats, ", "))
 	}
 
-	if o.customEntriesPath == "" {
-		return nil
-	}
-
-	if o.customEntriesFormat == "" {
-		return fmt.Errorf("you must specify the --customEntriesFormat when using --customEntriesPath")
-	}
-
-	if !slices.Contains(validCustomEntriesFormats, o.customEntriesFormat) {
-		return fmt.Errorf("invalid custom entries format '%s', valid options are: %s",
-			o.customEntriesFormat, strings.Join(validCustomEntriesFormats, ", "))
+	if err := validateCustomEntries(o.customEntriesPath, o.customEntriesFormat, validCustomEntriesFormats); err != nil {
+		return err
 	}
 
 	if !slices.Contains(validPlatformType, Platform(o.platformType)) {
 		return fmt.Errorf("invalid platform type %s, valid options: %v", o.platformType, validPlatformType)
+	}
+
+	return nil
+}
+
+func validateCustomEntries(path, format string, validFormats []string) error {
+	if path == "" && format == "" { // dont need to validate
+		return nil
+	}
+
+	if path != "" && format == "" { // if one of them are missing
+		return fmt.Errorf("you must specify the --customEntriesFormat when using --customEntriesPath")
+	}
+
+	if path == "" && format != "" { // if one of them are missing
+		return fmt.Errorf("you must specify the --customEntriesPath when using --customEntriesFormat")
+	}
+
+	if !slices.Contains(validFormats, format) { // poth are set with wrong format
+		return fmt.Errorf("invalid custom entries format '%s', valid options are: %s",
+			format, strings.Join(validFormats, ", "))
 	}
 
 	return nil

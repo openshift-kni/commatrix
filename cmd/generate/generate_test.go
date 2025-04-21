@@ -205,6 +205,14 @@ func TestCommatrixGeneration(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "Should return failure when customEntriesFormat is set but customEntriesPath is missing",
+			args: []string{"generate", "--customEntriesFormat", "nft", "--platform-type", "aws"},
+			expectedFunc: func() (string, error) {
+				return "", fmt.Errorf("you must specify the --customEntriesPath when using --customEntriesFormat")
+			},
+			wantErr: true,
+		},
+		{
 			name: "Should return failure when customEntriesFormat not valid",
 			args: []string{"generate", "--customEntriesPath", "/path/to/customEntriesFile", "--customEntriesFormat", "invalid", "--platform-type", "aws"},
 			expectedFunc: func() (string, error) {
