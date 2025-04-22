@@ -56,8 +56,9 @@ func New(cs *client.ClientSet) (*EndpointSlicesExporter, error) {
 	return &EndpointSlicesExporter{cs, nodeToRole, []EndpointSlicesInfo{}}, nil
 }
 
-// load endpoint slices for services from type loadbalancer and node port only.
-func (ep *EndpointSlicesExporter) LoadEndpointSlicesInfo() error {
+// load endpoint slices for services from type loadbalancer and node port,
+// or with port specified with hostNetwork or hostPort.
+func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 	// get all the services
 	servicesList := &corev1.ServiceList{}
 	err := ep.List(context.TODO(), servicesList, &rtclient.ListOptions{})
@@ -94,9 +95,16 @@ func (ep *EndpointSlicesExporter) LoadEndpointSlicesInfo() error {
 			continue
 		}
 
-		if !filterServiceTypes(service) && !filterHostNetwork(pods.Items[0]) {
+		ports := epl.Items[0].Ports
+		// 	Check if all pod ports are exposed, otherwise, keep only ports linked to an EndpointSlice and hostPort.
+		if !isExposedService(service) && !isHostNetworked(pods.Items[0]) {
+			epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], epl.Items[0].Ports)
+			ports = filterEndpointPortsByPodHostPort(epsPortsInfo)
+		}
+		if len(ports) == 0 {
 			continue
 		}
+		epl.Items[0].Ports = ports
 
 		epsliceInfo := createEPSliceInfo(service, epl.Items[0], pods.Items)
 		log.Debug("epsliceInfo created", epsliceInfo)

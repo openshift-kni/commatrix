@@ -41,7 +41,7 @@ func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath stri
 // port number, namespace, service name, pod, container, node role, and flow optionality for OpenShift.
 func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, error) {
 	log.Debug("Loading EndpointSlices information")
-	err := cm.exporter.LoadEndpointSlicesInfo()
+	err := cm.exporter.LoadExposedEndpointSlicesInfo()
 	if err != nil {
 		log.Errorf("Failed loading endpointslices: %v", err)
 		return nil, fmt.Errorf("failed loading endpointslices: %w", err)
