@@ -1,6 +1,7 @@
 FORMAT ?= csv
+PLATFORM_TYPE ?= aws
 DEST_DIR ?= .
-DEBUG ?=
+DEBUG ?= false
 SUITE ?= all
 GO_SRC := cmd/main.go
 EXECUTABLE := oc-commatrix
@@ -66,8 +67,10 @@ clean-cross-build:
 generate: build
 	rm -rf $(DEST_DIR)/communication-matrix
 	mkdir -p $(DEST_DIR)/communication-matrix
-	./$(EXECUTABLE) generate --format=$(FORMAT) --destDir=$(DEST_DIR)/communication-matrix --customEntriesPath=$(CUSTOM_ENTRIES_PATH) --customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) --host-open-ports $(if $(DEBUG),--debug=true)
+	./$(EXECUTABLE) generate --format=$(FORMAT)  --destDir=$(DEST_DIR)/communication-matrix --customEntriesPath=$(CUSTOM_ENTRIES_PATH) \
+	--customEntriesFormat=$(CUSTOM_ENTRIES_FORMAT) --host-open-ports --platform-type=$(PLATFORM_TYPE) $(if $(filter true,$(DEBUG)),--debug)
 
+  
 .PHONY: install
 install:
 	install $(EXECUTABLE) $(INSTALL_DIR)

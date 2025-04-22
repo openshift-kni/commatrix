@@ -43,6 +43,7 @@ Usage:
   oc commatrix generate [flags]
 
 Flags:
+      --platform-type string         Platform Type (baremetal, aws), Required
       --customEntriesFormat string   Set the format of the custom entries file (json,yaml,csv)
       --customEntriesPath string     Add custom entries from a file to the matrix
       --debug                        Debug logs (default is false)
@@ -58,10 +59,11 @@ Once you run the `oc commatrix generate` command, the plugin will
 generate a communication matrix based on the ingress flows in your
 OpenShift cluster. The output will be saved to a file (destDir) in the chosen format,
 similar to the following:
+> **Note:** The `--platform-type` flag is required for all commands.
 
-`csv example`
+`csv example on aws`
 ```sh
-$ oc commatrix generate --format csv
+$ oc commatrix generate --format csv --platform-type aws
 Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,true
 Ingress,TCP,53,openshift-dns,dns-default,dnf-default,dns,master,false
@@ -69,9 +71,9 @@ Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,m
 Ingress,TCP,111,Host system service,rpcbind,,,master,true
 ```
 
-`json example`
+`json example on baremetal`
 ```sh
-$ oc commatrix generate --format json
+$ oc commatrix generate --format json --platform-type baremetal
 [
     {
         "direction": "Ingress",
@@ -98,9 +100,9 @@ $ oc commatrix generate --format json
 ]
 ```
 
-`host-open-ports example command`
+`host-open-ports example command on aws`
 ```sh
-$ oc commatrix generate --host-open-ports --format csv
+$ oc commatrix generate --platform-type aws --host-open-ports --format csv
 ```
 
 the command will generate the follwing paths:
@@ -151,9 +153,9 @@ UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=2805,fd=5))
 UNCONN 0      0      127.0.0.1:708   0.0.0.0:* users:(("rpc.statd",pid=3922,fd=8))
 ```
 
-`customEntriesFormat and customEntriesPath example command`
+`customEntriesFormat and customEntriesPath example command on baremetal`
 ```sh
-$ oc commatrix generate --format csv --customEntriesFormat csv --customEntriesPath "communication-matrix/customEntriesPath"
+$ oc commatrix generate --platform-type baremetal --format csv --customEntriesFormat csv --customEntriesPath "communication-matrix/customEntriesPath"
 ```
 
 `contents of communication-matrix/customEntriesPath`

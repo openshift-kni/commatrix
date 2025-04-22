@@ -33,22 +33,31 @@ var (
 
 	`)
 	CommatrixExample = templates.Examples(`
-			 # Generate the communication matrix in default format (csv):
-			 oc commatrix generate  
+			 # Note: The --platform-type flag is required for all commands.
+
+			 # Generate the communication matrix in default format (csv) on AWS:
+			 oc commatrix generate --platform-type aws 
 			 
-			 # Generate the communication matrix in nft format:
-			 oc commatrix generate --format nft 
+			 # Generate the communication matrix in nft format on baremetal platform:
+			 oc commatrix generate --platform-type baremetal --format nft 
+
+			 # Generate the communication matrix in json format with debug logs on AWS:
+			 oc commatrix generate --platform-type aws --format json --debug
 			 
-			 # Generate the communication matrix in json format with debug logs:
-			 oc commatrix generate --format json --debug
+			 # Generate communication matrix, host open ports matrix, and their difference in yaml format on baremetal:
+			 oc commatrix generate --platform-type baremetal --host-open-ports --format yaml 
 			 
-			 # Generate communication matrix, host open ports matrix, and their difference in yaml format:
-			 oc commatrix generate --host-open-ports --format yaml 
-			 
-			 # Generate the communication matrix in json format with custom entries:
-			 oc commatrix generate --format json --customEntriesPath /path/to/customEntriesFile --customEntriesFormat json
+			 # Generate the communication matrix in json format with custom entries on AWS:
+			 oc commatrix generate --platform-type aws --format json --customEntriesPath /path/to/customEntriesFile --customEntriesFormat json
 			 
 	`)
+)
+
+type Platform string
+
+const (
+	PlatformBaremetal Platform = "baremetal"
+	PlatformAWS       Platform = "aws"
 )
 
 var (
@@ -64,9 +73,15 @@ var (
 		types.FormatJSON,
 		types.FormatYAML,
 	}
+
+	validPlatformType = []Platform{
+		PlatformBaremetal,
+		PlatformAWS,
+	}
 )
 
 type GenerateOptions struct {
+	platformType        string
 	destDir             string
 	format              string
 	customEntriesPath   string
@@ -123,12 +138,17 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 			return nil
 		},
 	}
+
 	cmd.Flags().StringVar(&o.destDir, "destDir", "", "Output files dir (default communication-matrix)")
 	cmd.Flags().StringVar(&o.format, "format", "csv", "Desired format (json,yaml,csv,nft)")
-	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
+	cmd.Flags().StringVar(&o.platformType, "platform-type", "", fmt.Sprintf("Platform Type %v, Required", validPlatformType))
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 	cmd.Flags().BoolVar(&o.openPorts, "host-open-ports", false, "Generate communication matrix, host open ports matrix, and their difference")
+	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
+	if err := cmd.MarkFlagRequired("platform-type"); err != nil { // make it as required flag
+		log.Fatalf("failed to mark platform-type as required: %v", err)
+	}
 
 	return cmd
 }
@@ -150,6 +170,10 @@ func Validate(o *GenerateOptions) error {
 	if !slices.Contains(validCustomEntriesFormats, o.customEntriesFormat) {
 		return fmt.Errorf("invalid custom entries format '%s', valid options are: %s",
 			o.customEntriesFormat, strings.Join(validCustomEntriesFormats, ", "))
+	}
+
+	if !slices.Contains(validPlatformType, Platform(o.platformType)) {
+		return fmt.Errorf("invalid platform type %s, valid options: %v", o.platformType, validPlatformType)
 	}
 
 	return nil
@@ -189,12 +213,7 @@ func Run(o *GenerateOptions) (err error) {
 		deployment = types.SNO
 	}
 
-	isBM, err := o.utilsHelpers.IsBMInfra()
-	if err != nil {
-		return fmt.Errorf("failed to check is bm cluster %s", err)
-	}
-
-	if isBM {
+	if Platform(o.platformType) == PlatformBaremetal {
 		infra = types.Baremetal
 	}
 
