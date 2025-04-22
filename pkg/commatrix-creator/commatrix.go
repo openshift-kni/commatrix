@@ -136,7 +136,7 @@ func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, er
 			break
 		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
-	case types.Cloud:
+	case types.AWS:
 		log.Debug("Adding Cloud static entries")
 		comDetails = append(comDetails, types.CloudStaticEntriesMaster...)
 		if cm.d == types.SNO {

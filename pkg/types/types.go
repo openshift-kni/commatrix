@@ -24,7 +24,7 @@ type Env int
 
 const (
 	Baremetal Env = iota
-	Cloud
+	AWS
 )
 
 type Deployment int
@@ -71,8 +71,8 @@ func GetEnv(envStr string) (Env, error) {
 	switch envStr {
 	case "baremetal":
 		return Baremetal, nil
-	case "cloud":
-		return Cloud, nil
+	case "aws":
+		return AWS, nil
 	default:
 		return -1, fmt.Errorf("invalid cluster environment: %s", envStr)
 	}

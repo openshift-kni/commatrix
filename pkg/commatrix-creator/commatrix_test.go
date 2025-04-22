@@ -231,7 +231,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to cloud standard cluster", func() {
 			g.By("Creating new communication matrix suitable to cloud standard cluster")
-			cm, err := New(nil, "", "", types.Cloud, types.Standard)
+			cm, err := New(nil, "", "", types.AWS, types.Standard)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -246,7 +246,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to cloud SNO cluster", func() {
 			g.By("Creating new communication matrix suitable to cloud SNO cluster")
-			cm, err := New(nil, "", "", types.Cloud, types.SNO)
+			cm, err := New(nil, "", "", types.AWS, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -296,7 +296,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix with custom entries", func() {
 			g.By("Creating new communication matrix with static entries")
-			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, types.Cloud, types.SNO)
+			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, types.AWS, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
@@ -320,7 +320,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
 			g.By("Creating new communication matrix without static entries")
-			commatrixCreator, err := New(endpointSlices, "", "", types.Cloud, types.SNO)
+			commatrixCreator, err := New(endpointSlices, "", "", types.AWS, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())

@@ -202,7 +202,7 @@ func Run(o *GenerateOptions) (err error) {
 
 	log.Debug("Detecting deployment and infra types")
 	deployment := types.Standard
-	infra := types.Cloud
+	infra := types.AWS
 
 	isSNO, err := o.utilsHelpers.IsSNOCluster()
 	if err != nil {
