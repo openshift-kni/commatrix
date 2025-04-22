@@ -62,7 +62,7 @@ var _ = BeforeSuite(func() {
 		deployment = types.SNO
 	}
 
-	infra = types.Cloud
+	infra = types.AWS
 	isBM, err = utilsHelpers.IsBMInfra()
 	Expect(err).NotTo(HaveOccurred())
 
