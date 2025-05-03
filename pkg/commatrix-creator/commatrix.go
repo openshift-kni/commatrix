@@ -1,15 +1,12 @@
 package commatrixcreator
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/gocarina/gocsv"
 	log "github.com/sirupsen/logrus"
-	"sigs.k8s.io/yaml"
 
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
@@ -79,7 +76,6 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 }
 
 func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDetails, error) {
-	var res []types.ComDetails
 	log.Debugf("Opening file %s", cm.customEntriesPath)
 	f, err := os.Open(filepath.Clean(cm.customEntriesPath))
 	if err != nil {
@@ -96,28 +92,10 @@ func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDe
 	}
 
 	log.Debugf("Unmarshalling file content with format %s", cm.customEntriesFormat)
-	switch cm.customEntriesFormat {
-	case types.FormatJSON:
-		err = json.Unmarshal(raw, &res)
-		if err != nil {
-			log.Errorf("Failed to unmarshal JSON file: %v", err)
-			return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
-		}
-	case types.FormatYAML:
-		err = yaml.Unmarshal(raw, &res)
-		if err != nil {
-			log.Errorf("Failed to unmarshal YAML file: %v", err)
-			return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
-		}
-	case types.FormatCSV:
-		err = gocsv.UnmarshalBytes(raw, &res)
-		if err != nil {
-			log.Errorf("Failed to unmarshal CSV file: %v", err)
-			return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
-		}
-	default:
-		log.Errorf("Invalid format specified: %s", cm.customEntriesFormat)
-		return nil, fmt.Errorf("invalid value for format must be (json,yaml,csv)")
+	res, err := types.ParseToComDetailsList(raw, cm.customEntriesFormat)
+	if err != nil {
+		log.Errorf("Failed to unmarshal %s file: %v", cm.customEntriesFormat, err)
+		return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
 	}
 
 	log.Debug("Successfully unmarshalled custom entries")

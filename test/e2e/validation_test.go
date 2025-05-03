@@ -1,11 +1,13 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os/exec"
+	"path/filepath"
 
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -16,9 +18,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 
-	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
-
-	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
@@ -49,17 +48,43 @@ var (
 			Optional:  false,
 		},
 	}
+	commatrix *types.ComMatrix
 )
 
 const (
 	docCommatrixBaseFilePath = "../../docs/stable/raw/%s.csv"
 	diffFileComments         = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
+	commatrixFile      = "communication-matrix.csv"
+	matrixdiffFile     = "matrix-diff-ss"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
 )
 
+type EPSStatus string
+
+const (
+	NotUsed EPSStatus = "+"
+	Missing EPSStatus = "-"
+)
+
 var _ = Describe("Validation", func() {
+	BeforeEach(func() {
+		By("Generating communication matrix using oc command")
+		cmd := exec.Command("oc", "commatrix", "generate", "--host-open-ports", "--destDir", artifactsDir)
+		err := cmd.Run()
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to run command: %s", cmd.String()))
+
+		By("Reading the generated commatrix files")
+		commatrixFilePath := filepath.Join(artifactsDir, commatrixFile)
+		commatrixFileContent, err := os.ReadFile(commatrixFilePath)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read generated commatrix file")
+
+		ComDetailsMatrix, err := types.ParseToComDetailsList(commatrixFileContent, types.FormatCSV)
+		Expect(err).ToNot(HaveOccurred(), "Failed to parse generated commatrix")
+		commatrix = &types.ComMatrix{Matrix: ComDetailsMatrix}
+	})
+
 	It("generated communication matrix should be equal to documented communication matrix", func() {
 		By("generate documented commatrix file path")
 		docType := "aws"
@@ -72,11 +97,11 @@ var _ = Describe("Validation", func() {
 		docCommatrixFilePath := fmt.Sprintf(docCommatrixBaseFilePath, docType)
 
 		By(fmt.Sprintf("Filter documented commatrix type %s for diff generation", docType))
-		// get origin documented commatrix details
-		docComMatrixCreator, err := commatrixcreator.New(epExporter, docCommatrixFilePath, types.FormatCSV, infra, deployment)
-		Expect(err).ToNot(HaveOccurred())
-		docComDetailsList, err := docComMatrixCreator.GetComDetailsListFromFile()
-		Expect(err).ToNot(HaveOccurred())
+		docCommatrixFileContent, err := os.ReadFile(docCommatrixFilePath)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read documented communication matrix file")
+
+		docComDetailsList, err := types.ParseToComDetailsList(docCommatrixFileContent, types.FormatCSV)
+		Expect(err).ToNot(HaveOccurred(), "Failed to parse documented communication matrix")
 
 		if isSNO {
 			// Exclude all worker nodes static entries.
@@ -97,12 +122,14 @@ var _ = Describe("Validation", func() {
 			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: types.BaremetalStaticEntriesWorker}, "worker")
 			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: types.BaremetalStaticEntriesMaster}, "master")
 		}
+
 		docComMatrix := &types.ComMatrix{Matrix: docComDetailsList}
 
 		By("generating diff between matrices for testing purposes")
 		endpointslicesDiffWithDocMat := matrixdiff.Generate(commatrix, docComMatrix)
 		diffStr, err := endpointslicesDiffWithDocMat.String()
 		Expect(err).ToNot(HaveOccurred())
+
 		err = os.WriteFile(filepath.Join(artifactsDir, "doc-diff-new"), []byte(diffFileComments+diffStr), 0644)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -122,11 +149,12 @@ var _ = Describe("Validation", func() {
 		// and ignore the ports in given file (if exists)
 		missingPortsMat := endpointslicesDiffWithDocMat.GenerateUniquePrimary()
 		if openPortsToIgnoreFile != "" && openPortsToIgnoreFormat != "" {
-			// generate open ports to ignore commatrix
-			portsToIgnoreCommatrixCreator, err := commatrixcreator.New(epExporter, openPortsToIgnoreFile, openPortsToIgnoreFormat, infra, deployment)
+			portsToIgnoreFileContent, err := os.ReadFile(openPortsToIgnoreFile)
 			Expect(err).ToNot(HaveOccurred())
-			portsToIgnoreComDetails, err := portsToIgnoreCommatrixCreator.GetComDetailsListFromFile()
+
+			portsToIgnoreComDetails, err := types.ParseToComDetailsList(portsToIgnoreFileContent, openPortsToIgnoreFormat)
 			Expect(err).ToNot(HaveOccurred())
+
 			portsToIgnoreMat = &types.ComMatrix{Matrix: portsToIgnoreComDetails}
 
 			// generate the diff matrix between the open ports to ignore matrix and the missing ports in the documented commatrix (based on the diff between the enpointslice and the doc matrix)
@@ -142,36 +170,23 @@ var _ = Describe("Validation", func() {
 	})
 
 	It("should validate the communication matrix ports match the node's open ports", func() {
-		listeningCheck, err := listeningsockets.NewCheck(cs, utilsHelpers, artifactsDir)
-		Expect(err).ToNot(HaveOccurred())
+		By("Reading the generated diff commatrix files")
+		matDiffSSFilePath := filepath.Join(artifactsDir, matrixdiffFile)
+		matDiffSSFileContent, err := os.ReadFile(matDiffSSFilePath)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read matrix-diff-ss file")
 
-		By("generate the ss matrix and ss raws")
-		ssMat, ssOutTCP, ssOutUDP, err := listeningCheck.GenerateSS(testNS)
-		Expect(err).ToNot(HaveOccurred())
+		notUsedEPSMat, err := extractEPSMatByStatus(matDiffSSFileContent, NotUsed)
+		Expect(err).ToNot(HaveOccurred(), "Failed to extract not used EPS Matrix")
 
-		err = listeningCheck.WriteSSRawFiles(ssOutTCP, ssOutUDP)
-		Expect(err).ToNot(HaveOccurred())
+		missingEPSMat, err := extractEPSMatByStatus(matDiffSSFileContent, Missing)
+		Expect(err).ToNot(HaveOccurred(), "Failed to extract missing EPS Matrix")
 
-		err = ssMat.WriteMatrixToFileByType(utilsHelpers, "ss-generated-matrix", types.FormatCSV, deployment, artifactsDir)
-		Expect(err).ToNot(HaveOccurred())
-
-		// generate the diff matrix between the enpointslice and the ss matrix
-		ssFilteredMat, err := filterSSMatrix(ssMat)
-		Expect(err).ToNot(HaveOccurred())
-
-		diff := matrixdiff.Generate(commatrix, ssFilteredMat)
-		diffStr, err := diff.String()
-		Expect(err).ToNot(HaveOccurred())
-
-		err = utilsHelpers.WriteFile(filepath.Join(artifactsDir, "matrix-diff-ss"), []byte(diffStr))
-		Expect(err).ToNot(HaveOccurred())
-
-		notUsedEPSMat := diff.GenerateUniquePrimary()
 		if len(notUsedEPSMat.Matrix) > 0 {
 			logrus.Warningf("the following ports are not used: \n %s", notUsedEPSMat)
 		}
 
-		missingEPSMat := diff.GenerateUniqueSecondary()
+		missingEPSMat, err = filterKnownPorts(missingEPSMat)
+		Expect(err).ToNot(HaveOccurred(), "Failed to filter the known ports")
 		if len(missingEPSMat.Matrix) > 0 {
 			err := fmt.Errorf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat)
 			Expect(err).ToNot(HaveOccurred())
@@ -196,8 +211,8 @@ func excludeStaticEntriesWithGivenNodeRole(comDetails []types.ComDetails, static
 	return filteredComDetails
 }
 
-// Filter ss known ports to skip in matrix diff.
-func filterSSMatrix(mat *types.ComMatrix) (*types.ComMatrix, error) {
+// Filter known ports to skip on checking.
+func filterKnownPorts(mat *types.ComMatrix) (*types.ComMatrix, error) {
 	nodePortMin := serviceNodePortMin
 	nodePortMax := serviceNodePortMax
 
@@ -253,4 +268,52 @@ func filterSSMatrix(mat *types.ComMatrix) (*types.ComMatrix, error) {
 	}
 
 	return &types.ComMatrix{Matrix: res}, nil
+}
+
+// extractEPSMatByStatus extracts and returns ComMatrix by filtering lines of a CSV content based on a EPS status.
+func extractEPSMatByStatus(csvContent []byte, status EPSStatus) (*types.ComMatrix, error) {
+	filteredCSV := extractDiffByStatus(csvContent, status)
+
+	prefixEPSMat, err := types.ParseToComDetailsList(filteredCSV, types.FormatCSV)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.ComMatrix{Matrix: prefixEPSMat}, nil
+}
+
+// extractDiffByStatus filter the lines of the csv content based on the EPS status
+// Example:
+// CSV content:
+// Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+// Ingress, TCP, 80, Namespace1, service1, pod1, container1, worker, true
+// + Ingress, TCP, 8080, Namespace2, service2, pod2, container2, worker, true
+// - Ingress, UDP, 9090, Namespace2, service3, pod3, container3, master, false
+//
+// Calling extractDiffByStatus(csvContent, NotUsed) will return the filtered CSV content:
+// Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+// Ingress, TCP, 8080, Namespace2, service2, pod2, container2, worker, true
+//
+// Calling extractDiffByStatus(csvContent, Missing) will return the filtered CSV content:
+// Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+// Ingress, UDP, 9090, Namespace2, service3, pod3, container3, master, false.
+func extractDiffByStatus(csvContent []byte, status EPSStatus) []byte {
+	prefix := []byte(status)
+	var filteredLines [][]byte
+	lines := bytes.Split(csvContent, []byte("\n"))
+
+	// take headers
+	if len(lines) > 0 {
+		filteredLines = append(filteredLines, lines[0])
+	}
+
+	// filter by prefix (+ or -)
+	for _, line := range lines[1:] {
+		line = bytes.TrimSpace(line)
+		if bytes.HasPrefix(line, prefix) {
+			filteredLines = append(filteredLines, line[2:])
+		}
+	}
+
+	return bytes.Join(filteredLines, []byte("\n"))
 }

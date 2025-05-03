@@ -1,9 +1,11 @@
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -19,17 +21,39 @@ import (
 )
 
 var (
-	workerNodeRole = "worker"
-	tableName      = "table inet openshift_filter"
-	chainName      = "chain OPENSHIFT"
+	workerNodeRole     = "worker"
+	tableName          = "table inet openshift_filter"
+	chainName          = "chain OPENSHIFT"
+	workerNFTFile      = "communication-matrix-worker.nft"
+	masterNFTFile      = "communication-matrix-master.nft"
+	masterNFTconfig    []byte
+	workerNFTconfig    []byte
+	nodeRoleToNFTables map[string][]byte
 )
 
 var _ = Describe("Nftables", func() {
-	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
-		masterMat, workerMat := commatrix.SeparateMatrixByRole()
-		nodeRoleToNFTables := make(map[string][]byte)
+	BeforeEach(func() {
+		By("Creating test namespace")
+		err := utilsHelpers.CreateNamespace(testNS)
+		Expect(err).ToNot(HaveOccurred())
 
+		nodeList = &corev1.NodeList{}
+		err = cs.List(context.TODO(), nodeList)
+		Expect(err).ToNot(HaveOccurred())
+
+		By("Generating nft communication matrix using oc command")
+		cmd := exec.Command("oc", "commatrix", "generate", "--format", "nft", "--destDir", artifactsDir)
+		err = cmd.Run()
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to run command: %s", cmd.String()))
+
+		By("Reading the generated commatrix nft files")
+		masterFilePath := filepath.Join(artifactsDir, masterNFTFile)
+		masterNFTconfig, err = os.ReadFile(masterFilePath)
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to read generated %s file", masterNFTFile))
+
+		// creare the nodeRoleToNFTables map[string][]byte
 		By("Creating NFT output for each role")
+		nodeRoleToNFTables = make(map[string][]byte)
 		for _, node := range nodeList.Items {
 			role, err := types.GetNodeRole(&node)
 			Expect(err).NotTo(HaveOccurred())
@@ -37,15 +61,16 @@ var _ = Describe("Nftables", func() {
 			if _, exists := nodeRoleToNFTables[role]; !exists {
 				var nftablesConfig []byte
 
-				roleBasedMat := masterMat
+				nftablesConfig = masterNFTconfig
 				extraNftablesFileEnv := "EXTRA_NFTABLES_MASTER_FILE"
 				if role == workerNodeRole {
-					roleBasedMat = workerMat
+					workerFilePath := filepath.Join(artifactsDir, workerNFTFile)
+					workerNFTconfig, err = os.ReadFile(workerFilePath)
+					Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to read generated %s file", workerNFTFile))
+
+					nftablesConfig = workerNFTconfig
 					extraNftablesFileEnv = "EXTRA_NFTABLES_WORKER_FILE"
 				}
-
-				nftablesConfig, err = roleBasedMat.ToNFTables()
-				Expect(err).NotTo(HaveOccurred())
 
 				extraNFTablesFile, _ := os.LookupEnv(extraNftablesFileEnv)
 				if extraNFTablesFile != "" {
@@ -56,7 +81,15 @@ var _ = Describe("Nftables", func() {
 				nodeRoleToNFTables[role] = nftablesConfig
 			}
 		}
+	})
 
+	AfterEach(func() {
+		By("Deleting Namespace")
+		err := utilsHelpers.DeleteNamespace(testNS)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	It("should apply firewall by blocking all ports except the ones OCP is listening on", func() {
 		err := cluster.ValidateClusterVersionAndMachineConfiguration(cs)
 		Expect(err).ToNot(HaveOccurred())
 

@@ -320,3 +320,24 @@ func GetNodeRole(node *corev1.Node) (string, error) {
 
 	return "", fmt.Errorf("unable to determine role for node %s", node.Name)
 }
+
+func ParseToComDetailsList(content []byte, format string) ([]ComDetails, error) {
+	var comDetails []ComDetails
+	switch format {
+	case FormatJSON:
+		if err := json.Unmarshal(content, &comDetails); err != nil {
+			return nil, err
+		}
+	case FormatYAML:
+		if err := yaml.Unmarshal(content, &comDetails); err != nil {
+			return nil, err
+		}
+	case FormatCSV:
+		if err := gocsv.UnmarshalBytes(content, &comDetails); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("invalid value for format must be (json,yaml,csv)")
+	}
+	return comDetails, nil
+}
