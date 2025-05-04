@@ -71,7 +71,7 @@ const (
 var _ = Describe("Validation", func() {
 	BeforeEach(func() {
 		By("Generating communication matrix using oc command")
-		cmd := exec.Command("oc", "commatrix", "generate", "--host-open-ports", "--destDir", artifactsDir)
+		cmd := exec.Command("oc", "commatrix", "generate", "--host-open-ports", "--destDir", artifactsDir, "--platform-type", platformType)
 		err := cmd.Run()
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to run command: %s", cmd.String()))
 

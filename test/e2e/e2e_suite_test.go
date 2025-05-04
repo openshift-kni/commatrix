@@ -20,9 +20,13 @@ var (
 	utilsHelpers utils.UtilsInterface
 	nodeList     *corev1.NodeList
 	artifactsDir string
+	platformType string
 )
 
-const testNS = "openshift-commatrix-test"
+const (
+	testNS    = "openshift-commatrix-test"
+	baremetal = "baremetal"
+)
 
 var _ = BeforeSuite(func() {
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -48,8 +52,11 @@ var _ = BeforeSuite(func() {
 	isSNO, err = utilsHelpers.IsSNOCluster()
 	Expect(err).NotTo(HaveOccurred())
 
-	isBM, err = utilsHelpers.IsBMInfra()
-	Expect(err).NotTo(HaveOccurred())
+	platformType, _ = os.LookupEnv("PLATFORM_TYPE")
+	isBM = false
+	if platformType == baremetal {
+		isBM = true
+	}
 })
 
 func TestE2e(t *testing.T) {
