@@ -8,6 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/openshift-kni/commatrix/cmd/generate"
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -20,9 +21,12 @@ var (
 	utilsHelpers utils.UtilsInterface
 	nodeList     *corev1.NodeList
 	artifactsDir string
+	platformType string
 )
 
-const testNS = "openshift-commatrix-test"
+const (
+	testNS = "openshift-commatrix-test"
+)
 
 var _ = BeforeSuite(func() {
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -48,8 +52,15 @@ var _ = BeforeSuite(func() {
 	isSNO, err = utilsHelpers.IsSNOCluster()
 	Expect(err).NotTo(HaveOccurred())
 
-	isBM, err = utilsHelpers.IsBMInfra()
-	Expect(err).NotTo(HaveOccurred())
+	platformType, _ = os.LookupEnv("PLATFORM_TYPE")
+	if platformType == "" {
+		platformType = string(generate.PlatformAWS)
+	}
+
+	isBM = false
+	if platformType == string(generate.PlatformBaremetal) {
+		isBM = true
+	}
 })
 
 func TestE2e(t *testing.T) {

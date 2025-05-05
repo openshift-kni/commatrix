@@ -42,7 +42,7 @@ var _ = Describe("Nftables", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Generating nft communication matrix using oc command")
-		cmd := exec.Command("oc", "commatrix", "generate", "--format", "nft", "--destDir", artifactsDir)
+		cmd := exec.Command("oc", "commatrix", "generate", "--format", "nft", "--destDir", artifactsDir, "--platform-type", platformType)
 		err = cmd.Run()
 		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to run command: %s", cmd.String()))
 
