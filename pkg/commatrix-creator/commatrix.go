@@ -52,7 +52,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	}
 
 	log.Debug("Getting static entries")
-	staticEntries, err := cm.getStaticEntries()
+	staticEntries, err := cm.GetStaticEntries()
 	if err != nil {
 		log.Errorf("Failed adding static entries: %s", err)
 		return nil, fmt.Errorf("failed adding static entries: %s", err)
@@ -102,7 +102,7 @@ func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDe
 	return res, nil
 }
 
-func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, error) {
+func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, error) {
 	log.Debug("Determining static entries based on environment and deployment")
 	comDetails := []types.ComDetails{}
 

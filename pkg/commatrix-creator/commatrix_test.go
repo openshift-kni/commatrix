@@ -206,7 +206,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.getStaticEntries()
+			gotComDetails, err := cm.GetStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -221,7 +221,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.getStaticEntries()
+			gotComDetails, err := cm.GetStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -235,7 +235,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.getStaticEntries()
+			gotComDetails, err := cm.GetStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -250,7 +250,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.getStaticEntries()
+			gotComDetails, err := cm.GetStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -264,7 +264,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.getStaticEntries()
+			gotComDetails, err := cm.GetStaticEntries()
 			o.Expect(err).To(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to empty comDetails")
