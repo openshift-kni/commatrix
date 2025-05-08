@@ -75,8 +75,8 @@ func (m *MatrixDiff) String() (string, error) {
 	return diff, nil
 }
 
-// Generates the unique entries in primary mat.
-func (m *MatrixDiff) GenerateUniquePrimary() *types.ComMatrix {
+// Get the unique entries in primary mat.
+func (m *MatrixDiff) GetUniquePrimary() *types.ComMatrix {
 	matrix := types.ComMatrix{}
 
 	for _, cd := range m.Matrix {
@@ -88,12 +88,25 @@ func (m *MatrixDiff) GenerateUniquePrimary() *types.ComMatrix {
 	return &matrix
 }
 
-// Generates the unique entries in secondary mat.
-func (m *MatrixDiff) GenerateUniqueSecondary() *types.ComMatrix {
+// Get the unique entries in secondary mat.
+func (m *MatrixDiff) GetUniqueSecondary() *types.ComMatrix {
 	matrix := types.ComMatrix{}
 
 	for _, cd := range m.Matrix {
 		if m.cdToStatus[cd.String()] == uniqueSecondary {
+			matrix.Matrix = append(matrix.Matrix, cd)
+		}
+	}
+
+	return &matrix
+}
+
+// Get the common entries in both mat.
+func (m *MatrixDiff) GetSharedEntries() *types.ComMatrix {
+	matrix := types.ComMatrix{}
+
+	for _, cd := range m.Matrix {
+		if m.cdToStatus[cd.String()] == both {
 			matrix.Matrix = append(matrix.Matrix, cd)
 		}
 	}

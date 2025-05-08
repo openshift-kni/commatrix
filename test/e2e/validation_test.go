@@ -135,7 +135,7 @@ var _ = Describe("Validation", func() {
 
 		By("comparing new and documented commatrices")
 		// Get ports that are in the documented commatrix but not in the generated commatrix.
-		notUsedPortsMat := endpointslicesDiffWithDocMat.GenerateUniqueSecondary()
+		notUsedPortsMat := endpointslicesDiffWithDocMat.GetUniqueSecondary()
 		if len(notUsedPortsMat.Matrix) > 0 {
 			logrus.Warningf("the following ports are documented but are not used:\n%s", notUsedPortsMat)
 		}
@@ -147,7 +147,7 @@ var _ = Describe("Validation", func() {
 
 		// Get ports that are in the generated commatrix but not in the documented commatrix,
 		// and ignore the ports in given file (if exists)
-		missingPortsMat := endpointslicesDiffWithDocMat.GenerateUniquePrimary()
+		missingPortsMat := endpointslicesDiffWithDocMat.GetUniquePrimary()
 		if openPortsToIgnoreFile != "" && openPortsToIgnoreFormat != "" {
 			portsToIgnoreFileContent, err := os.ReadFile(openPortsToIgnoreFile)
 			Expect(err).ToNot(HaveOccurred())
@@ -158,9 +158,9 @@ var _ = Describe("Validation", func() {
 			portsToIgnoreMat = &types.ComMatrix{Matrix: portsToIgnoreComDetails}
 
 			// generate the diff matrix between the open ports to ignore matrix and the missing ports in the documented commatrix (based on the diff between the enpointslice and the doc matrix)
-			nonDocumentedEndpointslicesMat := endpointslicesDiffWithDocMat.GenerateUniquePrimary()
+			nonDocumentedEndpointslicesMat := endpointslicesDiffWithDocMat.GetUniquePrimary()
 			endpointslicesDiffWithIgnoredPorts := matrixdiff.Generate(nonDocumentedEndpointslicesMat, portsToIgnoreMat)
-			missingPortsMat = endpointslicesDiffWithIgnoredPorts.GenerateUniquePrimary()
+			missingPortsMat = endpointslicesDiffWithIgnoredPorts.GetUniquePrimary()
 		}
 
 		if len(missingPortsMat.Matrix) > 0 {
