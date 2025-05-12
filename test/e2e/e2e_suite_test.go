@@ -28,9 +28,14 @@ var (
 	epExporter   *endpointslices.EndpointSlicesExporter
 	nodeList     *corev1.NodeList
 	artifactsDir string
+	platformType string
 )
 
-const testNS = "openshift-commatrix-test"
+const (
+	testNS            = "openshift-commatrix-test"
+	PlatformBaremetal = "baremetal"
+	PlatformAWS       = "aws"
+)
 
 var _ = BeforeSuite(func() {
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -63,8 +68,16 @@ var _ = BeforeSuite(func() {
 	}
 
 	infra = types.Cloud
-	isBM, err = utilsHelpers.IsBMInfra()
-	Expect(err).NotTo(HaveOccurred())
+	isBM = false
+	platformType, _ = os.LookupEnv("PLATFORM_TYPE")
+	if platformType == "" || (platformType != PlatformBaremetal && platformType != PlatformAWS) { // if not set or value is wrong
+		log.Println("Environment variable PLATFORM_TYPE is not set or has an invalid value; please set it to either 'baremetal' or 'aws'")
+		Fail("Invalid or unset PLATFORM_TYPE environment variable")
+	}
+
+	if platformType == PlatformBaremetal {
+		isBM = true
+	}
 
 	if isBM {
 		infra = types.Baremetal
