@@ -28,9 +28,13 @@ var (
 	epExporter   *endpointslices.EndpointSlicesExporter
 	nodeList     *corev1.NodeList
 	artifactsDir string
+	platformType string
 )
 
-const testNS = "openshift-commatrix-test"
+const (
+	testNS            = "openshift-commatrix-test"
+	PlatformBaremetal = "baremetal"
+)
 
 var _ = BeforeSuite(func() {
 	kubeconfig := os.Getenv("KUBECONFIG")
@@ -63,11 +67,15 @@ var _ = BeforeSuite(func() {
 	}
 
 	infra = types.Cloud
-	isBM, err = utilsHelpers.IsBMInfra()
-	Expect(err).NotTo(HaveOccurred())
+	platformType, _ = os.LookupEnv("PLATFORM_TYPE")
+	if platformType == "" {
+		isBM, err = utilsHelpers.IsBMInfra()
+		Expect(err).NotTo(HaveOccurred())
+	}
 
-	if isBM {
-		infra = types.Baremetal
+	isBM = false
+	if platformType == PlatformBaremetal {
+		isBM = true
 	}
 
 	epExporter, err = endpointslices.New(cs)
