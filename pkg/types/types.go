@@ -25,6 +25,7 @@ type Env int
 const (
 	Baremetal Env = iota
 	AWS
+	NonePlatformType
 )
 
 type Deployment int

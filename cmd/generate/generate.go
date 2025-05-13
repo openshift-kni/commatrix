@@ -13,14 +13,14 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
+	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
+	configv1 "github.com/openshift/api/config/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/kubectl/pkg/util/templates"
-
-	"github.com/openshift-kni/commatrix/pkg/types"
 )
 
 var (
@@ -53,13 +53,6 @@ var (
 	`)
 )
 
-type Platform string
-
-const (
-	PlatformBaremetal Platform = "baremetal"
-	PlatformAWS       Platform = "aws"
-)
-
 var (
 	validFormats = []string{
 		types.FormatCSV,
@@ -73,15 +66,9 @@ var (
 		types.FormatJSON,
 		types.FormatYAML,
 	}
-
-	validPlatformType = []Platform{
-		PlatformBaremetal,
-		PlatformAWS,
-	}
 )
 
 type GenerateOptions struct {
-	platformType        string
 	destDir             string
 	format              string
 	customEntriesPath   string
@@ -141,15 +128,10 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 
 	cmd.Flags().StringVar(&o.destDir, "destDir", "", "Output files dir (default communication-matrix)")
 	cmd.Flags().StringVar(&o.format, "format", "csv", "Desired format (json,yaml,csv,nft)")
-	cmd.Flags().StringVar(&o.platformType, "platform-type", "", fmt.Sprintf("Platform Type %v, Required", validPlatformType))
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 	cmd.Flags().BoolVar(&o.openPorts, "host-open-ports", false, "Generate communication matrix, host open ports matrix, and their difference")
 	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
-	if err := cmd.MarkFlagRequired("platform-type"); err != nil { // make it as required flag
-		log.Fatalf("failed to mark platform-type as required: %v", err)
-	}
-
 	return cmd
 }
 
@@ -161,10 +143,6 @@ func Validate(o *GenerateOptions) error {
 
 	if err := validateCustomEntries(o.customEntriesPath, o.customEntriesFormat, validCustomEntriesFormats); err != nil {
 		return err
-	}
-
-	if !slices.Contains(validPlatformType, Platform(o.platformType)) {
-		return fmt.Errorf("invalid platform type %s, valid options: %v", o.platformType, validPlatformType)
 	}
 
 	return nil
@@ -225,7 +203,12 @@ func Run(o *GenerateOptions) (err error) {
 		deployment = types.SNO
 	}
 
-	if Platform(o.platformType) == PlatformBaremetal {
+	platformType, err := o.utilsHelpers.GetPlatformType()
+	if err != nil {
+		return fmt.Errorf("failed to get platform type %s", err)
+	}
+
+	if platformType == configv1.BareMetalPlatformType {
 		infra = types.Baremetal
 	}
 
