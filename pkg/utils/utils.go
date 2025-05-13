@@ -31,7 +31,7 @@ type UtilsInterface interface {
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
 	GetPodLogs(namespace string, pod *corev1.Pod) (string, error)
 	WriteFile(path string, data []byte) error
-	IsBMInfra() (bool, error)
+	GetPlatformType() (configv1.PlatformType, error)
 	IsSNOCluster() (bool, error)
 	WaitForPodStatus(namespace string, pod *corev1.Pod, PodPhase corev1.PodPhase) error
 }
@@ -229,14 +229,14 @@ func (u *utils) IsSNOCluster() (bool, error) {
 	return infra.Status.ControlPlaneTopology == configv1.SingleReplicaTopologyMode, nil
 }
 
-func (u *utils) IsBMInfra() (bool, error) {
+func (u *utils) GetPlatformType() (configv1.PlatformType, error) {
 	infra := &configv1.Infrastructure{}
 	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "cluster"}, infra)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
+	return infra.Status.PlatformStatus.Type, nil
 }
 
 func (u *utils) GetPodLogs(namespace string, pod *corev1.Pod) (string, error) {

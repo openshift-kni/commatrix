@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/utils"
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -48,8 +49,13 @@ var _ = BeforeSuite(func() {
 	isSNO, err = utilsHelpers.IsSNOCluster()
 	Expect(err).NotTo(HaveOccurred())
 
-	isBM, err = utilsHelpers.IsBMInfra()
+	platformType, err := utilsHelpers.GetPlatformType()
 	Expect(err).NotTo(HaveOccurred())
+
+	isBM = false
+	if platformType == configv1.BareMetalPlatformType {
+		isBM = true
+	}
 })
 
 func TestE2e(t *testing.T) {

@@ -156,7 +156,7 @@ func TestCommatrixGeneration(t *testing.T) {
 	}{
 		{
 			name: "Should generate CSV output",
-			args: []string{"generate", "--format", "csv", "--destDir", destDir, "--platform-type", "aws"},
+			args: []string{"generate", "--format", "csv", "--destDir", destDir},
 			expectedFunc: func() (string, error) {
 				expectedOutput, err := expectedComMatrix.ToCSV()
 				return string(expectedOutput), err
@@ -165,7 +165,7 @@ func TestCommatrixGeneration(t *testing.T) {
 		},
 		{
 			name: "Should generate JSON output",
-			args: []string{"generate", "--format", "json", "--destDir", destDir, "--platform-type", "aws"},
+			args: []string{"generate", "--format", "json", "--destDir", destDir},
 			expectedFunc: func() (string, error) {
 				expectedOutput, err := expectedComMatrix.ToJSON()
 				return string(expectedOutput), err
@@ -173,24 +173,8 @@ func TestCommatrixGeneration(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Should Return failure on misssing platform-type",
-			args: []string{"generate"},
-			expectedFunc: func() (string, error) {
-				return "", fmt.Errorf("required flag(s) \"platform-type\" not set")
-			},
-			wantErr: true,
-		},
-		{
-			name: "Should Return failure on platform-type validation",
-			args: []string{"generate", "--platform-type", "test"},
-			expectedFunc: func() (string, error) {
-				return "", fmt.Errorf("invalid platform type test, valid options: [baremetal aws]")
-			},
-			wantErr: true,
-		},
-		{
 			name: "Should Return failure on format validation",
-			args: []string{"generate", "--format", "test", "--platform-type", "aws"},
+			args: []string{"generate", "--format", "test"},
 			expectedFunc: func() (string, error) {
 				return "", fmt.Errorf("invalid format 'test', valid options are: csv, json, yaml, nft")
 			},
@@ -198,7 +182,7 @@ func TestCommatrixGeneration(t *testing.T) {
 		},
 		{
 			name: "Should return failure when customEntriesPath is set but customEntriesFormat is missing",
-			args: []string{"generate", "--customEntriesPath", "/path/to/customEntriesFile", "--platform-type", "aws"},
+			args: []string{"generate", "--customEntriesPath", "/path/to/customEntriesFile"},
 			expectedFunc: func() (string, error) {
 				return "", fmt.Errorf("you must specify the --customEntriesFormat when using --customEntriesPath")
 			},
@@ -206,7 +190,7 @@ func TestCommatrixGeneration(t *testing.T) {
 		},
 		{
 			name: "Should return failure when customEntriesFormat is set but customEntriesPath is missing",
-			args: []string{"generate", "--customEntriesFormat", "nft", "--platform-type", "aws"},
+			args: []string{"generate", "--customEntriesFormat", "nft"},
 			expectedFunc: func() (string, error) {
 				return "", fmt.Errorf("you must specify the --customEntriesPath when using --customEntriesFormat")
 			},
@@ -214,7 +198,7 @@ func TestCommatrixGeneration(t *testing.T) {
 		},
 		{
 			name: "Should return failure when customEntriesFormat not valid",
-			args: []string{"generate", "--customEntriesPath", "/path/to/customEntriesFile", "--customEntriesFormat", "invalid", "--platform-type", "aws"},
+			args: []string{"generate", "--customEntriesPath", "/path/to/customEntriesFile", "--customEntriesFormat", "invalid"},
 			expectedFunc: func() (string, error) {
 				return "", fmt.Errorf("invalid custom entries format 'invalid', valid options are: csv, json, yaml")
 			},
