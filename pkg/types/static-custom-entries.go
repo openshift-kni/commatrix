@@ -276,54 +276,6 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 	},
 }
 
-var CloudStaticEntriesWorker = []ComDetails{
-	{
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      10300,
-		NodeRole:  "worker",
-		Service:   "csi-livenessprobe",
-		Namespace: "openshift-cluster-csi-drivers",
-		Pod:       "csi-driver-node",
-		Container: "csi-driver",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      10309,
-		NodeRole:  "worker",
-		Service:   "csi-node-driver",
-		Namespace: "openshift-cluster-csi-drivers",
-		Pod:       "csi-driver-node",
-		Container: "csi-node-driver-registrar",
-		Optional:  false,
-	},
-}
-
-var CloudStaticEntriesMaster = []ComDetails{
-	{
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      10300,
-		NodeRole:  "master",
-		Service:   "csi-livenessprobe",
-		Namespace: "openshift-cluster-csi-drivers",
-		Pod:       "csi-driver-node",
-		Container: "csi-driver",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      10309,
-		NodeRole:  "master",
-		Service:   "csi-node-driver",
-		Namespace: "openshift-cluster-csi-drivers",
-		Pod:       "csi-driver-node",
-		Container: "csi-node-driver-registrar",
-		Optional:  false,
-	},
-}
-
 var StandardStaticEntries = []ComDetails{
 	{
 		Direction: "Ingress",
