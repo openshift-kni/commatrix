@@ -14,6 +14,7 @@ import (
 	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/utils"
+	configv1 "github.com/openshift/api/config/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -190,7 +191,6 @@ func Run(o *GenerateOptions) (err error) {
 
 	log.Debug("Detecting deployment and infra types")
 	deployment := types.Standard
-	infra := types.Cloud
 
 	isSNO, err := o.utilsHelpers.IsSNOCluster()
 	if err != nil {
@@ -201,16 +201,12 @@ func Run(o *GenerateOptions) (err error) {
 		deployment = types.SNO
 	}
 
-	platformType, err := o.utilsHelpers.IsBMInfra()
+	platformType, err := o.utilsHelpers.GetPlatformType()
 	if err != nil {
 		return fmt.Errorf("failed to get platform type %s", err)
 	}
 
-	if platformType {
-		infra = types.Baremetal
-	}
-
-	matrix, err := generateMatrix(o, deployment, infra)
+	matrix, err := generateMatrix(o, deployment, platformType)
 	if err != nil {
 		return fmt.Errorf("failed to generate endpoint slice matrix: %v", err)
 	}
@@ -239,7 +235,7 @@ func Run(o *GenerateOptions) (err error) {
 	return nil
 }
 
-func generateMatrix(o *GenerateOptions, deployment types.Deployment, infra types.Env) (*types.ComMatrix, error) {
+func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformType configv1.PlatformType) (*types.ComMatrix, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -250,7 +246,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, infra types
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, infra, deployment)
+	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, deployment)
 	if err != nil {
 		return nil, err
 	}

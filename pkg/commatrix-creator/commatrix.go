@@ -10,22 +10,23 @@ import (
 
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
+	configv1 "github.com/openshift/api/config/v1"
 )
 
 type CommunicationMatrixCreator struct {
 	exporter            *endpointslices.EndpointSlicesExporter
 	customEntriesPath   string
 	customEntriesFormat string
-	e                   types.Env
+	platformType        configv1.PlatformType
 	d                   types.Deployment
 }
 
-func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, e types.Env, d types.Deployment) (*CommunicationMatrixCreator, error) {
+func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, d types.Deployment) (*CommunicationMatrixCreator, error) {
 	return &CommunicationMatrixCreator{
 		exporter:            exporter,
 		customEntriesPath:   customEntriesPath,
 		customEntriesFormat: customEntriesFormat,
-		e:                   e,
+		platformType:        platformType,
 		d:                   d,
 	}, nil
 }
@@ -106,23 +107,25 @@ func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, er
 	log.Debug("Determining static entries based on environment and deployment")
 	comDetails := []types.ComDetails{}
 
-	switch cm.e {
-	case types.Baremetal:
+	switch cm.platformType {
+	case configv1.BareMetalPlatformType:
 		log.Debug("Adding Baremetal static entries")
 		comDetails = append(comDetails, types.BaremetalStaticEntriesMaster...)
 		if cm.d == types.SNO {
 			break
 		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
-	case types.Cloud:
+	case configv1.AWSPlatformType:
 		log.Debug("Adding Cloud static entries")
 		comDetails = append(comDetails, types.CloudStaticEntriesMaster...)
 		if cm.d == types.SNO {
 			break
 		}
 		comDetails = append(comDetails, types.CloudStaticEntriesWorker...)
+	case configv1.NonePlatformType:
+		break
 	default:
-		log.Errorf("Invalid value for cluster environment: %v", cm.e)
+		log.Errorf("Invalid value for cluster environment: %v", cm.platformType)
 		return nil, fmt.Errorf("invalid value for cluster environment")
 	}
 
