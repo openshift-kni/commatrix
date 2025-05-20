@@ -1,5 +1,7 @@
 Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
 Ingress,TCP,10258,openshift-cloud-controller-manager-operator,cloud-controller,cloud-controller-manager,cloud-controller-manager,master,FALSE
 Ingress,TCP,10260,openshift-cloud-controller-manager-operator,cloud-controller,cloud-controller-manager,cloud-controller-manager,master,FALSE
+Ingress,UDP,6081,openshift-ovn-kubernetes,ovn-kubernetes geneve,,,master,FALSE
 Ingress,TCP,80,openshift-ingress,router-default,router-default,router,worker,FALSE
 Ingress,TCP,443,openshift-ingress,router-default,router-default,router,worker,FALSE
+Ingress,UDP,6081,openshift-ovn-kubernetes,ovn-kubernetes geneve,,,worker,FALSE
