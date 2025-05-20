@@ -60,17 +60,6 @@ type ContainerInfo struct {
 	} `json:"containers"`
 }
 
-func GetDeployment(deploymentStr string) (Deployment, error) {
-	switch deploymentStr {
-	case "standard":
-		return Standard, nil
-	case "sno":
-		return SNO, nil
-	default:
-		return -1, fmt.Errorf("invalid deployment type: %s", deploymentStr)
-	}
-}
-
 func (m *ComMatrix) ToCSV() ([]byte, error) {
 	out := make([]byte, 0)
 	w := bytes.NewBuffer(out)

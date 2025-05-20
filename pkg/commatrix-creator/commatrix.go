@@ -21,16 +21,16 @@ type CommunicationMatrixCreator struct {
 	customEntriesPath   string
 	customEntriesFormat string
 	platformType        configv1.PlatformType
-	d                   types.Deployment
+	deployment          types.Deployment
 }
 
-func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, d types.Deployment) (*CommunicationMatrixCreator, error) {
+func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, deployment types.Deployment) (*CommunicationMatrixCreator, error) {
 	return &CommunicationMatrixCreator{
 		exporter:            exporter,
 		customEntriesPath:   customEntriesPath,
 		customEntriesFormat: customEntriesFormat,
 		platformType:        platformType,
-		d:                   d,
+		deployment:          deployment,
 	}, nil
 }
 
@@ -133,14 +133,14 @@ func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, er
 	case configv1.BareMetalPlatformType:
 		log.Debug("Adding Baremetal static entries")
 		comDetails = append(comDetails, types.BaremetalStaticEntriesMaster...)
-		if cm.d == types.SNO {
+		if cm.deployment == types.SNO {
 			break
 		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
 	case configv1.AWSPlatformType:
 		log.Debug("Adding Cloud static entries")
 		comDetails = append(comDetails, types.CloudStaticEntriesMaster...)
-		if cm.d == types.SNO {
+		if cm.deployment == types.SNO {
 			break
 		}
 		comDetails = append(comDetails, types.CloudStaticEntriesWorker...)
@@ -153,7 +153,7 @@ func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, er
 
 	log.Debug("Adding general static entries")
 	comDetails = append(comDetails, types.GeneralStaticEntriesMaster...)
-	if cm.d == types.SNO {
+	if cm.deployment == types.SNO {
 		return comDetails, nil
 	}
 
