@@ -8,7 +8,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "k8s.io/api/core/v1"
+	v1 "github.com/openshift/api/config/v1"
+	v10 "k8s.io/api/core/v1"
 )
 
 // MockUtilsInterface is a mock of UtilsInterface interface.
@@ -49,10 +50,10 @@ func (mr *MockUtilsInterfaceMockRecorder) CreateNamespace(namespace interface{})
 }
 
 // CreatePodOnNode mocks base method.
-func (m *MockUtilsInterface) CreatePodOnNode(nodeName, namespace, image string, command []string) (*v1.Pod, error) {
+func (m *MockUtilsInterface) CreatePodOnNode(nodeName, namespace, image string, command []string) (*v10.Pod, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePodOnNode", nodeName, namespace, image, command)
-	ret0, _ := ret[0].(*v1.Pod)
+	ret0, _ := ret[0].(*v10.Pod)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -78,7 +79,7 @@ func (mr *MockUtilsInterfaceMockRecorder) DeleteNamespace(namespace interface{})
 }
 
 // DeletePod mocks base method.
-func (m *MockUtilsInterface) DeletePod(pod *v1.Pod) error {
+func (m *MockUtilsInterface) DeletePod(pod *v10.Pod) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeletePod", pod)
 	ret0, _ := ret[0].(error)
@@ -91,8 +92,23 @@ func (mr *MockUtilsInterfaceMockRecorder) DeletePod(pod interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePod", reflect.TypeOf((*MockUtilsInterface)(nil).DeletePod), pod)
 }
 
+// GetPlatformType mocks base method.
+func (m *MockUtilsInterface) GetPlatformType() (v1.PlatformType, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPlatformType")
+	ret0, _ := ret[0].(v1.PlatformType)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPlatformType indicates an expected call of GetPlatformType.
+func (mr *MockUtilsInterfaceMockRecorder) GetPlatformType() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformType", reflect.TypeOf((*MockUtilsInterface)(nil).GetPlatformType))
+}
+
 // GetPodLogs mocks base method.
-func (m *MockUtilsInterface) GetPodLogs(namespace string, pod *v1.Pod) (string, error) {
+func (m *MockUtilsInterface) GetPodLogs(namespace string, pod *v10.Pod) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPodLogs", namespace, pod)
 	ret0, _ := ret[0].(string)
@@ -104,21 +120,6 @@ func (m *MockUtilsInterface) GetPodLogs(namespace string, pod *v1.Pod) (string, 
 func (mr *MockUtilsInterfaceMockRecorder) GetPodLogs(namespace, pod interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPodLogs", reflect.TypeOf((*MockUtilsInterface)(nil).GetPodLogs), namespace, pod)
-}
-
-// IsBMInfra mocks base method.
-func (m *MockUtilsInterface) IsBMInfra() (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsBMInfra")
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsBMInfra indicates an expected call of IsBMInfra.
-func (mr *MockUtilsInterfaceMockRecorder) IsBMInfra() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsBMInfra", reflect.TypeOf((*MockUtilsInterface)(nil).IsBMInfra))
 }
 
 // IsSNOCluster mocks base method.
@@ -137,7 +138,7 @@ func (mr *MockUtilsInterfaceMockRecorder) IsSNOCluster() *gomock.Call {
 }
 
 // RunCommandOnPod mocks base method.
-func (m *MockUtilsInterface) RunCommandOnPod(pod *v1.Pod, command []string) ([]byte, error) {
+func (m *MockUtilsInterface) RunCommandOnPod(pod *v10.Pod, command []string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunCommandOnPod", pod, command)
 	ret0, _ := ret[0].([]byte)
@@ -152,7 +153,7 @@ func (mr *MockUtilsInterfaceMockRecorder) RunCommandOnPod(pod, command interface
 }
 
 // WaitForPodStatus mocks base method.
-func (m *MockUtilsInterface) WaitForPodStatus(namespace string, pod *v1.Pod, PodPhase v1.PodPhase) error {
+func (m *MockUtilsInterface) WaitForPodStatus(namespace string, pod *v10.Pod, PodPhase v10.PodPhase) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitForPodStatus", namespace, pod, PodPhase)
 	ret0, _ := ret[0].(error)

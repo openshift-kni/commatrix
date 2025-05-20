@@ -14,6 +14,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -23,7 +24,7 @@ var (
 	isSNO        bool
 	isBM         bool
 	deployment   types.Deployment
-	infra        types.Env
+	platformType configv1.PlatformType
 	utilsHelpers utils.UtilsInterface
 	epExporter   *endpointslices.EndpointSlicesExporter
 	nodeList     *corev1.NodeList
@@ -62,19 +63,21 @@ var _ = BeforeSuite(func() {
 		deployment = types.SNO
 	}
 
-	infra = types.Cloud
-	isBM, err = utilsHelpers.IsBMInfra()
+	platformType, err := utilsHelpers.GetPlatformType()
 	Expect(err).NotTo(HaveOccurred())
 
-	if isBM {
-		infra = types.Baremetal
+	isBM = false
+	// Assuming Telco partners use 'None' platform type just on Bare Metal.
+	// Mark as Bare Metal if the platform type is either 'BareMetal' (multi-node BM) or 'None' (SNO BM).
+	if platformType == configv1.BareMetalPlatformType || platformType == configv1.NonePlatformType {
+		isBM = true
 	}
 
 	epExporter, err = endpointslices.New(cs)
 	Expect(err).ToNot(HaveOccurred())
 
 	By("Generating comMatrix")
-	commMatrixCreator, err := commatrixcreator.New(epExporter, "", "", infra, deployment)
+	commMatrixCreator, err := commatrixcreator.New(epExporter, "", "", platformType, deployment)
 	Expect(err).NotTo(HaveOccurred())
 
 	commatrix, err = commMatrixCreator.CreateEndpointMatrix()

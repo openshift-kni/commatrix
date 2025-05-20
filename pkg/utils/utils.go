@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -31,7 +32,7 @@ type UtilsInterface interface {
 	RunCommandOnPod(pod *corev1.Pod, command []string) ([]byte, error)
 	GetPodLogs(namespace string, pod *corev1.Pod) (string, error)
 	WriteFile(path string, data []byte) error
-	IsBMInfra() (bool, error)
+	GetPlatformType() (configv1.PlatformType, error)
 	IsSNOCluster() (bool, error)
 	WaitForPodStatus(namespace string, pod *corev1.Pod, PodPhase corev1.PodPhase) error
 }
@@ -44,6 +45,12 @@ const (
 	interval = 1 * time.Second
 	timeout  = 10 * time.Minute
 )
+
+var SupportedPlatforms = []configv1.PlatformType{
+	configv1.AWSPlatformType,
+	configv1.BareMetalPlatformType,
+	configv1.NonePlatformType,
+}
 
 func New(c *client.ClientSet) UtilsInterface {
 	return &utils{c}
@@ -229,14 +236,21 @@ func (u *utils) IsSNOCluster() (bool, error) {
 	return infra.Status.ControlPlaneTopology == configv1.SingleReplicaTopologyMode, nil
 }
 
-func (u *utils) IsBMInfra() (bool, error) {
+// GetPlatformType returns the cluster's platform type.
+// If it's not AWS, BareMetal, or None, it returns an unsupported platform error.
+func (u *utils) GetPlatformType() (configv1.PlatformType, error) {
 	infra := &configv1.Infrastructure{}
 	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "cluster"}, infra)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 
-	return infra.Status.PlatformStatus.Type == configv1.BareMetalPlatformType, nil
+	platformType := infra.Status.PlatformStatus.Type
+	if !slices.Contains(SupportedPlatforms, platformType) {
+		return "", fmt.Errorf("unsupported platform type: %s. Supported platform types are: %v", platformType, SupportedPlatforms)
+	}
+
+	return platformType, nil
 }
 
 func (u *utils) GetPodLogs(namespace string, pod *corev1.Pod) (string, error) {
