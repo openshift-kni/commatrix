@@ -239,22 +239,8 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
-			wantedComDetails := slices.Concat(types.CloudStaticEntriesMaster, types.CloudStaticEntriesWorker,
-				types.GeneralStaticEntriesMaster, types.StandardStaticEntries, types.GeneralStaticEntriesWorker)
-			o.Expect(gotComDetails).To(o.Equal(wantedComDetails))
-		})
-
-		g.It("Should successfully get static entries suitable to cloud SNO cluster", func() {
-			g.By("Creating new communication matrix suitable to cloud SNO cluster")
-			cm, err := New(nil, "", "", types.Cloud, types.SNO)
-			o.Expect(err).ToNot(o.HaveOccurred())
-
-			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.getStaticEntries()
-			o.Expect(err).ToNot(o.HaveOccurred())
-
-			g.By("Comparing gotten static entries to wanted comDetails")
-			wantedComDetails := slices.Concat(types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster)
+			wantedComDetails := slices.Concat(types.GeneralStaticEntriesMaster,
+				types.StandardStaticEntries, types.GeneralStaticEntriesWorker)
 			o.Expect(gotComDetails).To(o.Equal(wantedComDetails))
 		})
 
@@ -302,7 +288,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Generating wanted comDetails based on cluster features")
-			wantedComDetails := slices.Concat(testEpsComDetails, types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster)
+			wantedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster)
 
 			g.By("Add to wanted comDetails the example static entries")
 			wantedComDetails = slices.Concat(wantedComDetails, exampleComDetailsList)
@@ -326,7 +312,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Generating wanted comDetails")
-			wantedComDetails := slices.Concat(testEpsComDetails, types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster)
+			wantedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster)
 			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 
