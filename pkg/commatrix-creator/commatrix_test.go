@@ -240,8 +240,8 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
-			wantedComDetails := slices.Concat(types.CloudStaticEntriesMaster, types.CloudStaticEntriesWorker,
-				types.GeneralStaticEntriesMaster, types.StandardStaticEntries, types.GeneralStaticEntriesWorker)
+			wantedComDetails := slices.Concat(types.CloudStaticEntriesMaster, types.GeneralStaticEntriesMaster,
+				types.StandardStaticEntries, types.GeneralStaticEntriesWorker)
 			o.Expect(gotComDetails).To(o.Equal(wantedComDetails))
 		})
 
