@@ -14,6 +14,7 @@ import (
 	listeningsockets "github.com/openshift-kni/commatrix/pkg/listening-sockets"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/utils"
+	configv1 "github.com/openshift/api/config/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -33,31 +34,22 @@ var (
 
 	`)
 	CommatrixExample = templates.Examples(`
-			 # Note: The --platform-type flag is required for all commands.
-
-			 # Generate the communication matrix in default format (csv) on AWS:
-			 oc commatrix generate --platform-type aws 
+			 # Generate the communication matrix in default format (csv):
+			 oc commatrix generate  
 			 
-			 # Generate the communication matrix in nft format on baremetal platform:
-			 oc commatrix generate --platform-type baremetal --format nft 
-
-			 # Generate the communication matrix in json format with debug logs on AWS:
-			 oc commatrix generate --platform-type aws --format json --debug
+			 # Generate the communication matrix in nft format:
+			 oc commatrix generate --format nft 
 			 
-			 # Generate communication matrix, host open ports matrix, and their difference in yaml format on baremetal:
-			 oc commatrix generate --platform-type baremetal --host-open-ports --format yaml 
+			 # Generate the communication matrix in json format with debug logs:
+			 oc commatrix generate --format json --debug
 			 
-			 # Generate the communication matrix in json format with custom entries on AWS:
-			 oc commatrix generate --platform-type aws --format json --customEntriesPath /path/to/customEntriesFile --customEntriesFormat json
+			 # Generate communication matrix, host open ports matrix, and their difference in yaml format:
+			 oc commatrix generate --host-open-ports --format yaml 
+			 
+			 # Generate the communication matrix in json format with custom entries:
+			 oc commatrix generate --format json --customEntriesPath /path/to/customEntriesFile --customEntriesFormat json
 			 
 	`)
-)
-
-type Platform string
-
-const (
-	PlatformBaremetal Platform = "baremetal"
-	PlatformAWS       Platform = "aws"
 )
 
 var (
@@ -73,15 +65,9 @@ var (
 		types.FormatJSON,
 		types.FormatYAML,
 	}
-
-	validPlatformType = []Platform{
-		PlatformBaremetal,
-		PlatformAWS,
-	}
 )
 
 type GenerateOptions struct {
-	platformType        string
 	destDir             string
 	format              string
 	customEntriesPath   string
@@ -138,17 +124,12 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 			return nil
 		},
 	}
-
 	cmd.Flags().StringVar(&o.destDir, "destDir", "", "Output files dir (default communication-matrix)")
 	cmd.Flags().StringVar(&o.format, "format", "csv", "Desired format (json,yaml,csv,nft)")
-	cmd.Flags().StringVar(&o.platformType, "platform-type", "", fmt.Sprintf("Platform Type %v, Required", validPlatformType))
+	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 	cmd.Flags().BoolVar(&o.openPorts, "host-open-ports", false, "Generate communication matrix, host open ports matrix, and their difference")
-	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
-	if err := cmd.MarkFlagRequired("platform-type"); err != nil { // make it as required flag
-		log.Fatalf("failed to mark platform-type as required: %v", err)
-	}
 
 	return cmd
 }
@@ -161,10 +142,6 @@ func Validate(o *GenerateOptions) error {
 
 	if err := validateCustomEntries(o.customEntriesPath, o.customEntriesFormat, validCustomEntriesFormats); err != nil {
 		return err
-	}
-
-	if !slices.Contains(validPlatformType, Platform(o.platformType)) {
-		return fmt.Errorf("invalid platform type %s, valid options: %v", o.platformType, validPlatformType)
 	}
 
 	return nil
@@ -214,7 +191,6 @@ func Run(o *GenerateOptions) (err error) {
 
 	log.Debug("Detecting deployment and infra types")
 	deployment := types.Standard
-	infra := types.AWS
 
 	isSNO, err := o.utilsHelpers.IsSNOCluster()
 	if err != nil {
@@ -225,11 +201,12 @@ func Run(o *GenerateOptions) (err error) {
 		deployment = types.SNO
 	}
 
-	if Platform(o.platformType) == PlatformBaremetal {
-		infra = types.Baremetal
+	platformType, err := o.utilsHelpers.GetPlatformType()
+	if err != nil {
+		return fmt.Errorf("failed to get platform type %s", err)
 	}
 
-	matrix, err := generateMatrix(o, deployment, infra)
+	matrix, err := generateMatrix(o, deployment, platformType)
 	if err != nil {
 		return fmt.Errorf("failed to generate endpoint slice matrix: %v", err)
 	}
@@ -258,7 +235,7 @@ func Run(o *GenerateOptions) (err error) {
 	return nil
 }
 
-func generateMatrix(o *GenerateOptions, deployment types.Deployment, infra types.Env) (*types.ComMatrix, error) {
+func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformType configv1.PlatformType) (*types.ComMatrix, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -269,7 +246,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, infra types
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, infra, deployment)
+	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, deployment)
 	if err != nil {
 		return nil, err
 	}

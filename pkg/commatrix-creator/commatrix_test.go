@@ -15,6 +15,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
+	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek "k8s.io/client-go/kubernetes/fake"
 )
@@ -160,7 +161,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 		for _, format := range []string{types.FormatCSV, types.FormatJSON, types.FormatYAML} {
 			g.It(fmt.Sprintf("Should successfully extract ComDetails from a %s file", format), func() {
 				g.By(fmt.Sprintf("Creating new communication matrix with %s static entries format", format))
-				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, 0, 0)
+				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, configv1.BareMetalPlatformType, 0)
 				o.Expect(err).ToNot(o.HaveOccurred())
 
 				g.By("Getting ComDetails List From File")
@@ -174,7 +175,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to non-matched customEntriesPath and customEntriesFormat types", func() {
 			g.By("Creating new communication matrix with non-matched customEntriesPath and customEntriesFormat")
-			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, 0, 0)
+			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, configv1.BareMetalPlatformType, 0)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting ComDetails List From File")
@@ -187,7 +188,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to an invalid customEntriesFormat", func() {
 			g.By("Creating new communication matrix with invalid customEntriesFormat")
-			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, 0, 0)
+			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, configv1.BareMetalPlatformType, 0)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting ComDetails List From File")
@@ -202,7 +203,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 	g.Context("Get static entries from file", func() {
 		g.It("Should successfully get static entries suitable to baremetal standard cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal standard cluster")
-			cm, err := New(nil, "", "", types.Baremetal, types.Standard)
+			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, types.Standard)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -217,7 +218,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to baremetal SNO cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal SNO cluster")
-			cm, err := New(nil, "", "", types.Baremetal, types.SNO)
+			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -231,7 +232,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to cloud standard cluster", func() {
 			g.By("Creating new communication matrix suitable to cloud standard cluster")
-			cm, err := New(nil, "", "", types.AWS, types.Standard)
+			cm, err := New(nil, "", "", configv1.AWSPlatformType, types.Standard)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -246,7 +247,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to cloud SNO cluster", func() {
 			g.By("Creating new communication matrix suitable to cloud SNO cluster")
-			cm, err := New(nil, "", "", types.AWS, types.SNO)
+			cm, err := New(nil, "", "", configv1.AWSPlatformType, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -260,7 +261,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to an invalid value for cluster environment", func() {
 			g.By("Creating new communication matrix with an invalid value for cluster environment")
-			cm, err := New(nil, "", "", -1, types.SNO)
+			cm, err := New(nil, "", "", "invalid", types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -296,7 +297,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix with custom entries", func() {
 			g.By("Creating new communication matrix with static entries")
-			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, types.AWS, types.SNO)
+			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, configv1.AWSPlatformType, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
@@ -320,7 +321,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
 			g.By("Creating new communication matrix without static entries")
-			commatrixCreator, err := New(endpointSlices, "", "", types.AWS, types.SNO)
+			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, types.SNO)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())

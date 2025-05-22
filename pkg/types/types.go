@@ -20,13 +20,6 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/utils"
 )
 
-type Env int
-
-const (
-	Baremetal Env = iota
-	AWS
-)
-
 type Deployment int
 
 const (
@@ -65,28 +58,6 @@ type ContainerInfo struct {
 			PodNamespace  string `json:"io.kubernetes.pod.namespace"`
 		} `json:"labels"`
 	} `json:"containers"`
-}
-
-func GetEnv(envStr string) (Env, error) {
-	switch envStr {
-	case "baremetal":
-		return Baremetal, nil
-	case "aws":
-		return AWS, nil
-	default:
-		return -1, fmt.Errorf("invalid cluster environment: %s", envStr)
-	}
-}
-
-func GetDeployment(deploymentStr string) (Deployment, error) {
-	switch deploymentStr {
-	case "standard":
-		return Standard, nil
-	case "sno":
-		return SNO, nil
-	default:
-		return -1, fmt.Errorf("invalid deployment type: %s", deploymentStr)
-	}
 }
 
 func (m *ComMatrix) ToCSV() ([]byte, error) {
