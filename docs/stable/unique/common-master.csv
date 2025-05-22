@@ -31,4 +31,3 @@ Ingress,TCP,17697,openshift-kube-apiserver,openshift-kube-apiserver-healthz,kube
 Ingress,TCP,22623,openshift-machine-config-operator,machine-config-server,machine-config-server,machine-config-server,master,FALSE
 Ingress,TCP,22624,openshift-machine-config-operator,machine-config-server,machine-config-server,machine-config-server,master,FALSE
 Ingress,UDP,111,Host system service,rpcbind,,,master,TRUE
-Ingress,UDP,6081,openshift-ovn-kubernetes,ovn-kubernetes geneve,,,master,FALSE
