@@ -63,14 +63,9 @@ func main() {
 	}
 
 	log.Debug("Get infra type")
-	infra := types.Cloud
-	isBM, err := utilsHelpers.IsBMInfra()
+	platformType, err := utilsHelpers.GetPlatformType()
 	if err != nil {
 		log.Panicf("Failed to get infra type %v", err)
-	}
-
-	if isBM {
-		infra = types.Baremetal
 	}
 
 	epExporter, err := endpointslices.New(cs)
@@ -80,7 +75,7 @@ func main() {
 	log.Debug("EndpointSlices exporter created")
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, customEntriesPath, customEntriesFormat, infra, deployment)
+	commMatrix, err := commatrixcreator.New(epExporter, customEntriesPath, customEntriesFormat, platformType, deployment)
 	if err != nil {
 		log.Panicf("Failed creating comm matrix creator: %v", err)
 	}
