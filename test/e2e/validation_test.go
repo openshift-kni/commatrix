@@ -73,7 +73,7 @@ var _ = Describe("Validation", func() {
 
 		By(fmt.Sprintf("Filter documented commatrix type %s for diff generation", docType))
 		// get origin documented commatrix details
-		docComMatrixCreator, err := commatrixcreator.New(epExporter, docCommatrixFilePath, types.FormatCSV, infra, deployment)
+		docComMatrixCreator, err := commatrixcreator.New(epExporter, docCommatrixFilePath, types.FormatCSV, platformType, deployment)
 		Expect(err).ToNot(HaveOccurred())
 		docComDetailsList, err := docComMatrixCreator.GetComDetailsListFromFile()
 		Expect(err).ToNot(HaveOccurred())
@@ -123,7 +123,7 @@ var _ = Describe("Validation", func() {
 		missingPortsMat := endpointslicesDiffWithDocMat.GenerateUniquePrimary()
 		if openPortsToIgnoreFile != "" && openPortsToIgnoreFormat != "" {
 			// generate open ports to ignore commatrix
-			portsToIgnoreCommatrixCreator, err := commatrixcreator.New(epExporter, openPortsToIgnoreFile, openPortsToIgnoreFormat, infra, deployment)
+			portsToIgnoreCommatrixCreator, err := commatrixcreator.New(epExporter, openPortsToIgnoreFile, openPortsToIgnoreFormat, platformType, deployment)
 			Expect(err).ToNot(HaveOccurred())
 			portsToIgnoreComDetails, err := portsToIgnoreCommatrixCreator.GetComDetailsListFromFile()
 			Expect(err).ToNot(HaveOccurred())
