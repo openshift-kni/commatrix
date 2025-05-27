@@ -350,16 +350,6 @@ var CloudStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
-		Port:      10260,
-		NodeRole:  "master",
-		Service:   "cloud-controller",
-		Namespace: "openshift-cloud-controller-manager-operator",
-		Pod:       "cloud-controller-manager",
-		Container: "cloud-controller-manager",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
 		Port:      10258,
 		NodeRole:  "master",
 		Service:   "cloud-controller",
