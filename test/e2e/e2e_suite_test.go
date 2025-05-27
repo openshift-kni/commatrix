@@ -17,7 +17,7 @@ import (
 var (
 	cs           *client.ClientSet
 	isSNO        bool
-	isBM         bool
+	platformType configv1.PlatformType
 	utilsHelpers utils.UtilsInterface
 	nodeList     *corev1.NodeList
 	artifactsDir string
@@ -49,15 +49,8 @@ var _ = BeforeSuite(func() {
 	isSNO, err = utilsHelpers.IsSNOCluster()
 	Expect(err).NotTo(HaveOccurred())
 
-	platformType, err := utilsHelpers.GetPlatformType()
+	platformType, err = utilsHelpers.GetPlatformType()
 	Expect(err).NotTo(HaveOccurred())
-
-	isBM = false
-	// Assuming Telco partners use 'None' platform type just on Bare Metal.
-	// Mark as Bare Metal if the platform type is either 'BareMetal' (multi-node BM) or 'None' (SNO BM).
-	if platformType == configv1.BareMetalPlatformType || platformType == configv1.NonePlatformType {
-		isBM = true
-	}
 })
 
 func TestE2e(t *testing.T) {

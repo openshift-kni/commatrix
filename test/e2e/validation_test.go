@@ -22,34 +22,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
 
-var (
-	// Entries which are open on the worker node instead of master in standard cluster.
-	// Will be excluded in diff generatation between documented and generated comMatrix.
-	StandardExcludedMasterComDetails = []types.ComDetails{
-		{
-			Direction: "Ingress",
-			Protocol:  "TCP",
-			Port:      80,
-			NodeRole:  "master",
-			Service:   "router-default",
-			Namespace: "openshift-ingress",
-			Pod:       "router-default",
-			Container: "router",
-			Optional:  false,
-		}, {
-			Direction: "Ingress",
-			Protocol:  "TCP",
-			Port:      443,
-			NodeRole:  "master",
-			Service:   "router-default",
-			Namespace: "openshift-ingress",
-			Pod:       "router-default",
-			Container: "router",
-			Optional:  false,
-		},
-	}
-	commatrix *types.ComMatrix
-)
+var commatrix *types.ComMatrix
 
 const (
 	docCommatrixBaseFilePath = "../../docs/stable/raw/%s.csv"
@@ -88,7 +61,9 @@ var _ = Describe("Validation", func() {
 	It("generated communication matrix should be equal to documented communication matrix", func() {
 		By("generate documented commatrix file path")
 		docType := "aws"
-		if isBM {
+		// Mark as Bare Metal if the platform type is either 'BareMetal' (multi-node BM) or 'None' (SNO BM).
+		// Assuming Telco partners use 'None' platform type just on Bare Metal.
+		if platformType == configv1.BareMetalPlatformType || platformType == configv1.NonePlatformType {
 			docType = "bm"
 		}
 		if isSNO {
@@ -102,26 +77,6 @@ var _ = Describe("Validation", func() {
 
 		docComDetailsList, err := types.ParseToComDetailsList(docCommatrixFileContent, types.FormatCSV)
 		Expect(err).ToNot(HaveOccurred(), "Failed to parse documented communication matrix")
-
-		if isSNO {
-			// Exclude all worker nodes static entries.
-			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: docComDetailsList}, "worker")
-			// Exclude static entries of standard deployment type.
-			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: types.StandardStaticEntries}, "master")
-		} else {
-			// Exclude specific master entries (see StandardExcludedMasterComDetails var description)
-			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: StandardExcludedMasterComDetails}, "master")
-		}
-
-		// if cluster is running on BM exclude Cloud static entries in diff generation
-		// else cluster is running on Cloud and exclude BM static entries in diff generation.
-		if isBM {
-			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: types.CloudStaticEntriesMaster}, "master")
-		} else {
-			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: types.BaremetalStaticEntriesWorker}, "worker")
-			docComDetailsList = excludeStaticEntriesWithGivenNodeRole(docComDetailsList, &types.ComMatrix{Matrix: types.BaremetalStaticEntriesMaster}, "master")
-		}
-
 		docComMatrix := &types.ComMatrix{Matrix: docComDetailsList}
 
 		By("generating diff between matrices for testing purposes")
@@ -129,7 +84,7 @@ var _ = Describe("Validation", func() {
 		diffStr, err := endpointslicesDiffWithDocMat.String()
 		Expect(err).ToNot(HaveOccurred())
 
-		err = os.WriteFile(filepath.Join(artifactsDir, "doc-diff-new"), []byte(diffFileComments+diffStr), 0644)
+		err = os.WriteFile(filepath.Join(artifactsDir, "doc-diff-commatrix"), []byte(diffFileComments+diffStr), 0644)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("comparing new and documented commatrices")
@@ -153,7 +108,6 @@ var _ = Describe("Validation", func() {
 
 			portsToIgnoreComDetails, err := types.ParseToComDetailsList(portsToIgnoreFileContent, openPortsToIgnoreFormat)
 			Expect(err).ToNot(HaveOccurred())
-
 			portsToIgnoreMat = &types.ComMatrix{Matrix: portsToIgnoreComDetails}
 
 			// generate the diff matrix between the open ports to ignore matrix and the missing ports in the documented commatrix (based on the diff between the enpointslice and the doc matrix)
@@ -192,23 +146,6 @@ var _ = Describe("Validation", func() {
 		}
 	})
 })
-
-// excludeStaticEntriesWithGivenNodeRole excludes from comDetails, static entries from staticEntriesMatrix with the given nodeRole
-// The function returns filtered ComDetails without the excluded entries.
-func excludeStaticEntriesWithGivenNodeRole(comDetails []types.ComDetails, staticEntriesMatrix *types.ComMatrix, nodeRole string) []types.ComDetails {
-	filteredComDetails := []types.ComDetails{}
-	for _, cd := range comDetails {
-		switch cd.NodeRole {
-		case nodeRole:
-			if !staticEntriesMatrix.Contains(cd) {
-				filteredComDetails = append(filteredComDetails, cd)
-			}
-		default:
-			filteredComDetails = append(filteredComDetails, cd)
-		}
-	}
-	return filteredComDetails
-}
 
 // Filter known ports to skip on checking.
 func filterKnownPorts(mat *types.ComMatrix) (*types.ComMatrix, error) {
