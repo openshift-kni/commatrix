@@ -71,16 +71,6 @@ var GeneralStaticEntriesWorker = []ComDetails{
 		Pod:       "ovnkube",
 		Container: "ovnkube-controller",
 		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      9537,
-		NodeRole:  "worker",
-		Service:   "crio-metrics",
-		Namespace: "Host system service",
-		Pod:       "",
-		Container: "",
-		Optional:  false,
 	},
 }
 
@@ -114,16 +104,6 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Namespace: "openshift-ovn-kubernetes",
 		Pod:       "ovnkube",
 		Container: "ovnkube-controller",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      9537,
-		NodeRole:  "master",
-		Service:   "crio-metrics",
-		Namespace: "Host system service",
-		Pod:       "",
-		Container: "",
 		Optional:  false,
 	}, {
 		Direction: "Ingress",

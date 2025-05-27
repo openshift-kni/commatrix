@@ -17,7 +17,6 @@ Ingress,TCP,9107,openshift-ovn-kubernetes,egressip-node-healthcheck,ovnkube-node
 Ingress,TCP,9108,openshift-ovn-kubernetes,ovn-kubernetes-control-plane,ovnkube-control-plane,kube-rbac-proxy,master,FALSE
 Ingress,TCP,9192,openshift-cluster-machine-approver,machine-approver,machine-approver,kube-rbac-proxy,master,FALSE
 Ingress,TCP,9258,openshift-cloud-controller-manager-operator,machine-approver,cluster-cloud-controller-manager,cluster-cloud-controller-manager,master,FALSE
-Ingress,TCP,9537,Host system service,crio-metrics,,,master,FALSE
 Ingress,TCP,9637,openshift-machine-config-operator,kube-rbac-proxy-crio,kube-rbac-proxy-crio,kube-rbac-proxy-crio,master,FALSE
 Ingress,TCP,9978,openshift-etcd,etcd,etcd,etcd-metrics,master,FALSE
 Ingress,TCP,9979,openshift-etcd,etcd,etcd,etcd-metrics,master,FALSE
@@ -44,7 +43,6 @@ Ingress,TCP,9100,openshift-monitoring,node-exporter,node-exporter,kube-rbac-prox
 Ingress,TCP,9103,openshift-ovn-kubernetes,ovn-kubernetes-node,ovnkube-node,kube-rbac-proxy-node,worker,FALSE
 Ingress,TCP,9105,openshift-ovn-kubernetes,ovn-kubernetes-node,ovnkube-node,kube-rbac-proxy-ovn-metrics,worker,FALSE
 Ingress,TCP,9107,openshift-ovn-kubernetes,egressip-node-healthcheck,ovnkube-node,ovnkube-controller,worker,FALSE
-Ingress,TCP,9537,Host system service,crio-metrics,,,worker,FALSE
 Ingress,TCP,9637,openshift-machine-config-operator,kube-rbac-proxy-crio,kube-rbac-proxy-crio,kube-rbac-proxy-crio,worker,FALSE
 Ingress,TCP,10250,Host system service,kubelet,,,worker,FALSE
 Ingress,TCP,10256,openshift-ovn-kubernetes,ovnkube,ovnkube,ovnkube-controller,worker,FALSE
