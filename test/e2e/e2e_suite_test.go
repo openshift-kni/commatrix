@@ -22,9 +22,8 @@ var (
 	cs           *client.ClientSet
 	commatrix    *types.ComMatrix
 	isSNO        bool
-	isBM         bool
-	deployment   types.Deployment
 	platformType configv1.PlatformType
+	deployment   types.Deployment
 	utilsHelpers utils.UtilsInterface
 	epExporter   *endpointslices.EndpointSlicesExporter
 	nodeList     *corev1.NodeList
@@ -63,15 +62,8 @@ var _ = BeforeSuite(func() {
 		deployment = types.SNO
 	}
 
-	platformType, err := utilsHelpers.GetPlatformType()
+	platformType, err = utilsHelpers.GetPlatformType()
 	Expect(err).NotTo(HaveOccurred())
-
-	isBM = false
-	// Assuming Telco partners use 'None' platform type just on Bare Metal.
-	// Mark as Bare Metal if the platform type is either 'BareMetal' (multi-node BM) or 'None' (SNO BM).
-	if platformType == configv1.BareMetalPlatformType || platformType == configv1.NonePlatformType {
-		isBM = true
-	}
 
 	epExporter, err = endpointslices.New(cs)
 	Expect(err).ToNot(HaveOccurred())
