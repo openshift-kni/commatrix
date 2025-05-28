@@ -326,6 +326,16 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 	}, {
 		Direction: "Ingress",
 		Protocol:  "TCP",
+		Port:      9454,
+		NodeRole:  "master",
+		Service:   "",
+		Namespace: "openshift-kni-infra",
+		Pod:       "haproxy",
+		Container: "haproxy",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "TCP",
 		Port:      6385,
 		NodeRole:  "master",
 		Service:   "",
