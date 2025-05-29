@@ -67,7 +67,24 @@ func (u *utils) CreateNamespace(namespace string) error {
 		return fmt.Errorf("failed creating namespace %s: %v", namespace, err)
 	}
 
+	// wait for it to be ready with the openshift.io/sa.scc.uid-range Annotation
+	err = u.waitForNamespaceSCCUAnnotation(ns)
+	if err != nil {
+		return fmt.Errorf("failed to wait for annotation 'openshift.io/sa.scc.uid-range' in namespace %s: %v", namespace, err)
+	}
+
 	return nil
+}
+
+func (u *utils) waitForNamespaceSCCUAnnotation(ns *corev1.Namespace) error {
+	return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, true, func(ctx context.Context) (bool, error) {
+		err := u.Get(context.TODO(), clientOptions.ObjectKey{Name: ns.Name}, ns)
+		if err != nil {
+			return false, err
+		}
+		_, found := ns.Annotations["openshift.io/sa.scc.uid-range"]
+		return found, nil
+	})
 }
 
 func (u *utils) DeleteNamespace(namespace string) error {
