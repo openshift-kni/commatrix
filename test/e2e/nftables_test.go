@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -43,8 +44,14 @@ var _ = Describe("Nftables", func() {
 
 		By("Generating nft communication matrix using oc command")
 		cmd := exec.Command("oc", "commatrix", "generate", "--format", "nft", "--destDir", artifactsDir)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 		err = cmd.Run()
-		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to run command: %s", cmd.String()))
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf(
+			"Failed to run command: %s\nstdout:\n%s\nstderr:\n%s",
+			cmd.String(), stdout.String(), stderr.String(),
+		))
 
 		By("Reading the generated commatrix nft files")
 		masterFilePath := filepath.Join(artifactsDir, masterNFTFile)
