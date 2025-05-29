@@ -1,0 +1,6 @@
+Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+Ingress,UDP,6081,openshift-ovn-kubernetes,ovn-kubernetes geneve,,,master,FALSE
+Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,worker,FALSE
+Ingress,TCP,443,openshift-ingress,router-internal-default,router-default,router,worker,FALSE
+Ingress,TCP,1936,openshift-ingress,router-internal-default,router-default,router,worker,FALSE
+Ingress,UDP,6081,openshift-ovn-kubernetes,ovn-kubernetes geneve,,,worker,FALSE
