@@ -45,8 +45,14 @@ var _ = Describe("Validation", func() {
 	BeforeEach(func() {
 		By("Generating communication matrix using oc command")
 		cmd := exec.Command("oc", "commatrix", "generate", "--host-open-ports", "--destDir", artifactsDir)
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 		err := cmd.Run()
-		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to run command: %s", cmd.String()))
+		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf(
+			"Failed to run command: %s\nstdout:\n%s\nstderr:\n%s",
+			cmd.String(), stdout.String(), stderr.String(),
+		))
 
 		By("Reading the generated commatrix files")
 		commatrixFilePath := filepath.Join(artifactsDir, commatrixFile)
