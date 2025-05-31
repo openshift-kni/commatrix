@@ -3,7 +3,7 @@ kind: Plugin
 metadata:
   name: commatrix
 spec:
-  version: v0.0.1
+  version: v0.0.3
   homepage: https://github.com/openshift-kni/commatrix
   shortDescription: Generate a communication matrix for OpenShift clusters.
   description: "The `oc commatrix generate` generates an up-to-date communication flows matrix for all ingress flows \nof OpenShift (multi-node and single-node deployments) and Operators.\n"
@@ -12,34 +12,34 @@ spec:
         matchLabels:
           os: linux
           arch: amd64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_amd64.tar.gz
-      sha256: f9c82bcfa1a136353f3168fbaf5d3c4ef2ca59c28ae72721ea51f0aa14f2216e
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.3/oc-commatrix_linux_amd64.tar.gz
+      sha256: b83edb63fe9da53c0cbaaf335e200159d3069e8f6f31eb3e2293bcdf3321d734
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: darwin
           arch: amd64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_amd64.tar.gz
-      sha256: 6a7102ee19e6aeeea134e24c79fd1516f4d05889cd9fd214d37c643e9b32ac74
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.3/oc-commatrix_darwin_amd64.tar.gz
+      sha256: 38b525cc53779b95846732fbe9f3b9bcb5815efb6d3194260aa344a5d420dc32
       bin: oc-commatrix   
     - selector:
         matchLabels:
           os: linux
           arch: arm64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_linux_arm64.tar.gz
-      sha256: c85467dd75a297a923d8c02d95b4b744f42d2c48065e7da845ca7ea0526fbdaa
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.3/oc-commatrix_linux_arm64.tar.gz
+      sha256: 3d1506876f538008db691f672aa44b02a2e2ee07b2c5d00ae4beccfe3f32f793
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: darwin
           arch: arm64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_darwin_arm64.tar.gz
-      sha256: 9ce3d6b6de95b1cb9044fe621391650ed97ec3be1368154f51c7b407f874a56f
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.3/oc-commatrix_darwin_arm64.tar.gz
+      sha256: db878a7fd2698dc4112412adbc8b01d78c83b7e6e69b2a1ce4a12f37307b5039
       bin: oc-commatrix
     - selector:
         matchLabels:
           os: windows
           arch: amd64
-      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.1/oc-commatrix_windows_amd64.tar.gz
-      sha256: a23a65307191b2ae712a870ba46b92fed7b290f437c227f6a080adb3f8588249
+      uri: https://github.com/openshift-kni/commatrix/releases/download/v0.0.3/oc-commatrix_windows_amd64.tar.gz
+      sha256: dfa65087b76bbcde19fbad56a0b1ae7974ee866179f7a60bfb4e980d57c47663
       bin: oc-commatrix.exe
