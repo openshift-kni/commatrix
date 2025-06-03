@@ -206,6 +206,10 @@ func Run(o *GenerateOptions) (err error) {
 		return fmt.Errorf("failed to get platform type %s", err)
 	}
 
+	if !slices.Contains(types.SupportedPlatforms, platformType) {
+		return fmt.Errorf("unsupported platform type: %s. Supported platform types are: %v", platformType, types.SupportedPlatforms)
+	}
+
 	matrix, err := generateMatrix(o, deployment, platformType)
 	if err != nil {
 		return fmt.Errorf("failed to generate endpoint slice matrix: %v", err)

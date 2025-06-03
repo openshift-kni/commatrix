@@ -66,10 +66,15 @@ var _ = Describe("Validation", func() {
 
 	It("generated communication matrix should be equal to documented communication matrix", func() {
 		By("generate documented commatrix file path")
-		docType := "aws"
-		if platformType == configv1.BareMetalPlatformType {
+
+		// clusters with unsupported platform types had skip the test, so we assume the platform type is supported
+		var docType string
+		switch platformType {
+		case configv1.AWSPlatformType:
+			docType = "aws"
+		case configv1.BareMetalPlatformType:
 			docType = "bm"
-		} else if platformType == configv1.NonePlatformType {
+		case configv1.NonePlatformType:
 			docType = "none"
 		}
 

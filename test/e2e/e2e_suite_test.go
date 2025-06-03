@@ -1,14 +1,17 @@
 package e2e
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/openshift-kni/commatrix/pkg/client"
+	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,6 +54,11 @@ var _ = BeforeSuite(func() {
 
 	platformType, err = utilsHelpers.GetPlatformType()
 	Expect(err).NotTo(HaveOccurred())
+
+	// if cluster's type is not supported by the commatrix app, skip tests
+	if !slices.Contains(types.SupportedPlatforms, platformType) {
+		Skip(fmt.Sprintf("unsupported platform type: %s. Supported platform types are: %v", platformType, types.SupportedPlatforms))
+	}
 })
 
 func TestE2e(t *testing.T) {
