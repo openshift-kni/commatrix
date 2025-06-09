@@ -13,12 +13,19 @@ import (
 
 	"github.com/gocarina/gocsv"
 
+	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 )
+
+var SupportedPlatforms = []configv1.PlatformType{
+	configv1.AWSPlatformType,
+	configv1.BareMetalPlatformType,
+	configv1.NonePlatformType,
+}
 
 type Deployment int
 
