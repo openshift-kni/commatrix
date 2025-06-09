@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"slices"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -45,12 +44,6 @@ const (
 	interval = 1 * time.Second
 	timeout  = 10 * time.Minute
 )
-
-var SupportedPlatforms = []configv1.PlatformType{
-	configv1.AWSPlatformType,
-	configv1.BareMetalPlatformType,
-	configv1.NonePlatformType,
-}
 
 func New(c *client.ClientSet) UtilsInterface {
 	return &utils{c}
@@ -245,12 +238,7 @@ func (u *utils) GetPlatformType() (configv1.PlatformType, error) {
 		return "", err
 	}
 
-	platformType := infra.Status.PlatformStatus.Type
-	if !slices.Contains(SupportedPlatforms, platformType) {
-		return "", fmt.Errorf("unsupported platform type: %s. Supported platform types are: %v", platformType, SupportedPlatforms)
-	}
-
-	return platformType, nil
+	return infra.Status.PlatformStatus.Type, nil
 }
 
 func (u *utils) GetPodLogs(namespace string, pod *corev1.Pod) (string, error) {

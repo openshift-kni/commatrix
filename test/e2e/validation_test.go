@@ -34,12 +34,19 @@ const (
 var _ = Describe("Validation", func() {
 	It("generated communication matrix should be equal to documented communication matrix", func() {
 		By("generate documented commatrix file path")
-		docType := "aws"
-		// Mark as Bare Metal if the platform type is either 'BareMetal' (multi-node BM) or 'None' (SNO BM).
-		// Assuming Telco partners use 'None' platform type just on Bare Metal.
-		if platformType == configv1.BareMetalPlatformType || platformType == configv1.NonePlatformType {
+
+		// clusters with unsupported platform types had skip the test, so we assume the platform type is supported
+		var docType string
+		switch platformType {
+		case configv1.AWSPlatformType:
+			docType = "aws"
+		case configv1.BareMetalPlatformType:
 			docType = "bm"
+		case configv1.NonePlatformType:
+			docType = "none"
 		}
+
+		// Asuming telco partenrs are using only none type and aws platform types for sno clusters.
 		if isSNO {
 			docType += "-sno"
 		}
