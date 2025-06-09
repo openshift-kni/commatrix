@@ -2,9 +2,11 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -64,6 +66,11 @@ var _ = BeforeSuite(func() {
 
 	platformType, err = utilsHelpers.GetPlatformType()
 	Expect(err).NotTo(HaveOccurred())
+
+	// if cluster's type is not supported by the commatrix app, skip tests
+	if !slices.Contains(types.SupportedPlatforms, platformType) {
+		Skip(fmt.Sprintf("unsupported platform type: %s. Supported platform types are: %v", platformType, types.SupportedPlatforms))
+	}
 
 	epExporter, err = endpointslices.New(cs)
 	Expect(err).ToNot(HaveOccurred())
