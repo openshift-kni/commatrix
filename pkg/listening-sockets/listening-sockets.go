@@ -111,12 +111,12 @@ func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byt
 }
 
 func (cc *ConnectionCheck) WriteSSRawFiles(ssOutTCP, ssOutUDP []byte) error {
-	err := cc.podUtils.WriteFile(path.Join(cc.destDir, "raw-ss-tcp"), ssOutTCP)
+	err := cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawTCP), ssOutTCP)
 	if err != nil {
 		return fmt.Errorf("failed writing to file: %s", err)
 	}
 
-	err = cc.podUtils.WriteFile(path.Join(cc.destDir, "raw-ss-udp"), ssOutUDP)
+	err = cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawUDP), ssOutUDP)
 	if err != nil {
 		return fmt.Errorf("failed writing to file: %s", err)
 	}
