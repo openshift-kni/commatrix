@@ -1,4 +1,0 @@
-Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
-Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,master,FALSE
-Ingress,TCP,443,openshift-ingress,router-internal-default,router-default,router,master,FALSE
-Ingress,TCP,1936,openshift-ingress,router-internal-default,router-default,router,master,FALSE
