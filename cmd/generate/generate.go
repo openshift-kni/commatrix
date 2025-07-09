@@ -125,7 +125,7 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 		},
 	}
 	cmd.Flags().StringVar(&o.destDir, "destDir", "", "Output files dir (default communication-matrix)")
-	cmd.Flags().StringVar(&o.format, "format", "csv", "Desired format (json,yaml,csv,nft)")
+	cmd.Flags().StringVar(&o.format, "format", consts.FilesDefaultFormat, "Desired format (json,yaml,csv,nft)")
 	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
@@ -174,7 +174,7 @@ func Complete(o *GenerateOptions) error {
 	}
 
 	if o.destDir == "" {
-		o.destDir = "communication-matrix"
+		o.destDir = consts.CommatrixDefaultDir
 		log.Debugf("Creating communication-matrix default path: %s", o.destDir)
 		if err := os.MkdirAll(o.destDir, 0755); err != nil {
 			return fmt.Errorf("failed to create destination directory '%s': %v", o.destDir, err)
@@ -229,7 +229,7 @@ func Run(o *GenerateOptions) (err error) {
 		}
 
 		log.Debug("Writing the matrix diff to file")
-		err = o.utilsHelpers.WriteFile(filepath.Join(o.destDir, "matrix-diff-ss"), []byte(diffStr))
+		err = o.utilsHelpers.WriteFile(filepath.Join(o.destDir, consts.MatrixDiffSSfileName), []byte(diffStr))
 		if err != nil {
 			return fmt.Errorf("error writing the diff matrix file: %v", err)
 		}
@@ -261,7 +261,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformTyp
 	}
 
 	log.Debug("Writing endpoint matrix to file")
-	err = matrix.WriteMatrixToFileByType(o.utilsHelpers, "communication-matrix", o.format, deployment, o.destDir)
+	err = matrix.WriteMatrixToFileByType(o.utilsHelpers, consts.CommatrixFileNamePrefix, o.format, deployment, o.destDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write endpoint matrix to file: %v", err)
 	}
@@ -299,7 +299,7 @@ func generateSS(o *GenerateOptions, deployment types.Deployment) (*types.ComMatr
 	}
 
 	log.Debug("Writing SS matrix to file")
-	err = ssMat.WriteMatrixToFileByType(o.utilsHelpers, "ss-generated-matrix", o.format, deployment, o.destDir)
+	err = ssMat.WriteMatrixToFileByType(o.utilsHelpers, consts.SSMatrixFileNamePrefix, o.format, deployment, o.destDir)
 	if err != nil {
 		return nil, fmt.Errorf("error while writing SS matrix to file: %v", err)
 	}
