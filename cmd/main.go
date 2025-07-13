@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"path/filepath"
+	"slices"
 
 	log "github.com/sirupsen/logrus"
 
@@ -66,6 +67,10 @@ func main() {
 	platformType, err := utilsHelpers.GetPlatformType()
 	if err != nil {
 		log.Panicf("Failed to get infra type %v", err)
+	}
+
+	if !slices.Contains(types.SupportedPlatforms, platformType) {
+		log.Panicf("unsupported platform type: %s. Supported platform types are: %v", platformType, types.SupportedPlatforms)
 	}
 
 	epExporter, err := endpointslices.New(cs)
