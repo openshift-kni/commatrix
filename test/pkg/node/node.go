@@ -9,7 +9,6 @@ import (
 	"github.com/onsi/gomega"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
-	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +22,7 @@ const (
 
 // SoftRebootNodeAndWaitForDisconnect soft reboots given node and wait for node to be unreachable.
 func SoftRebootNodeAndWaitForDisconnect(utilsHelpers utils.UtilsInterface, cs *client.ClientSet, nodeName, ns string, isSNO bool) error {
-	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, consts.DefaultDebugPodImage, []string{})
+	debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, ns, utils.DefaultDebugPodImage, []string{})
 	if err != nil {
 		return fmt.Errorf("failed to create debug pod on node %s: %w", nodeName, err)
 	}

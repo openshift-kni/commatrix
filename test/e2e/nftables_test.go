@@ -13,8 +13,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/types"
+	"github.com/openshift-kni/commatrix/pkg/utils"
 	"github.com/openshift-kni/commatrix/test/pkg/cluster"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
 	"github.com/openshift-kni/commatrix/test/pkg/node"
@@ -137,7 +137,7 @@ var _ = Describe("Nftables", func() {
 		}
 
 		debugPod, err := utilsHelpers.CreatePodOnNode(nodeName, testNS,
-			consts.DefaultDebugPodImage, command)
+			utils.DefaultDebugPodImage, command)
 		Expect(err).ToNot(HaveOccurred())
 
 		err = utilsHelpers.WaitForPodStatus(testNS, debugPod, corev1.PodSucceeded)
