@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
+	imageutils "k8s.io/kubernetes/test/utils/image"
 	"k8s.io/utils/ptr"
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,6 +36,10 @@ type UtilsInterface interface {
 	IsSNOCluster() (bool, error)
 	WaitForPodStatus(namespace string, pod *corev1.Pod, PodPhase corev1.PodPhase) error
 }
+
+var (
+	DefaultDebugPodImage = imageutils.GetE2EImage(imageutils.Agnhost)
+)
 
 type utils struct {
 	*client.ClientSet

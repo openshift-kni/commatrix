@@ -11,6 +11,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/types"
+	"github.com/openshift-kni/commatrix/pkg/utils"
 
 	mock_utils "github.com/openshift-kni/commatrix/pkg/utils/mock"
 	v1 "k8s.io/api/core/v1"
@@ -157,7 +158,7 @@ var _ = Describe("GenerateSS", func() {
 			AnyTimes()
 
 		mockUtils.EXPECT().
-			CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, consts.DefaultDebugPodImage, []string{}).
+			CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, utils.DefaultDebugPodImage, []string{}).
 			Return(mockPod, nil).AnyTimes()
 
 		mockUtils.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, mockPod, v1.PodRunning).
