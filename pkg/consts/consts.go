@@ -7,7 +7,7 @@ const (
 	OptionalTrue            = "true"
 	RoleLabel               = "node-role.kubernetes.io/"
 	DefaultDebugNamespace   = "openshift-commatrix-debug"
-	DefaultDebugPodImage    = "quay.io/openshift-release-dev/ocp-release:4.15.12-multi"
+	DefaultDebugPodImage    = "image-registry.openshift-image-registry.svc:5000/openshift/tools:latest"
 	FilesDefaultFormat      = "csv"
 	CommatrixFileNamePrefix = "communication-matrix"
 	SSMatrixFileNamePrefix  = "ss-generated-matrix"
