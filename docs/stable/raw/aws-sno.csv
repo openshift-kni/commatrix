@@ -28,7 +28,6 @@ Ingress,TCP,10256,openshift-ovn-kubernetes,ovnkube,ovnkube,ovnkube-controller,ma
 Ingress,TCP,10257,openshift-kube-controller-manager,kube-controller-manager,kube-controller-manager,kube-controller-manager,master,FALSE
 Ingress,TCP,10258,openshift-cloud-controller-manager-operator,cloud-controller,cloud-controller-manager,cloud-controller-manager,master,FALSE
 Ingress,TCP,10259,openshift-kube-scheduler,scheduler,openshift-kube-scheduler,kube-scheduler,master,FALSE
-Ingress,TCP,10357,openshift-kube-apiserver,openshift-kube-apiserver-healthz,kube-apiserver,kube-apiserver-check-endpoints,master,FALSE
 Ingress,TCP,17697,openshift-kube-apiserver,openshift-kube-apiserver-healthz,kube-apiserver,kube-apiserver-check-endpoints,master,FALSE
 Ingress,TCP,22623,openshift-machine-config-operator,machine-config-server,machine-config-server,machine-config-server,master,FALSE
 Ingress,TCP,22624,openshift-machine-config-operator,machine-config-server,machine-config-server,machine-config-server,master,FALSE
