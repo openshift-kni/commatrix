@@ -299,3 +299,32 @@ var StandardStaticEntries = []ComDetails{
 		Optional:  false,
 	},
 }
+
+// General IPv6-only static entries that should be applied when the cluster supports IPv6.
+var GeneralIPv6StaticEntriesWorker = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      546,
+		NodeRole:  "worker",
+		Service:   "NetworkManager",
+		Namespace: "",
+		Pod:       "",
+		Container: "",
+		Optional:  false,
+	},
+}
+
+var GeneralIPv6StaticEntriesMaster = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      546,
+		NodeRole:  "master",
+		Service:   "NetworkManager",
+		Namespace: "",
+		Pod:       "",
+		Container: "",
+		Optional:  false,
+	},
+}
