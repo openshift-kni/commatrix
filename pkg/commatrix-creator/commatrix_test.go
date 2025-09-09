@@ -161,7 +161,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 		for _, format := range []string{types.FormatCSV, types.FormatJSON, types.FormatYAML} {
 			g.It(fmt.Sprintf("Should successfully extract ComDetails from a %s file", format), func() {
 				g.By(fmt.Sprintf("Creating new communication matrix with %s static entries format", format))
-				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, configv1.BareMetalPlatformType, 0)
+				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, configv1.BareMetalPlatformType, 0, false)
 				o.Expect(err).ToNot(o.HaveOccurred())
 
 				g.By("Getting ComDetails List From File")
@@ -175,7 +175,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to non-matched customEntriesPath and customEntriesFormat types", func() {
 			g.By("Creating new communication matrix with non-matched customEntriesPath and customEntriesFormat")
-			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, configv1.BareMetalPlatformType, 0)
+			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, configv1.BareMetalPlatformType, 0, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting ComDetails List From File")
@@ -188,7 +188,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to an invalid customEntriesFormat", func() {
 			g.By("Creating new communication matrix with invalid customEntriesFormat")
-			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, configv1.BareMetalPlatformType, 0)
+			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, configv1.BareMetalPlatformType, 0, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting ComDetails List From File")
@@ -203,7 +203,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 	g.Context("Get static entries from file", func() {
 		g.It("Should successfully get static entries suitable to baremetal standard cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal standard cluster")
-			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, types.Standard)
+			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, types.Standard, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -218,7 +218,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to baremetal SNO cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal SNO cluster")
-			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, types.SNO)
+			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, types.SNO, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -232,7 +232,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to an invalid value for cluster environment", func() {
 			g.By("Creating new communication matrix with an invalid value for cluster environment")
-			cm, err := New(nil, "", "", "invalid", types.SNO)
+			cm, err := New(nil, "", "", "invalid", types.SNO, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -268,7 +268,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix with custom entries", func() {
 			g.By("Creating new communication matrix with static entries")
-			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, configv1.AWSPlatformType, types.SNO)
+			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, configv1.AWSPlatformType, types.SNO, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
@@ -292,7 +292,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
 			g.By("Creating new communication matrix without static entries")
-			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, types.SNO)
+			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, types.SNO, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
@@ -306,6 +306,29 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
 
 			g.By("Checking whether diff is empty")
+			o.Expect(diff.GetUniquePrimary().Matrix).To(o.BeEmpty())
+			o.Expect(diff.GetUniqueSecondary().Matrix).To(o.BeEmpty())
+		})
+
+		g.It("Should include IPv6 static entries when ipv6Enabled is true on Standard", func() {
+			g.By("Creating communication matrix with ipv6Enabled=true for Standard")
+			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, types.Standard, true)
+			o.Expect(err).ToNot(o.HaveOccurred())
+			commatrix, err := commatrixCreator.CreateEndpointMatrix()
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Building expected details: eps + general master/worker + standard + ipv6 master/worker")
+			wanted := slices.Concat(testEpsComDetails,
+				types.StandardStaticEntries,
+				types.GeneralStaticEntriesMaster,
+				types.GeneralStaticEntriesWorker,
+				types.GeneralIPv6StaticEntriesMaster,
+				types.GeneralIPv6StaticEntriesWorker,
+			)
+			wantedMatrix := types.ComMatrix{Matrix: wanted}
+			wantedMatrix.SortAndRemoveDuplicates()
+
+			diff := matrixdiff.Generate(&wantedMatrix, commatrix)
 			o.Expect(diff.GetUniquePrimary().Matrix).To(o.BeEmpty())
 			o.Expect(diff.GetUniqueSecondary().Matrix).To(o.BeEmpty())
 		})

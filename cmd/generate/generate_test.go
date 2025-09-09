@@ -41,6 +41,15 @@ var (
 		},
 	}
 
+	network = &configv1.Network{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster",
+		},
+		Spec: configv1.NetworkSpec{
+			ClusterNetwork: []configv1.ClusterNetworkEntry{{CIDR: "10.0.0.0/16"}},
+		},
+	}
+
 	testNode = &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-node",
@@ -216,7 +225,7 @@ func TestCommatrixGeneration(t *testing.T) {
 	err = configv1.AddToScheme(sch)
 	require.NoError(t, err)
 
-	fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(infra, testNode, testPod, testService, testEndpointSlice).Build()
+	fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(infra, network, testNode, testPod, testService, testEndpointSlice).Build()
 	fakeClientset := fakek.NewSimpleClientset()
 
 	clientset := &client.ClientSet{
