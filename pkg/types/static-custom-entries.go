@@ -158,16 +158,6 @@ var GeneralStaticEntriesMaster = []ComDetails{
 	}, {
 		Direction: "Ingress",
 		Protocol:  "TCP",
-		Port:      9258,
-		NodeRole:  "master",
-		Service:   "machine-approver",
-		Namespace: "openshift-cloud-controller-manager-operator",
-		Pod:       "cluster-cloud-controller-manager",
-		Container: "cluster-cloud-controller-manager",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
 		Port:      22624,
 		NodeRole:  "master",
 		Service:   "machine-config-server",
@@ -292,20 +282,6 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Namespace: "openshift-kni-infra",
 		Pod:       "coredns",
 		Container: "coredns",
-		Optional:  false,
-	},
-}
-
-var CloudStaticEntriesMaster = []ComDetails{
-	{
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      10258,
-		NodeRole:  "master",
-		Service:   "cloud-controller",
-		Namespace: "openshift-cloud-controller-manager-operator",
-		Pod:       "cloud-controller-manager",
-		Container: "cloud-controller-manager",
 		Optional:  false,
 	},
 }

@@ -142,8 +142,7 @@ var (
 )
 
 func TestCommatrixGeneration(t *testing.T) {
-	expectedComDetails := slices.Concat(testEpsComDetails, types.CloudStaticEntriesMaster,
-		types.GeneralStaticEntriesMaster, types.GeneralStaticEntriesWorker, types.StandardStaticEntries)
+	expectedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster, types.GeneralStaticEntriesWorker, types.StandardStaticEntries)
 
 	expectedComMatrix := types.ComMatrix{Matrix: expectedComDetails}
 	expectedComMatrix.SortAndRemoveDuplicates()
