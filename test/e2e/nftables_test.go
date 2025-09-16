@@ -22,14 +22,15 @@ import (
 )
 
 var (
-	workerNodeRole     = "worker"
-	tableName          = "table inet openshift_filter"
-	chainName          = "chain OPENSHIFT"
-	workerNFTFile      = "communication-matrix-worker.nft"
-	masterNFTFile      = "communication-matrix-master.nft"
-	masterNFTconfig    []byte
-	workerNFTconfig    []byte
-	nodeRoleToNFTables map[string][]byte
+	workerNodeRole       = "worker"
+	tableName            = "table inet openshift_filter"
+	chainName            = "chain OPENSHIFT"
+	workerNFTFile        = "communication-matrix-worker.nft"
+	masterNFTFile        = "communication-matrix-master.nft"
+	masterNFTconfig      []byte
+	workerNFTconfig      []byte
+	nodeRoleToNFTables   map[string][]byte
+	imageAPIGroupVersion = "image.openshift.io/v1"
 )
 
 var _ = Describe("Nftables", func() {
@@ -130,6 +131,9 @@ var _ = Describe("Nftables", func() {
 
 		By("Waiting for node to be ready")
 		node.WaitForNodeReady(nodeName, cs)
+
+		By("Waiting for image API to be available")
+		cluster.WaitForAPIGroupAvailable(cs, imageAPIGroupVersion)
 
 		By("Listing nftables rules")
 		command := []string{
