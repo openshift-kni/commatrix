@@ -210,7 +210,12 @@ func Run(o *GenerateOptions) (err error) {
 		return fmt.Errorf("unsupported platform type: %s. Supported platform types are: %v", platformType, types.SupportedPlatforms)
 	}
 
-	matrix, err := generateMatrix(o, deployment, platformType)
+	ipv6Enabled, err := o.utilsHelpers.IsIPv6Enabled()
+	if err != nil {
+		return fmt.Errorf("failed to detect IPv6: %v", err)
+	}
+
+	matrix, err := generateMatrix(o, deployment, platformType, ipv6Enabled)
 	if err != nil {
 		return fmt.Errorf("failed to generate endpoint slice matrix: %v", err)
 	}
@@ -239,7 +244,7 @@ func Run(o *GenerateOptions) (err error) {
 	return nil
 }
 
-func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformType configv1.PlatformType) (*types.ComMatrix, error) {
+func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformType configv1.PlatformType, ipv6Enabled bool) (*types.ComMatrix, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -250,7 +255,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformTyp
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, deployment)
+	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, deployment, ipv6Enabled)
 	if err != nil {
 		return nil, err
 	}
