@@ -178,16 +178,6 @@ var GeneralStaticEntriesMaster = []ComDetails{
 	}, {
 		Direction: "Ingress",
 		Protocol:  "TCP",
-		Port:      10357,
-		NodeRole:  "master",
-		Service:   "openshift-kube-apiserver-healthz",
-		Namespace: "openshift-kube-apiserver",
-		Pod:       "kube-apiserver",
-		Container: "kube-apiserver-check-endpoints",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
 		Port:      17697,
 		NodeRole:  "master",
 		Service:   "openshift-kube-apiserver-healthz",
