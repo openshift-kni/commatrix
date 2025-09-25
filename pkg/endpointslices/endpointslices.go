@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
+	"github.com/openshift-kni/commatrix/pkg/mcp"
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
 
@@ -26,8 +28,14 @@ type EndpointSlicesInfo struct {
 
 type EndpointSlicesExporter struct {
 	*client.ClientSet
-	nodeToRole map[string]string
-	sliceInfo  []EndpointSlicesInfo
+	nodeToPool  map[string]string
+	sliceInfo   []EndpointSlicesInfo
+	poolToRoles map[string][]string
+}
+
+// PoolRoles returns roles per observed pool.
+func (ep *EndpointSlicesExporter) PoolRoles() map[string][]string {
+	return ep.poolToRoles
 }
 
 type NoOwnerRefErr struct {
@@ -40,23 +48,16 @@ func (e *NoOwnerRefErr) Error() string {
 }
 
 func New(cs *client.ClientSet) (*EndpointSlicesExporter, error) {
-	nodeList := &corev1.NodeList{}
-	err := cs.List(context.TODO(), nodeList)
+	nodeToPool, err := mcp.ResolveNodeToPool(cs)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeToRole := map[string]string{}
-	for _, node := range nodeList.Items {
-		nodeToRole[node.Name], err = types.GetNodeRole(&node)
-		if err != nil {
-			return nil, err
-		}
-		// Info-level log to trace node to role mapping during initialization
-		log.Infof("node role mapping: node=%s role=%s", node.Name, nodeToRole[node.Name])
+	poolToRoles, err := mcp.MapPoolToRoles(cs, nodeToPool)
+	if err != nil {
+		return nil, err
 	}
-
-	return &EndpointSlicesExporter{cs, nodeToRole, []EndpointSlicesInfo{}}, nil
+	return &EndpointSlicesExporter{cs, nodeToPool, []EndpointSlicesInfo{}, poolToRoles}, nil
 }
 
 // load endpoint slices for services from type loadbalancer and node port,
@@ -132,7 +133,7 @@ func (ep *EndpointSlicesExporter) ToComDetails() ([]types.ComDetails, error) {
 	comDetails := make([]types.ComDetails, 0)
 
 	for _, epSliceInfo := range ep.sliceInfo {
-		cds, err := epSliceInfo.toComDetails(ep.nodeToRole)
+		cds, err := epSliceInfo.toComDetails(ep.nodeToPool)
 		if err != nil {
 			switch err.(type) {
 			case *NoOwnerRefErr:
@@ -157,44 +158,29 @@ func createEPSliceInfo(service corev1.Service, ep discoveryv1.EndpointSlice, pod
 	}
 }
 
-// getEndpointSliceNodeRoles gets endpointslice Info struct and returns which node roles the services are on.
-func (ei *EndpointSlicesInfo) getEndpointSliceNodeRoles(nodesRoles map[string]string) []string {
-	// map to prevent duplications
-	rolesMap := make(map[string]bool)
-	// Dump the full node->role map for troubleshooting empty roles
-	log.Infof("node->role map entries=%d content=%v", len(nodesRoles), nodesRoles)
+func (ei *EndpointSlicesInfo) getEndpointSlicePools(nodeToPool map[string]string) []string {
+	poolsMap := make(map[string]bool)
 	for _, endpoint := range ei.EndpointSlice.Endpoints {
-		var nodeName string
 		if endpoint.NodeName == nil {
-			log.Warningf("EndpointSlice %s/%s: endpoint has nil NodeName; service=%s", ei.EndpointSlice.Namespace, ei.EndpointSlice.Name, ei.Service.Name)
-			if dump, err := json.MarshalIndent(ei.EndpointSlice, "", "  "); err == nil {
-				log.Infof("EndpointSlice dump %s/%s:\n%s", ei.EndpointSlice.Namespace, ei.EndpointSlice.Name, string(dump))
-			} else {
-				log.Warningf("failed to marshal EndpointSlice %s/%s: %v", ei.EndpointSlice.Namespace, ei.EndpointSlice.Name, err)
-			}
-			nodeName = ""
-		} else {
-			nodeName = *endpoint.NodeName
+			continue
 		}
-		role, ok := nodesRoles[nodeName]
-		if !ok {
-			log.Warningf("EndpointSlice %s/%s: node %s not found in node->role map; service=%s", ei.EndpointSlice.Namespace, ei.EndpointSlice.Name, nodeName, ei.Service.Name)
+		pool := nodeToPool[*endpoint.NodeName]
+		if pool == "" {
+			continue
 		}
-		if role == "" {
-			log.Warningf("EndpointSlice %s/%s: empty role for node %s; service=%s", ei.EndpointSlice.Namespace, ei.EndpointSlice.Name, nodeName, ei.Service.Name)
-		}
-		rolesMap[role] = true
+		poolsMap[pool] = true
 	}
 
-	roles := []string{}
-	for k := range rolesMap {
-		roles = append(roles, k)
+	pools := []string{}
+	for k := range poolsMap {
+		pools = append(pools, k)
 	}
 
-	return roles
+	slices.Sort(pools)
+	return pools
 }
 
-func (ei *EndpointSlicesInfo) toComDetails(nodesRoles map[string]string) ([]types.ComDetails, error) {
+func (ei *EndpointSlicesInfo) toComDetails(nodeToPool map[string]string) ([]types.ComDetails, error) {
 	if len(ei.EndpointSlice.OwnerReferences) == 0 {
 		return nil, &NoOwnerRefErr{name: ei.EndpointSlice.Name, namespace: ei.EndpointSlice.Namespace}
 	}
@@ -215,11 +201,8 @@ func (ei *EndpointSlicesInfo) toComDetails(nodesRoles map[string]string) ([]type
 		return nil, fmt.Errorf("failed to get pod name for endpointslice %s: %w", ei.EndpointSlice.Name, err)
 	}
 
-	// Get the node roles of this endpointslice.
-	roles := ei.getEndpointSliceNodeRoles(nodesRoles)
-	if len(roles) == 0 {
-		log.Warningf("EndpointSlice %s/%s: no node roles resolved; service=%s", ei.EndpointSlice.Namespace, ei.EndpointSlice.Name, ei.Service.Name)
-	}
+	// Get the MCP pools backing this EndpointSlice.
+	pools := ei.getEndpointSlicePools(nodeToPool)
 
 	epSlice := ei.EndpointSlice
 	optional := isOptional(epSlice)
@@ -228,13 +211,10 @@ func (ei *EndpointSlicesInfo) toComDetails(nodesRoles map[string]string) ([]type
 		containerName, err := getContainerName(int(*port.Port), ei.Pods)
 		if err != nil {
 			log.Warningf("failed to get container name for EndpointSlice %s/%s: %s", namespace, name, err)
-			containerName = "" // Default to an empty string if the container is not found.
+			containerName = ""
 		}
 
-		for _, role := range roles {
-			if role == "" {
-				log.Warningf("EndpointSlice %s/%s: creating ComDetails with empty node role; service=%s port=%d protocol=%s pod=%s", namespace, ei.EndpointSlice.Name, ei.Service.Name, int(*port.Port), string(*port.Protocol), name)
-			}
+		for _, pool := range pools {
 			res = append(res, types.ComDetails{
 				Direction: consts.IngressLabel,
 				Protocol:  string(*port.Protocol),
@@ -242,12 +222,13 @@ func (ei *EndpointSlicesInfo) toComDetails(nodesRoles map[string]string) ([]type
 				Namespace: namespace,
 				Pod:       name,
 				Container: containerName,
-				NodeRole:  role,
+				NodePool:  pool,
 				Service:   ei.Service.Name,
 				Optional:  optional,
 			})
 		}
 	}
+
 	return res, nil
 }
 

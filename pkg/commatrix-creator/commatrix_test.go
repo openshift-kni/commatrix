@@ -16,6 +16,7 @@ import (
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	configv1 "github.com/openshift/api/config/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek "k8s.io/client-go/kubernetes/fake"
 )
@@ -37,7 +38,7 @@ var (
 			Service:   "example-service",
 			Pod:       "example-pod",
 			Container: "example-container",
-			NodeRole:  "master",
+			NodePool:  "master",
 			Optional:  false,
 		},
 		{
@@ -48,7 +49,7 @@ var (
 			Service:   "example-service2",
 			Pod:       "example-pod2",
 			Container: "example-container2",
-			NodeRole:  "worker",
+			NodePool:  "worker",
 			Optional:  false,
 		},
 	}
@@ -62,7 +63,7 @@ var (
 			Service:   "test-service",
 			Pod:       "test-pod",
 			Container: "test-container",
-			NodeRole:  "master",
+			NodePool:  "master",
 			Optional:  false,
 		},
 	}
@@ -70,11 +71,36 @@ var (
 
 // Test resources.
 var (
+	mcpMaster = &machineconfigurationv1.MachineConfigPool{
+		ObjectMeta: metav1.ObjectMeta{Name: "master"},
+		Spec: machineconfigurationv1.MachineConfigPoolSpec{
+			NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/master": ""}},
+		},
+		Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+	}
+
+	mcpWorker = &machineconfigurationv1.MachineConfigPool{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: machineconfigurationv1.MachineConfigPoolSpec{
+			NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/worker": ""}},
+		},
+		Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+	}
+
 	testNode = &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-node",
 			Labels: map[string]string{
 				"node-role.kubernetes.io/master": "",
+			},
+		},
+	}
+
+	testNodeWorker = &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-node-worker",
+			Labels: map[string]string{
+				"node-role.kubernetes.io/worker": "",
 			},
 		},
 	}
@@ -253,8 +279,10 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).NotTo(o.HaveOccurred())
 			err = discoveryv1.AddToScheme(sch)
 			o.Expect(err).NotTo(o.HaveOccurred())
+			err = machineconfigurationv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
 
-			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode, testPod, testService, testEndpointSlice).Build()
+			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode, testNodeWorker, testPod, testService, testEndpointSlice, mcpWorker, mcpMaster).Build()
 			fakeClientset := fakek.NewSimpleClientset()
 
 			clientset := &client.ClientSet{
