@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/types"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,11 +51,36 @@ var (
 		},
 	}
 
+	mcpMaster = &machineconfigurationv1.MachineConfigPool{
+		ObjectMeta: metav1.ObjectMeta{Name: "master"},
+		Spec: machineconfigurationv1.MachineConfigPoolSpec{
+			NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/master": ""}},
+		},
+		Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+	}
+
+	mcpWorker = &machineconfigurationv1.MachineConfigPool{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: machineconfigurationv1.MachineConfigPoolSpec{
+			NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/worker": ""}},
+		},
+		Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+	}
+
 	testNode = &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-node",
 			Labels: map[string]string{
 				"node-role.kubernetes.io/master": "",
+			},
+		},
+	}
+
+	testNodeWorker = &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-node-worker",
+			Labels: map[string]string{
+				"node-role.kubernetes.io/worker": "",
 			},
 		},
 	}
@@ -144,7 +170,7 @@ var (
 			Service:   "test-service",
 			Pod:       "test-app-pod",
 			Container: "test-container",
-			NodeRole:  "master",
+			NodePool:  "master",
 			Optional:  false,
 		},
 	}
@@ -225,7 +251,10 @@ func TestCommatrixGeneration(t *testing.T) {
 	err = configv1.AddToScheme(sch)
 	require.NoError(t, err)
 
-	fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(infra, network, testNode, testPod, testService, testEndpointSlice).Build()
+	err = machineconfigurationv1.AddToScheme(sch)
+	require.NoError(t, err)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(infra, network, testNode, testNodeWorker, testPod, testService, testEndpointSlice, mcpWorker, mcpMaster).Build()
 	fakeClientset := fakek.NewSimpleClientset()
 
 	clientset := &client.ClientSet{

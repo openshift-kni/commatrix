@@ -1,7 +1,6 @@
 package listeningsockets
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
+	"github.com/openshift-kni/commatrix/pkg/mcp"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 )
@@ -31,29 +31,20 @@ type ConnectionCheck struct {
 	*client.ClientSet
 	podUtils   utils.UtilsInterface
 	destDir    string
-	nodeToRole map[string]string
+	nodeToPool map[string]string
 }
 
 func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string) (*ConnectionCheck, error) {
-	nodeList := &corev1.NodeList{}
-	err := c.List(context.TODO(), nodeList)
+	nodeToPool, err := mcp.ResolveNodeToPool(c)
 	if err != nil {
 		return nil, err
-	}
-
-	nodeToRole := map[string]string{}
-	for _, node := range nodeList.Items {
-		nodeToRole[node.Name], err = types.GetNodeRole(&node)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	return &ConnectionCheck{
 		c,
 		podUtils,
 		destDir,
-		nodeToRole,
+		nodeToPool,
 	}, nil
 }
 
@@ -63,7 +54,7 @@ func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byt
 
 	nLock := &sync.Mutex{}
 	g := new(errgroup.Group)
-	for nodeName := range cc.nodeToRole {
+	for nodeName := range cc.nodeToPool {
 		name := nodeName
 		g.Go(func() error {
 			debugPod, err := cc.podUtils.CreatePodOnNode(name, namespace, consts.DefaultDebugPodImage, []string{})
@@ -137,8 +128,8 @@ func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, nodeName
 	ssOutFilteredTCP := filterEntries(splitByLines(ssOutTCP))
 	ssOutFilteredUDP := filterEntries(splitByLines(ssOutUDP))
 
-	tcpComDetails := cc.toComDetails(debugPod, ssOutFilteredTCP, "TCP", cc.nodeToRole[nodeName])
-	udpComDetails := cc.toComDetails(debugPod, ssOutFilteredUDP, "UDP", cc.nodeToRole[nodeName])
+	tcpComDetails := cc.toComDetails(debugPod, ssOutFilteredTCP, "TCP", cc.nodeToPool[nodeName])
+	udpComDetails := cc.toComDetails(debugPod, ssOutFilteredUDP, "UDP", cc.nodeToPool[nodeName])
 
 	res := []types.ComDetails{}
 	res = append(res, udpComDetails...)
@@ -152,7 +143,7 @@ func splitByLines(bytes []byte) []string {
 	return strings.Split(str, "\n")
 }
 
-func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string, protocol string, nodeRole string) []types.ComDetails {
+func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string, protocol string, pool string) []types.ComDetails {
 	res := make([]types.ComDetails, 0)
 
 	for _, ssEntry := range ssOutput {
@@ -172,7 +163,7 @@ func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string,
 		cd.Namespace = nameSpace
 		cd.Pod = podName
 		cd.Protocol = protocol
-		cd.NodeRole = nodeRole
+		cd.NodePool = pool
 		cd.Optional = false
 		res = append(res, *cd)
 	}

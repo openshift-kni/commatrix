@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	log "github.com/sirupsen/logrus"
 
@@ -60,6 +61,8 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 		log.Errorf("Failed adding static entries: %s", err)
 		return nil, fmt.Errorf("failed adding static entries: %s", err)
 	}
+	// Expand static entries for all MCPs based on their roles
+	staticEntries = expandEntriesForPools(staticEntries, cm.exporter.PoolRoles())
 	epSliceComDetails = append(epSliceComDetails, staticEntries...)
 
 	if cm.customEntriesPath != "" {
@@ -142,4 +145,23 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 	}
 	log.Debug("Successfully determined static entries")
 	return comDetails, nil
+}
+
+// expandEntriesForPoolsByTokens uses MCP-derived role tokens per pool.
+func expandEntriesForPools(staticEntriesntries []types.ComDetails, poolToRoles map[string][]string) []types.ComDetails {
+	if len(poolToRoles) == 0 {
+		return staticEntriesntries
+	}
+	out := make([]types.ComDetails, 0, len(staticEntriesntries))
+	for _, se := range staticEntriesntries {
+		for poolName, roles := range poolToRoles {
+			// check membership in slice
+			if slices.Contains(roles, se.NodePool) {
+				dup := se
+				dup.NodePool = poolName
+				out = append(out, dup)
+			}
+		}
+	}
+	return out
 }
