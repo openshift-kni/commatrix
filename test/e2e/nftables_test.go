@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/openshift-kni/commatrix/pkg/consts"
-	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/test/pkg/cluster"
 	"github.com/openshift-kni/commatrix/test/pkg/firewall"
 	"github.com/openshift-kni/commatrix/test/pkg/node"
@@ -22,15 +21,10 @@ import (
 )
 
 var (
-	workerNodeRole       = "worker"
+	imageAPIGroupVersion = "image.openshift.io/v1"
 	tableName            = "table inet openshift_filter"
 	chainName            = "chain OPENSHIFT"
-	workerNFTFile        = "communication-matrix-worker.nft"
-	masterNFTFile        = "communication-matrix-master.nft"
-	masterNFTconfig      []byte
-	workerNFTconfig      []byte
-	nodeRoleToNFTables   map[string][]byte
-	imageAPIGroupVersion = "image.openshift.io/v1"
+	poolToNFTables       map[string][]byte
 )
 
 var _ = Describe("Nftables", func() {
@@ -54,40 +48,31 @@ var _ = Describe("Nftables", func() {
 			cmd.String(), stdout.String(), stderr.String(),
 		))
 
-		By("Reading the generated commatrix nft files")
-		masterFilePath := filepath.Join(artifactsDir, masterNFTFile)
-		masterNFTconfig, err = os.ReadFile(masterFilePath)
-		Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to read generated %s file", masterNFTFile))
-
-		// creare the nodeRoleToNFTables map[string][]byte
-		By("Creating NFT output for each role")
-		nodeRoleToNFTables = make(map[string][]byte)
-		for _, node := range nodeList.Items {
-			role, err := types.GetNodeRole(&node)
-			Expect(err).NotTo(HaveOccurred())
-
-			if _, exists := nodeRoleToNFTables[role]; !exists {
-				var nftablesConfig []byte
-
-				nftablesConfig = masterNFTconfig
-				extraNftablesFileEnv := "EXTRA_NFTABLES_MASTER_FILE"
-				if role == workerNodeRole {
-					workerFilePath := filepath.Join(artifactsDir, workerNFTFile)
-					workerNFTconfig, err = os.ReadFile(workerFilePath)
-					Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Failed to read generated %s file", workerNFTFile))
-
-					nftablesConfig = workerNFTconfig
-					extraNftablesFileEnv = "EXTRA_NFTABLES_WORKER_FILE"
-				}
-
-				extraNFTablesFile, _ := os.LookupEnv(extraNftablesFileEnv)
-				if extraNFTablesFile != "" {
-					nftablesConfig, err = AddPortsToNFTables(nftablesConfig, extraNFTablesFile)
-					Expect(err).NotTo(HaveOccurred())
-				}
-
-				nodeRoleToNFTables[role] = nftablesConfig
+		By("Reading the generated commatrix nft files per pool")
+		poolToNFTables = make(map[string][]byte)
+		entries, err := os.ReadDir(artifactsDir)
+		Expect(err).ToNot(HaveOccurred())
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
 			}
+			name := e.Name()
+			if !strings.HasPrefix(name, consts.CommatrixFileNamePrefix+"-") || !strings.HasSuffix(name, ".nft") {
+				continue
+			}
+			base := strings.TrimSuffix(name, ".nft")
+			pool := strings.TrimPrefix(base, consts.CommatrixFileNamePrefix+"-")
+			content, readErr := os.ReadFile(filepath.Join(artifactsDir, name))
+			Expect(readErr).ToNot(HaveOccurred(), fmt.Sprintf("Failed to read generated %s file", name))
+
+			upperPool := strings.NewReplacer("-", "_", ".", "_", ":", "_").Replace(strings.ToUpper(pool))
+			extraEnv := fmt.Sprintf("EXTRA_NFTABLES_%s_FILE", upperPool)
+			if extraPath, ok := os.LookupEnv(extraEnv); ok && extraPath != "" {
+				content, err = AddPortsToNFTables(content, extraPath)
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			poolToNFTables[pool] = content
 		}
 	})
 
@@ -101,11 +86,11 @@ var _ = Describe("Nftables", func() {
 		err := cluster.ValidateClusterVersionAndMachineConfiguration(cs)
 		Expect(err).ToNot(HaveOccurred())
 
-		for role, nftablesConfig := range nodeRoleToNFTables {
-			By(fmt.Sprintf("Applying firewall on %s nodes", role))
+		for pool, nftablesConfig := range poolToNFTables {
+			By(fmt.Sprintf("Applying firewall on pool %s", pool))
 
 			machineConfig, err := firewall.CreateMachineConfig(cs, nftablesConfig, artifactsDir,
-				role, utilsHelpers)
+				pool, utilsHelpers)
 			Expect(err).ToNot(HaveOccurred())
 
 			updated, err := cluster.ApplyMachineConfig(machineConfig, cs)
@@ -113,10 +98,10 @@ var _ = Describe("Nftables", func() {
 
 			if updated {
 				// wait to MCP to start the update.
-				cluster.WaitForMCPUpdateToStart(cs, role)
+				cluster.WaitForMCPUpdateToStart(cs, pool)
 
 				// Wait for MCP update to be ready.
-				cluster.WaitForMCPReadyState(cs, role)
+				cluster.WaitForMCPReadyState(cs, pool)
 
 				log.Println("MCP update completed successfully.")
 			} else {

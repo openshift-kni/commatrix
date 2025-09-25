@@ -13,6 +13,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/types"
 
 	mock_utils "github.com/openshift-kni/commatrix/pkg/utils/mock"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,7 +75,7 @@ var (
 			Direction: "Ingress",
 			Protocol:  "UDP",
 			Port:      111,
-			NodeRole:  "master",
+			NodePool:  "master",
 			Service:   "rpcbind",
 			Namespace: "test-namespace",
 			Pod:       "test-pod",
@@ -85,7 +86,7 @@ var (
 			Direction: "Ingress",
 			Protocol:  "UDP",
 			Port:      500,
-			NodeRole:  "master",
+			NodePool:  "master",
 			Service:   "pluto",
 			Namespace: "test-namespace",
 			Pod:       "test-pod",
@@ -104,17 +105,29 @@ var _ = Describe("GenerateSS", func() {
 
 		err := v1.AddToScheme(sch)
 		Expect(err).NotTo(HaveOccurred())
+		err = machineconfigurationv1.AddToScheme(sch)
+		Expect(err).NotTo(HaveOccurred())
 
 		testNode := &v1.Node{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-node",
+				Annotations: map[string]string{
+					"machineconfiguration.openshift.io/currentConfig": "rendered-master-abc",
+				},
 				Labels: map[string]string{
 					"node-role.kubernetes.io/master": "",
 				},
 			},
 		}
 
-		fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode).Build()
+		mcpMaster := &machineconfigurationv1.MachineConfigPool{
+			ObjectMeta: metav1.ObjectMeta{Name: "master"},
+			Spec: machineconfigurationv1.MachineConfigPoolSpec{
+				NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/master": ""}},
+			},
+			Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+		}
+		fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode, mcpMaster).Build()
 		fakeClientset := fakek.NewSimpleClientset()
 
 		clientset = &client.ClientSet{

@@ -16,6 +16,7 @@ import (
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	configv1 "github.com/openshift/api/config/v1"
+	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek "k8s.io/client-go/kubernetes/fake"
 )
@@ -37,7 +38,7 @@ var (
 			Service:   "example-service",
 			Pod:       "example-pod",
 			Container: "example-container",
-			NodeRole:  "master",
+			NodePool:  "master",
 			Optional:  false,
 		},
 		{
@@ -48,7 +49,7 @@ var (
 			Service:   "example-service2",
 			Pod:       "example-pod2",
 			Container: "example-container2",
-			NodeRole:  "worker",
+			NodePool:  "worker",
 			Optional:  false,
 		},
 	}
@@ -62,7 +63,7 @@ var (
 			Service:   "test-service",
 			Pod:       "test-pod",
 			Container: "test-container",
-			NodeRole:  "master",
+			NodePool:  "master",
 			Optional:  false,
 		},
 	}
@@ -70,11 +71,42 @@ var (
 
 // Test resources.
 var (
+	mcpMaster = &machineconfigurationv1.MachineConfigPool{
+		ObjectMeta: metav1.ObjectMeta{Name: "master"},
+		Spec: machineconfigurationv1.MachineConfigPoolSpec{
+			NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/master": ""}},
+		},
+		Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+	}
+
+	mcpWorker = &machineconfigurationv1.MachineConfigPool{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: machineconfigurationv1.MachineConfigPoolSpec{
+			NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/worker": ""}},
+		},
+		Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+	}
+
 	testNode = &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-node",
+			Annotations: map[string]string{
+				"machineconfiguration.openshift.io/currentConfig": "rendered-master-abc",
+			},
 			Labels: map[string]string{
 				"node-role.kubernetes.io/master": "",
+			},
+		},
+	}
+
+	testNodeWorker = &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-node-worker",
+			Annotations: map[string]string{
+				"machineconfiguration.openshift.io/currentConfig": "rendered-worker-abc",
+			},
+			Labels: map[string]string{
+				"node-role.kubernetes.io/worker": "",
 			},
 		},
 	}
@@ -253,8 +285,10 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).NotTo(o.HaveOccurred())
 			err = discoveryv1.AddToScheme(sch)
 			o.Expect(err).NotTo(o.HaveOccurred())
+			err = machineconfigurationv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
 
-			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode, testPod, testService, testEndpointSlice).Build()
+			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode, testNodeWorker, testPod, testService, testEndpointSlice, mcpWorker, mcpMaster).Build()
 			fakeClientset := fakek.NewSimpleClientset()
 
 			clientset := &client.ClientSet{
@@ -331,6 +365,100 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			diff := matrixdiff.Generate(&wantedMatrix, commatrix)
 			o.Expect(diff.GetUniquePrimary().Matrix).To(o.BeEmpty())
 			o.Expect(diff.GetUniqueSecondary().Matrix).To(o.BeEmpty())
+		})
+	})
+
+	g.Context("expandEntriesForPools", func() {
+		g.It("should fan-out role-scoped entries to all matching pools", func() {
+			// Given two static entries: one for master and one for worker
+			entries := []types.ComDetails{
+				{
+					Direction: "Ingress",
+					Protocol:  "TCP",
+					Port:      1000,
+					Namespace: "ns1",
+					Service:   "svc1",
+					Pod:       "pod1",
+					Container: "c1",
+					NodePool:  "master",
+					Optional:  false,
+				},
+				{
+					Direction: "Ingress",
+					Protocol:  "UDP",
+					Port:      2000,
+					Namespace: "ns2",
+					Service:   "svc2",
+					Pod:       "pod2",
+					Container: "c2",
+					NodePool:  "worker",
+					Optional:  true,
+				},
+			}
+
+			// And pool roles: poolA has master+worker, poolB has worker, poolC has master
+			poolToRoles := map[string][]string{
+				"poolA": {"master", "worker"},
+				"poolB": {"worker"},
+				"poolC": {"master"},
+			}
+
+			out := expandStaticEntriesByPool(entries, poolToRoles)
+
+			// Expect one entry for master in poolA, and worker duplicated for poolA and poolB and one for master poolC
+			expected := []types.ComDetails{
+				{
+					Direction: "Ingress",
+					Protocol:  "TCP",
+					Port:      1000,
+					Namespace: "ns1",
+					Service:   "svc1",
+					Pod:       "pod1",
+					Container: "c1",
+					NodePool:  "poolC",
+					Optional:  false,
+				},
+				{
+					Direction: "Ingress",
+					Protocol:  "TCP",
+					Port:      1000,
+					Namespace: "ns1",
+					Service:   "svc1",
+					Pod:       "pod1",
+					Container: "c1",
+					NodePool:  "poolA",
+					Optional:  false,
+				},
+				{
+					Direction: "Ingress",
+					Protocol:  "UDP",
+					Port:      2000,
+					Namespace: "ns2",
+					Service:   "svc2",
+					Pod:       "pod2",
+					Container: "c2",
+					NodePool:  "poolA",
+					Optional:  true,
+				},
+				{
+					Direction: "Ingress",
+					Protocol:  "UDP",
+					Port:      2000,
+					Namespace: "ns2",
+					Service:   "svc2",
+					Pod:       "pod2",
+					Container: "c2",
+					NodePool:  "poolB",
+					Optional:  true,
+				},
+			}
+
+			// Compare ignoring order
+			gotMatrix := types.ComMatrix{Matrix: out}
+			gotMatrix.SortAndRemoveDuplicates()
+			expectedMatrix := types.ComMatrix{Matrix: expected}
+			expectedMatrix.SortAndRemoveDuplicates()
+			o.Expect(gotMatrix.Matrix).To(o.Equal(expectedMatrix.Matrix))
 		})
 	})
 })
