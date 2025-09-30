@@ -14,9 +14,9 @@ import (
 
 const butaneVersion = "4.17.0"
 
-func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nodeRolde string,
+func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nodePool string,
 	utilsHelpers utils.UtilsInterface) (machineConfig []byte, err error) {
-	butaneConfigVar := createButaneConfig(string(NFTtable), nodeRolde)
+	butaneConfigVar := createButaneConfig(string(NFTtable), nodePool)
 	options := common.TranslateBytesOptions{}
 
 	machineConfig, _, err = butaneConfig.TranslateBytes(butaneConfigVar, options)
@@ -24,7 +24,7 @@ func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nod
 		return nil, fmt.Errorf("failed to covert the ButaneConfig to yaml %v: ", err)
 	}
 
-	fileName := fmt.Sprintf("mc-%s.yaml", nodeRolde)
+	fileName := fmt.Sprintf("mc-%s.yaml", nodePool)
 	filePath := filepath.Join(artifactsDir, fileName)
 	err = utilsHelpers.WriteFile(filePath, machineConfig)
 	if err != nil {
@@ -34,7 +34,7 @@ func CreateMachineConfig(c *client.ClientSet, NFTtable []byte, artifactsDir, nod
 	return machineConfig, nil
 }
 
-func createButaneConfig(nftablesRules, nodeRole string) []byte {
+func createButaneConfig(nftablesRules, nodePool string) []byte {
 	lines := strings.Split(nftablesRules, "\n")
 	nftablesRulesWithoutFirstLine := ""
 	if len(lines) > 1 {
@@ -78,7 +78,7 @@ storage:
           table inet openshift_filter
           delete table inet openshift_filter
 %s
-        `, butaneVersion, nodeRole, nodeRole, indentedRules)
+        `, butaneVersion, nodePool, nodePool, indentedRules)
 	butaneConfig = strings.ReplaceAll(butaneConfig, "\t", "  ")
 	return []byte(butaneConfig)
 }
