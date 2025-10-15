@@ -343,16 +343,6 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Pod:       "coredns",
 		Container: "coredns",
 		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      9447,
-		NodeRole:  "master",
-		Service:   "",
-		Namespace: "openshift-machine-api",
-		Pod:       "metal3-baremetal-operator",
-		Container: "",
-		Optional:  false,
 	},
 }
 
