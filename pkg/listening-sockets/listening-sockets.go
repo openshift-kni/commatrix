@@ -79,7 +79,7 @@ func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byt
 			defer func() {
 				err := cc.podUtils.DeletePod(debugPod)
 				if err != nil {
-					fmt.Printf("failed cleaning debug pod %s: %v", debugPod, err)
+					log.Warningf("failed cleaning debug pod %s: %v", debugPod.Name, err)
 				}
 			}()
 
