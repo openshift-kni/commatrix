@@ -55,6 +55,12 @@ namespace      EndpointSlice Namespace
 service        EndpointSlice owner Service name
 pod            EndpointSlice target Pod name
 container      Port owner Container name
-nodeRole       Service node host role (master/worker/master&worker[for SNO])
+nodePool       Resolved MachineConfigPool name (e.g., master, worker, or custom pool)
 optional       Optional or mandatory flow for OpenShift
 ```
+
+### MachineConfigPool selection
+
+When associating a node to a MachineConfigPool (MCP), the pool is derived directly from the node annotation `machineconfiguration.openshift.io/currentConfig`, expected in the form `rendered-<pool>-<hash>`. The pool name is obtained by removing the `rendered-` prefix and trimming the trailing `-<hash>`.
+
+The resolved pool name is recorded in the `nodePool` field of each matrix entry, and NFT output is generated per pool.
