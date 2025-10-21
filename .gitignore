@@ -2,6 +2,7 @@ communication-matrix/*
 commatrix-gen
 
 bin/
+cross-build-output/
 vendor/
 .vscode/
 
