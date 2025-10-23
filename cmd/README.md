@@ -57,12 +57,12 @@ Flags:
 Once you run the `oc commatrix generate` command, the plugin will
 generate a communication matrix based on the ingress flows in your
 OpenShift cluster. The output will be saved to a file (destDir) in the chosen format,
-similar to the following:
+similar to the following. Note that `Node Pool` reflects the resolved MachineConfigPool name:
 
 `csv example`
 ```sh
 $ oc commatrix generate --format csv
-Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+Direction,Protocol,Port,Namespace,Service,Pod,Container,NodePool,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,true
 Ingress,TCP,53,openshift-dns,dns-default,dnf-default,dns,master,false
 Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,master,false
@@ -81,7 +81,7 @@ $ oc commatrix generate --format json
         "service": "sshd",
         "pod": "",
         "container": "",
-        "nodeRole": "master",
+        "nodePool": "master",
         "optional": true
     },
     {
@@ -108,7 +108,7 @@ the command will generate the follwing paths:
 `communication-matrix path`
 
 ```sh
-Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+Direction,Protocol,Port,Namespace,Service,Pod,Container,NodePool,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,true
 Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,master,false
 Ingress,UDP,59975,,rpc.statd,,,master,false
@@ -117,7 +117,7 @@ Ingress,UDP,59975,,rpc.statd,,,master,false
 `ss-generated-matrix path`
 
 ```sh
-Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+Direction,Protocol,Port,Namespace,Service,Pod,Container,NodePool,Optional
 Ingress,TCP,22,,sshd,,,master,false
 Ingress,TCP,80,,haproxy,,router,master,false
 Ingress,TCP,111,Host system service,rpcbind,,,master,true
@@ -126,7 +126,7 @@ Ingress,TCP,111,Host system service,rpcbind,,,master,true
 `matrix-diff-ss path`
 
 ```sh
-Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+Direction,Protocol,Port,Namespace,Service,Pod,Container,NodePool,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,true
 Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,master,false
 - Ingress,TCP,111,Host system service,rpcbind,,,master,true
@@ -159,7 +159,7 @@ $ oc commatrix generate --format csv --customEntriesFormat csv --customEntriesPa
 `contents of communication-matrix/customEntriesPath`
 
 ```
-Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+Direction,Protocol,Port,Namespace,Service,Pod,Container,NodePool,Optional
 ingress,TCP,9050,example-namespace,example-service,example-pod,example-container,master,false
 ingress,UDP,9051,example-namespace2,example-service2,example-pod2,example-container2,worker,false
 ```
@@ -168,7 +168,7 @@ The command will generate the communication matrix, including the custom entries
 The output would look like this:
 
 ```
-Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
+Direction,Protocol,Port,Namespace,Service,Pod,Container,NodePool,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,true
 Ingress,TCP,53,openshift-dns,dns-default,dnf-default,dns,master,false
 ingress,TCP,9050,example-namespace,example-service,example-pod,example-container,master,false
