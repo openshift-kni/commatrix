@@ -178,6 +178,80 @@ var GeneralStaticEntriesMaster = []ComDetails{
 	},
 }
 
+var GeneralStaticEntriesArbiter = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      9637,
+		NodePool:  "arbiter",
+		Service:   "kube-rbac-proxy-crio",
+		Namespace: "openshift-machine-config-operator",
+		Pod:       "kube-rbac-proxy-crio",
+		Container: "kube-rbac-proxy-crio",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      10256,
+		NodePool:  "arbiter",
+		Service:   "ovnkube",
+		Namespace: "openshift-ovn-kubernetes",
+		Pod:       "ovnkube",
+		Container: "ovnkube-controller",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      10250,
+		NodePool:  "arbiter",
+		Service:   "kubelet",
+		Namespace: "Host system service",
+		Pod:       "",
+		Container: "",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      9107,
+		NodePool:  "arbiter",
+		Service:   "egressip-node-healthcheck",
+		Namespace: "openshift-ovn-kubernetes",
+		Pod:       "ovnkube-node",
+		Container: "ovnkube-controller",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      111,
+		NodePool:  "arbiter",
+		Service:   "rpcbind",
+		Namespace: "Host system service",
+		Pod:       "",
+		Container: "",
+		Optional:  true,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      111,
+		NodePool:  "arbiter",
+		Service:   "rpcbind",
+		Namespace: "Host system service",
+		Pod:       "",
+		Container: "",
+		Optional:  true,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      22,
+		NodePool:  "arbiter",
+		Service:   "sshd",
+		Namespace: "Host system service",
+		Pod:       "",
+		Container: "",
+		Optional:  true,
+	},
+}
+
 var BaremetalStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
@@ -276,6 +350,40 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 	},
 }
 
+var BaremetalStaticEntriesArbiter = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      53,
+		NodePool:  "arbiter",
+		Service:   "dns-default",
+		Namespace: "openshift-dns",
+		Pod:       "dnf-default",
+		Container: "dns",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      53,
+		NodePool:  "arbiter",
+		Service:   "dns-default",
+		Namespace: "openshift-dns",
+		Pod:       "dnf-default",
+		Container: "dns",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      18080,
+		NodePool:  "arbiter",
+		Service:   "",
+		Namespace: "openshift-kni-infra",
+		Pod:       "coredns",
+		Container: "coredns",
+		Optional:  false,
+	},
+}
+
 var StandardStaticEntries = []ComDetails{
 	{
 		Direction: "Ingress",
@@ -297,6 +405,16 @@ var StandardStaticEntries = []ComDetails{
 		Pod:       "",
 		Container: "",
 		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      6081,
+		NodePool:  "arbiter",
+		Service:   "ovn-kubernetes geneve",
+		Namespace: "openshift-ovn-kubernetes",
+		Pod:       "",
+		Container: "",
+		Optional:  true,
 	},
 }
 
@@ -321,6 +439,20 @@ var GeneralIPv6StaticEntriesMaster = []ComDetails{
 		Protocol:  "UDP",
 		Port:      546,
 		NodePool:  "master",
+		Service:   "NetworkManager",
+		Namespace: "",
+		Pod:       "",
+		Container: "",
+		Optional:  false,
+	},
+}
+
+var GeneralIPv6StaticEntriesArbiter = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      546,
+		NodePool:  "arbiter",
 		Service:   "NetworkManager",
 		Namespace: "",
 		Pod:       "",
