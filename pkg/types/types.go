@@ -33,6 +33,7 @@ type Deployment int
 const (
 	SNO Deployment = iota
 	Standard
+	HighlyAvailableArbiter
 )
 
 const (
