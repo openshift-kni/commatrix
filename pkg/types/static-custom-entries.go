@@ -155,26 +155,6 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Pod:       "",
 		Container: "",
 		Optional:  true,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      22624,
-		NodePool:  "master",
-		Service:   "machine-config-server",
-		Namespace: "openshift-machine-config-operator",
-		Pod:       "machine-config-server",
-		Container: "machine-config-server",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      22623,
-		NodePool:  "master",
-		Service:   "machine-config-server",
-		Namespace: "openshift-machine-config-operator",
-		Pod:       "machine-config-server",
-		Container: "machine-config-server",
-		Optional:  false,
 	},
 }
 
