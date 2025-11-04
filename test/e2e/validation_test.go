@@ -88,8 +88,8 @@ var _ = Describe("Validation", func() {
 		docCommatrixFileContent, err := os.ReadFile(docCommatrixFilePath)
 		Expect(err).ToNot(HaveOccurred(), "Failed to read documented communication matrix file")
 
-		// Normalize header: rename "Node Role" to our csv tag "nodePool"
-		docCommatrixFileContent = bytes.Replace(docCommatrixFileContent, []byte("Node Role"), []byte("NodePool"), 1)
+		// Normalize header: rename "Node Role" to our csv tag "NodeGroup"
+		docCommatrixFileContent = bytes.Replace(docCommatrixFileContent, []byte("Node Role"), []byte("NodeGroup"), 1)
 
 		docComDetailsList, err := types.ParseToComDetailsList(docCommatrixFileContent, types.FormatCSV)
 		Expect(err).ToNot(HaveOccurred(), "Failed to parse documented communication matrix")

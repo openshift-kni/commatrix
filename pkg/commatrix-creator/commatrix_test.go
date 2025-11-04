@@ -38,7 +38,7 @@ var (
 			Service:   "example-service",
 			Pod:       "example-pod",
 			Container: "example-container",
-			NodePool:  "master",
+			NodeGroup: "master",
 			Optional:  false,
 		},
 		{
@@ -49,7 +49,7 @@ var (
 			Service:   "example-service2",
 			Pod:       "example-pod2",
 			Container: "example-container2",
-			NodePool:  "worker",
+			NodeGroup: "worker",
 			Optional:  false,
 		},
 	}
@@ -63,7 +63,7 @@ var (
 			Service:   "test-service",
 			Pod:       "test-pod",
 			Container: "test-container",
-			NodePool:  "master",
+			NodeGroup: "master",
 			Optional:  false,
 		},
 	}
@@ -380,7 +380,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					Service:   "svc1",
 					Pod:       "pod1",
 					Container: "c1",
-					NodePool:  "master",
+					NodeGroup: "master",
 					Optional:  false,
 				},
 				{
@@ -391,7 +391,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					Service:   "svc2",
 					Pod:       "pod2",
 					Container: "c2",
-					NodePool:  "worker",
+					NodeGroup: "worker",
 					Optional:  true,
 				},
 			}
@@ -415,7 +415,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					Service:   "svc1",
 					Pod:       "pod1",
 					Container: "c1",
-					NodePool:  "poolC",
+					NodeGroup: "poolC",
 					Optional:  false,
 				},
 				{
@@ -426,7 +426,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					Service:   "svc1",
 					Pod:       "pod1",
 					Container: "c1",
-					NodePool:  "poolA",
+					NodeGroup: "poolA",
 					Optional:  false,
 				},
 				{
@@ -437,7 +437,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					Service:   "svc2",
 					Pod:       "pod2",
 					Container: "c2",
-					NodePool:  "poolA",
+					NodeGroup: "poolA",
 					Optional:  true,
 				},
 				{
@@ -448,7 +448,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					Service:   "svc2",
 					Pod:       "pod2",
 					Container: "c2",
-					NodePool:  "poolB",
+					NodeGroup: "poolB",
 					Optional:  true,
 				},
 			}

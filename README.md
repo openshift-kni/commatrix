@@ -10,6 +10,7 @@ This library leverages the EndpointSlice resource to identify the ports the
 cluster uses for ingress traffic. Relevant EndpointSlices include those  
 referencing host-networked pods, Node Port services, and LoadBalancer services.
 
+
 ### Creating Custom ComDetails with ss Command
 
 The `ss` command, a Linux utility, lists open ports on  
@@ -55,7 +56,11 @@ namespace      EndpointSlice Namespace
 service        EndpointSlice owner Service name
 pod            EndpointSlice target Pod name
 container      Port owner Container name
-nodePool       Resolved MachineConfigPool name (e.g., master, worker, or custom pool)
+nodeGroup      Resolved node group. Resolution logic:
+               - If MCP API available: nodeGroup = pool name parsed from node annotation
+                 machineconfiguration.openshift.io/currentConfig (e.g., master, worker, custom-ws)
+               - Else if label hypershift.openshift.io/nodePool present: nodeGroup = that label value
+               - Else: nodeGroup = node role (e.g., master, worker)
 optional       Optional or mandatory flow for OpenShift
 ```
 
@@ -63,4 +68,8 @@ optional       Optional or mandatory flow for OpenShift
 
 When associating a node to a MachineConfigPool (MCP), the pool is derived directly from the node annotation `machineconfiguration.openshift.io/currentConfig`, expected in the form `rendered-<pool>-<hash>`. The pool name is obtained by removing the `rendered-` prefix and trimming the trailing `-<hash>`.
 
-The resolved pool name is recorded in the `nodePool` field of each matrix entry, and NFT output is generated per pool.
+If MCPs are not present in the cluster (e.g., HyperShift), `nodeGroup` is computed as:
+1) use `hypershift.openshift.io/nodePool` label when available.
+2) otherwise fall back to the node role.
+
+The resolved group is recorded in the `nodeGroup` field for CSV/JSON/YAML outputs. NFT output is generated per node pool (MCP) or node role accordingly.

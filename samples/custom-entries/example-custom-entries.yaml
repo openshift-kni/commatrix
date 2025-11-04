@@ -1,7 +1,7 @@
 - container: example-container
   direction: ingress
   namespace: example-namespace
-  nodePool: master
+  nodeGroup: master
   optional: false
   pod: example-pod
   port: 9050
@@ -10,7 +10,7 @@
 - container: example-container2
   direction: ingress
   namespace: example-namespace2
-  nodePool: worker
+  nodeGroup: worker
   optional: false
   pod: example-pod2
   port: 9051

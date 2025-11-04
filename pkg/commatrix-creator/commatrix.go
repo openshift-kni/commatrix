@@ -64,7 +64,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	}
 
 	// List of [master, worker] roles per pool for static entries expansion
-	PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(cm.exporter.ClientSet, cm.exporter.NodeToPool())
+	PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(cm.exporter.ClientSet, cm.exporter.NodeToGroup())
 	if err != nil {
 		log.Errorf("Failed to extract pool to roles: %v", err)
 		return nil, err
@@ -165,9 +165,9 @@ func expandStaticEntriesByPool(staticEntries []types.ComDetails, poolToRoles map
 	for _, se := range staticEntries {
 		for poolName, roles := range poolToRoles {
 			// check membership in slice
-			if slices.Contains(roles, se.NodePool) {
+			if slices.Contains(roles, se.NodeGroup) {
 				dup := se
-				dup.NodePool = poolName
+				dup.NodeGroup = poolName
 				out = append(out, dup)
 			}
 		}

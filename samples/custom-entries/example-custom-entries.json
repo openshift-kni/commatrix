@@ -7,7 +7,7 @@
         "service": "example-service",
         "pod": "example-pod",
         "container": "example-container",
-        "nodePool": "master",
+        "nodeGroup": "master",
         "optional": false
     },
     {
@@ -18,7 +18,7 @@
         "service": "example-service2",
         "pod": "example-pod2",
         "container": "example-container2",
-        "nodePool": "worker",
+        "nodeGroup": "worker",
         "optional": false
     }
 ]
