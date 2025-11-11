@@ -176,7 +176,7 @@ var (
 			Service:   "test-service",
 			Pod:       "test-app-pod",
 			Container: "test-container",
-			NodePool:  "master",
+			NodeGroup: "master",
 			Optional:  false,
 		},
 	}

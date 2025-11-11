@@ -75,7 +75,7 @@ var (
 			Direction: "Ingress",
 			Protocol:  "UDP",
 			Port:      111,
-			NodePool:  "master",
+			NodeGroup: "master",
 			Service:   "rpcbind",
 			Namespace: "test-namespace",
 			Pod:       "test-pod",
@@ -86,7 +86,7 @@ var (
 			Direction: "Ingress",
 			Protocol:  "UDP",
 			Port:      500,
-			NodePool:  "master",
+			NodeGroup: "master",
 			Service:   "pluto",
 			Namespace: "test-namespace",
 			Pod:       "test-pod",
@@ -169,6 +169,12 @@ var _ = Describe("GenerateSS", func() {
 			Return([]byte(crictlExecCommandOut), nil).
 			AnyTimes()
 
+		// Mock expectation for loopback IP discovery on host
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
+			[]string{"chroot", "/host", "/bin/sh", "-c", "ip -j addr show lo"}).
+			Return([]byte(`[{"addr_info":[{"local":"127.0.0.1"},{"local":"::1"}]}]`), nil).
+			AnyTimes()
+
 		mockUtils.EXPECT().
 			CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, consts.DefaultDebugPodImage, []string{}).
 			Return(mockPod, nil).AnyTimes()
@@ -187,6 +193,87 @@ var _ = Describe("GenerateSS", func() {
 		Expect(normalizeOutput(string(ssOutTCP))).To(Equal(normalizeOutput(expectedTCPOutput)))
 		Expect(normalizeOutput(string(ssOutUDP))).To(Equal(normalizeOutput(expectedUDPOutput)))
 		Expect(ssMat.Matrix).To(Equal(expectedSSMat))
+	})
+})
+
+var _ = Describe("isLoopbackEntry", func() {
+	It("should correctly identify IPv4 loopback variants", func() {
+		empty := map[string]bool{}
+		Expect(isLoopbackEntry(`LISTEN 0 4096 127.0.0.1:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, empty)).To(BeTrue())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 127.0.0.2:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, empty)).To(BeTrue())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 127.1.2.3:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, empty)).To(BeTrue())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 127.255.255.255:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, empty)).To(BeTrue())
+	})
+
+	It("should correctly identify IPv6 loopback variants", func() {
+		empty := map[string]bool{}
+		Expect(isLoopbackEntry(`LISTEN 0 4096 ::1:8797 :::* users:(("svc",pid=1,fd=3))`, empty)).To(BeTrue())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 [::1]:8797 [::]:* users:(("svc",pid=1,fd=3))`, empty)).To(BeTrue())
+	})
+
+	It("should not flag non-loopback addresses", func() {
+		empty := map[string]bool{}
+		Expect(isLoopbackEntry(`LISTEN 0 4096 0.0.0.0:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, empty)).To(BeFalse())
+		Expect(isLoopbackEntry(`UNCONN 0 0 10.46.97.104:500 0.0.0.0:* users:(("svc",pid=1,fd=3))`, empty)).To(BeFalse())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 192.168.1.1:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, empty)).To(BeFalse())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 fe80::1:8797 :::* users:(("svc",pid=1,fd=3))`, empty)).To(BeFalse())
+		Expect(isLoopbackEntry(``, empty)).To(BeFalse())
+	})
+
+	It("should detect IPs assigned to loopback interface (alias)", func() {
+		aliases := map[string]bool{
+			"127.0.0.1":  true,
+			"::1":        true,
+			"172.20.0.1": true,
+		}
+		Expect(isLoopbackEntry(`LISTEN 0 4096 127.0.0.1:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, aliases)).To(BeTrue())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 172.20.0.1:6443 0.0.0.0:* users:(("svc",pid=1,fd=3))`, aliases)).To(BeTrue())
+		Expect(isLoopbackEntry(`LISTEN 0 4096 192.168.1.1:8797 0.0.0.0:* users:(("svc",pid=1,fd=3))`, aliases)).To(BeFalse())
+	})
+})
+
+var _ = Describe("filterEntries (loopback filtering)", func() {
+	It("should filter out loopback addresses from ss entries", func() {
+		entries := []string{
+			`LISTEN 0 4096 127.0.0.1:8797 0.0.0.0:* users:(("service1",pid=1234,fd=3))`,
+			`LISTEN 0 4096 127.1.2.3:8798 0.0.0.0:* users:(("service2",pid=1235,fd=3))`,
+			`LISTEN 0 4096 0.0.0.0:9100 0.0.0.0:* users:(("service3",pid=1236,fd=3))`,
+			`UNCONN 0 0 10.46.97.104:500 0.0.0.0:* users:(("service4",pid=1237,fd=3))`,
+			`LISTEN 0 4096 ::1:8800 :::* users:(("service5",pid=1238,fd=3))`,
+			`LISTEN 0 4096 192.168.1.1:8801 0.0.0.0:* users:(("service6",pid=1239,fd=3))`,
+			``,
+		}
+		empty := map[string]bool{}
+		filtered := filterEntries(entries, empty)
+
+		Expect(filtered).To(HaveLen(3))
+		Expect(filtered).To(ContainElement(ContainSubstring("0.0.0.0:9100")))
+		Expect(filtered).To(ContainElement(ContainSubstring("10.46.97.104:500")))
+		Expect(filtered).To(ContainElement(ContainSubstring("192.168.1.1:8801")))
+
+		Expect(filtered).NotTo(ContainElement(ContainSubstring("127.0.0.1")))
+		Expect(filtered).NotTo(ContainElement(ContainSubstring("127.1.2.3")))
+		Expect(filtered).NotTo(ContainElement(ContainSubstring("::1")))
+	})
+
+	It("should filter out loopback aliases (e.g., HyperShift 172.20.0.1)", func() {
+		loopbacks := map[string]bool{
+			"127.0.0.1":  true,
+			"::1":        true,
+			"172.20.0.1": true,
+		}
+		entries := []string{
+			`LISTEN 0 4096 172.20.0.1:6443 0.0.0.0:* users:(("kube-apiserver",pid=1234,fd=3))`,
+			`LISTEN 0 4096 127.0.0.1:8797 0.0.0.0:* users:(("service1",pid=1235,fd=3))`,
+			`LISTEN 0 4096 0.0.0.0:443 0.0.0.0:* users:(("service2",pid=1236,fd=3))`,
+			`LISTEN 0 4096 192.168.1.1:8801 0.0.0.0:* users:(("service3",pid=1237,fd=3))`,
+		}
+		filtered := filterEntries(entries, loopbacks)
+		Expect(filtered).To(HaveLen(2))
+		Expect(filtered).To(ContainElement(ContainSubstring("0.0.0.0:443")))
+		Expect(filtered).To(ContainElement(ContainSubstring("192.168.1.1:8801")))
+		Expect(filtered).NotTo(ContainElement(ContainSubstring("172.20.0.1:6443")))
+		Expect(filtered).NotTo(ContainElement(ContainSubstring("127.0.0.1")))
 	})
 })
 

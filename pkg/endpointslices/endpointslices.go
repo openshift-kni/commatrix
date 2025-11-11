@@ -27,13 +27,16 @@ type EndpointSlicesInfo struct {
 
 type EndpointSlicesExporter struct {
 	*client.ClientSet
-	nodeToPool map[string]string
-	sliceInfo  []EndpointSlicesInfo
+	nodeToGroup map[string]string
+	sliceInfo   []EndpointSlicesInfo
 }
 
-// NodeToPool returns Node To Pool mapping.
-func (ep *EndpointSlicesExporter) NodeToPool() map[string]string {
-	return ep.nodeToPool
+// NodeToGroup returns Node→Group mapping.
+// - When MCPs exist: uses the MCP pool name.
+// - When MCPs do not exist (e.g., HyperShift): prefers the 'hypershift.openshift.io/nodePool' label.
+// - Otherwise: falls back to the node role.
+func (ep *EndpointSlicesExporter) NodeToGroup() map[string]string {
+	return ep.nodeToGroup
 }
 
 type NoOwnerRefErr struct {
@@ -46,11 +49,17 @@ func (e *NoOwnerRefErr) Error() string {
 }
 
 func New(cs *client.ClientSet) (*EndpointSlicesExporter, error) {
-	nodeToPool, err := mcp.ResolveNodeToPool(cs)
+	// Try MCP-based resolution first
+	if nodeToPool, err := mcp.ResolveNodeToPool(cs); err == nil {
+		return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToPool, sliceInfo: []EndpointSlicesInfo{}}, nil
+	}
+
+	// Fallback: build node->group map (HyperShift or clusters without MCP): prefer NodePool label, else role
+	nodeToGroup, err := types.BuildNodeToGroupMap(cs)
 	if err != nil {
 		return nil, err
 	}
-	return &EndpointSlicesExporter{cs, nodeToPool, []EndpointSlicesInfo{}}, nil
+	return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToGroup, sliceInfo: []EndpointSlicesInfo{}}, nil
 }
 
 // load endpoint slices for services from type loadbalancer and node port,
@@ -126,7 +135,7 @@ func (ep *EndpointSlicesExporter) ToComDetails() ([]types.ComDetails, error) {
 	comDetails := make([]types.ComDetails, 0)
 
 	for _, epSliceInfo := range ep.sliceInfo {
-		cds, err := epSliceInfo.toComDetails(ep.nodeToPool)
+		cds, err := epSliceInfo.toComDetailsWithGroups(ep.nodeToGroup)
 		if err != nil {
 			switch err.(type) {
 			case *NoOwnerRefErr:
@@ -151,13 +160,13 @@ func createEPSliceInfo(service corev1.Service, ep discoveryv1.EndpointSlice, pod
 	}
 }
 
-func (ei *EndpointSlicesInfo) getEndpointSlicePools(nodeToPool map[string]string) []string {
+func (ei *EndpointSlicesInfo) getEndpointSliceGroups(nodeToGroup map[string]string) []string {
 	poolsMap := make(map[string]bool)
 	for _, endpoint := range ei.EndpointSlice.Endpoints {
 		if endpoint.NodeName == nil {
 			continue
 		}
-		pool := nodeToPool[*endpoint.NodeName]
+		pool := nodeToGroup[*endpoint.NodeName]
 		if pool == "" {
 			continue
 		}
@@ -173,7 +182,7 @@ func (ei *EndpointSlicesInfo) getEndpointSlicePools(nodeToPool map[string]string
 	return pools
 }
 
-func (ei *EndpointSlicesInfo) toComDetails(nodeToPool map[string]string) ([]types.ComDetails, error) {
+func (ei *EndpointSlicesInfo) toComDetailsWithGroups(nodeToGroup map[string]string) ([]types.ComDetails, error) {
 	if len(ei.EndpointSlice.OwnerReferences) == 0 {
 		return nil, &NoOwnerRefErr{name: ei.EndpointSlice.Name, namespace: ei.EndpointSlice.Namespace}
 	}
@@ -187,8 +196,8 @@ func (ei *EndpointSlicesInfo) toComDetails(nodeToPool map[string]string) ([]type
 		return nil, fmt.Errorf("failed to get pod name for endpointslice %s: %w", ei.EndpointSlice.Name, err)
 	}
 
-	// Get the MCP pools backing this EndpointSlice.
-	pools := ei.getEndpointSlicePools(nodeToPool)
+	// Get the groups backing this EndpointSlice (pool names or roles).
+	pools := ei.getEndpointSliceGroups(nodeToGroup)
 
 	epSlice := ei.EndpointSlice
 	optional := isOptional(epSlice)
@@ -208,7 +217,7 @@ func (ei *EndpointSlicesInfo) toComDetails(nodeToPool map[string]string) ([]type
 				Namespace: namespace,
 				Pod:       name,
 				Container: containerName,
-				NodePool:  pool,
+				NodeGroup: pool,
 				Service:   ei.Service.Name,
 				Optional:  optional,
 			})
