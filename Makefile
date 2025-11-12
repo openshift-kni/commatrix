@@ -86,7 +86,7 @@ fmt-code:
 
 GOMOCK = $(shell pwd)/bin/mockgen
 gomock:
-	$(call go-install-tool,$(GOMOCK),github.com/golang/mock/mockgen@v1.6.0)
+	$(call go-install-tool,$(GOMOCK),go.uber.org/mock/mockgen@v0.1.0)
 
 GINKGO = $(BIN_DIR)/ginkgo
 ginkgo:
