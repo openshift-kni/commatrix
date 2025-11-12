@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	"github.com/golang/mock/gomock"
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
+	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
