@@ -138,12 +138,7 @@ func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, er
 		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
 	case configv1.AWSPlatformType:
-		log.Debug("Adding Cloud static entries")
-		comDetails = append(comDetails, types.CloudStaticEntriesMaster...)
-		if cm.deployment == types.SNO {
-			break
-		}
-		comDetails = append(comDetails, types.CloudStaticEntriesWorker...)
+		log.Debug("There are no Cloud static entries to be added")
 	case configv1.NonePlatformType:
 		break
 	default:
