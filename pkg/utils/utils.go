@@ -34,6 +34,7 @@ type UtilsInterface interface {
 	WriteFile(path string, data []byte) error
 	GetPlatformType() (configv1.PlatformType, error)
 	IsSNOCluster() (bool, error)
+	IsHighlyAvailableArbiter() (bool, error)
 	WaitForPodStatus(namespace string, pod *corev1.Pod, PodPhase corev1.PodPhase) error
 	IsIPv6Enabled() (bool, error)
 }
@@ -89,6 +90,16 @@ func (u *utils) resolveImageStreamTag(namespace, name, tag string) (string, erro
 		return "", fmt.Errorf("unable to resolve the imagestream tag %s/%s:%s: %v", namespace, name, tag, err)
 	}
 	return image, nil
+}
+
+func (u *utils) getClusterControlPlaneTopology() (configv1.TopologyMode, error) {
+	infra := &configv1.Infrastructure{}
+	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "cluster"}, infra)
+	if err != nil {
+		return "", err
+	}
+
+	return infra.Status.ControlPlaneTopology, nil
 }
 
 func (u *utils) CreateNamespace(namespace string) error {
@@ -279,13 +290,21 @@ func getNamespaceDefinition(namespace string) *corev1.Namespace {
 }
 
 func (u *utils) IsSNOCluster() (bool, error) {
-	infra := &configv1.Infrastructure{}
-	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "cluster"}, infra)
+	controlPlaneTopology, err := u.getClusterControlPlaneTopology()
 	if err != nil {
 		return false, err
 	}
 
-	return infra.Status.ControlPlaneTopology == configv1.SingleReplicaTopologyMode, nil
+	return controlPlaneTopology == configv1.SingleReplicaTopologyMode, nil
+}
+
+func (u *utils) IsHighlyAvailableArbiter() (bool, error) {
+	controlPlaneTopology, err := u.getClusterControlPlaneTopology()
+	if err != nil {
+		return false, err
+	}
+
+	return controlPlaneTopology == configv1.HighlyAvailableArbiterMode, nil
 }
 
 // GetPlatformType returns the cluster's platform type.
