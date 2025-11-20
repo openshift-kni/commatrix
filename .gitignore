@@ -4,7 +4,6 @@ oc-commatrix
 
 bin/
 cross-build-output/
-vendor/
 .vscode/
 
 test/e2e/commatrix-e2e
