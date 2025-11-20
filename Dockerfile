@@ -1,12 +1,45 @@
-FROM registry.ci.openshift.org/ocp/4.20:oc-rpms AS oc
-# Final image temporarly contains golang, will be removed after the e2e tests removed from our repo
-FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.24-openshift-4.20
 
-WORKDIR /go/src/github.com/openshift-kni/commatrix
-RUN chmod -R a+w /go/src/github.com/openshift-kni/commatrix
+# Make kubectl & oc scripts available for copy
+FROM registry.redhat.io/openshift4/ose-cli-rhel9:v4.20@sha256:b8513a2ae627fa6d748f7e312c2439b7581de41ca0c41e5f01e35f89b9de63e9 AS ose-cli
 
-COPY --from=oc /go/src/github.com/openshift/oc/oc /usr/bin/oc
-# Build the commatrix binary
-RUN go mod vendor && \
-    make build && \
-    make install INSTALL_DIR=/usr/bin/
+# Build the manager binary
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.24@sha256:8412323224878c4e27cd6f7dc6ce99c50f878f37df323285bff29a53f8ec37cd AS builder
+
+WORKDIR /opt/app-root
+
+COPY go.mod go.mod
+COPY go.sum go.sum
+COPY cmd cmd
+COPY pkg pkg
+COPY vendor/ vendor/
+
+
+# Build oc-commatrix
+ENV GOEXPERIMENT=strictfipsruntime
+ENV CGO_ENABLED=1
+RUN mkdir -p build && \
+    go build -mod=vendor -tags strictfipsruntime -a -trimpath -ldflags="-s -w" \
+      -o build/oc-commatrix ./cmd/main.go
+# Create final image from UBI + built binary and oc
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:61d5ad475048c2e655cd46d0a55dfeaec182cc3faa6348cb85989a7c9e196483
+
+WORKDIR /
+
+COPY --from=builder /opt/app-root/build .
+COPY --from=ose-cli /usr/bin/oc /usr/bin/oc
+
+COPY LICENSE /licenses/
+COPY README.md ./README
+
+LABEL name="openshift-kni/commatrix" \
+      summary="Communication Matrix CLI" \
+      description="CLI to generate OpenShift communication matrices and optional host open ports diff." \
+      io.k8s.display-name="Communication Matrix CLI" \
+      io.openshift.tags="commatrix,oc,cli" \
+      maintainer="support@redhat.com" \
+      org.opencontainers.image.title="commatrix" \
+      org.opencontainers.image.source="https://github.com/openshift-kni/commatrix" 
+
+USER 65532:65532
+
+ENTRYPOINT ["/oc-commatrix"]
