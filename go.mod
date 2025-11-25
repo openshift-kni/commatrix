@@ -69,7 +69,7 @@ require (
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
+	gomodules.xyz/jsonpatch/v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 	k8s.io/client-go v0.31.2
 )
