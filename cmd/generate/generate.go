@@ -208,6 +208,12 @@ func Run(o *GenerateOptions) (err error) {
 		deployment = types.SNO
 	}
 
+	if isArbiter, err := o.utilsHelpers.IsHighlyAvailableArbiter(); err != nil {
+		return fmt.Errorf("failed to check is arbiter cluster %s", err)
+	} else if isArbiter {
+		deployment = types.HighlyAvailableArbiter
+	}
+
 	platformType, err := o.utilsHelpers.GetPlatformType()
 	if err != nil {
 		return fmt.Errorf("failed to get platform type %s", err)

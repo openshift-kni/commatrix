@@ -128,6 +128,9 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 		if cm.deployment == types.SNO {
 			break
 		}
+		if cm.deployment == types.HighlyAvailableArbiter {
+			comDetails = append(comDetails, types.BaremetalStaticEntriesArbiter...)
+		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
 	case configv1.AWSPlatformType:
 		log.Debug("There are no Cloud static entries to be added")
@@ -145,6 +148,13 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 	}
 	if cm.deployment == types.SNO {
 		return comDetails, nil
+	}
+
+	if cm.deployment == types.HighlyAvailableArbiter {
+		comDetails = append(comDetails, types.GeneralStaticEntriesArbiter...)
+		if cm.ipv6Enabled {
+			comDetails = append(comDetails, types.GeneralIPv6StaticEntriesArbiter...)
+		}
 	}
 
 	comDetails = append(comDetails, types.StandardStaticEntries...)

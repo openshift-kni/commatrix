@@ -2,6 +2,8 @@ Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,TRUE
 Ingress,TCP,53,openshift-dns,dns-default,dnf-default,dns,master,FALSE
 Ingress,TCP,111,Host system service,rpcbind,,,master,TRUE
+Ingress,TCP,2224,Host system service,pcsd,,,master,TRUE
+Ingress,UDP,5405,Host system service,corosync,,,master,TRUE
 Ingress,TCP,2379,openshift-etcd,etcd,etcd,etcdctl,master,FALSE
 Ingress,TCP,2380,openshift-etcd,healthz,etcd,etcd,master,FALSE
 Ingress,TCP,6080,openshift-kube-apiserver,,kube-apiserver,kube-apiserver-insecure-readyz,master,FALSE
