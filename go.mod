@@ -1,8 +1,8 @@
 module github.com/openshift-kni/commatrix
 
-go 1.22.0
+go 1.24.0
 
-toolchain go1.22.4
+toolchain go1.24.6
 
 require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
@@ -12,7 +12,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.1.0
-	golang.org/x/sync v0.8.0
+	golang.org/x/sync v0.18.0
 	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
 	k8s.io/cli-runtime v0.31.2
