@@ -2,7 +2,7 @@ module github.com/openshift-kni/commatrix
 
 go 1.22.0
 
-toolchain go1.22.4
+toolchain go1.25.4
 
 require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
