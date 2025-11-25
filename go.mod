@@ -1,8 +1,8 @@
 module github.com/openshift-kni/commatrix
 
-go 1.22.0
+go 1.23
 
-toolchain go1.22.4
+toolchain go1.24.6
 
 require (
 	github.com/gocarina/gocsv v0.0.0-20231116093920-b87c2d0e983a
@@ -118,6 +118,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
-	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
+	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
