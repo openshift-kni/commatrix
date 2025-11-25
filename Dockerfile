@@ -13,7 +13,6 @@ COPY cmd cmd
 COPY pkg pkg
 COPY vendor/ vendor/
 
-
 # Build oc-commatrix
 ENV GOEXPERIMENT=strictfipsruntime
 ENV CGO_ENABLED=1
@@ -31,14 +30,20 @@ COPY --from=ose-cli /usr/bin/oc /usr/bin/oc
 COPY LICENSE /licenses/
 COPY README.md ./README
 
-LABEL name="openshift-kni/commatrix" \
-      summary="Communication Matrix CLI" \
-      description="CLI to generate OpenShift communication matrices and optional host open ports diff." \
-      io.k8s.display-name="Communication Matrix CLI" \
-      io.openshift.tags="commatrix,oc,cli" \
-      maintainer="support@redhat.com" \
-      org.opencontainers.image.title="commatrix" \
-      org.opencontainers.image.source="https://github.com/openshift-kni/commatrix" 
+# Required labels for Conforma/Red Hat
+LABEL name="openshift-kni/commatrix"
+LABEL summary="Communication Matrix CLI"
+LABEL description="CLI to generate OpenShift communication matrices and optional host open ports diff."
+LABEL io.k8s.display-name="Communication Matrix CLI"
+LABEL io.k8s.description="Communication Matrix CLI"
+LABEL io.openshift.tags="commatrix,oc,cli"
+LABEL maintainer="support@redhat.com"
+LABEL com.redhat.component="commatrix"
+LABEL version="4.21"
+LABEL release="1"
+LABEL vendor="Red Hat, Inc."
+LABEL url="https://github.com/openshift-kni/commatrix"
+LABEL distribution-scope="public"
 
 USER 65532:65532
 
