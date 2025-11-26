@@ -137,12 +137,7 @@ func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, er
 		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
 	case types.Cloud:
-		log.Debug("Adding Cloud static entries")
-		comDetails = append(comDetails, types.CloudStaticEntriesMaster...)
-		if cm.d == types.SNO {
-			break
-		}
-		comDetails = append(comDetails, types.CloudStaticEntriesWorker...)
+		log.Debug("There are no Cloud static entries to be added")
 	default:
 		log.Errorf("Invalid value for cluster environment: %v", cm.e)
 		return nil, fmt.Errorf("invalid value for cluster environment")
