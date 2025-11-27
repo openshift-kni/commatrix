@@ -67,6 +67,16 @@ var (
 			Optional:  false,
 		},
 	}
+	exampleDynamicRanges = []types.DynamicRange{
+		{
+			Direction:   "ingress",
+			Protocol:    "TCP",
+			MinPort:     9000,
+			MaxPort:     9999,
+			Description: "example dynamic range",
+			Optional:    false,
+		},
+	}
 )
 
 // Test resources.
@@ -196,12 +206,13 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, configv1.BareMetalPlatformType, 0, false)
 				o.Expect(err).ToNot(o.HaveOccurred())
 
-				g.By("Getting ComDetails List From File")
-				gotComDetails, err := cm.GetComDetailsListFromFile()
+				g.By("Getting ComMatrix From File")
+				gotComMatrix, err := cm.GetComMatrixFromFile()
 				o.Expect(err).ToNot(o.HaveOccurred())
 
-				g.By("Comparing gotten ComDetails to wanted ComDetials")
-				o.Expect(gotComDetails).To(o.Equal(exampleComDetailsList))
+				g.By("Comparing gotten ComMatrix.Matrix to wanted ComDetials")
+				o.Expect(gotComMatrix.Matrix).To(o.Equal(exampleComDetailsList))
+				o.Expect(gotComMatrix.DynamicRanges).To(o.Equal(exampleDynamicRanges))
 			})
 		}
 
@@ -210,12 +221,12 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, configv1.BareMetalPlatformType, 0, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
-			g.By("Getting ComDetails List From File")
-			gotComDetails, err := cm.GetComDetailsListFromFile()
+			g.By("Getting ComMatrix From File")
+			gotComMatrix, err := cm.GetComMatrixFromFile()
 			o.Expect(err).To(o.HaveOccurred())
 
-			g.By("Comparing gotten ComDetails to empty ComDetials")
-			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
+			g.By("Expecting nil ComMatrix on error")
+			o.Expect(gotComMatrix).To(o.BeNil())
 		})
 
 		g.It("Should return an error due to an invalid customEntriesFormat", func() {
@@ -223,12 +234,12 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, configv1.BareMetalPlatformType, 0, false)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
-			g.By("Getting ComDetails List From File")
-			gotComDetails, err := cm.GetComDetailsListFromFile()
+			g.By("Getting ComMatrix From File")
+			gotComMatrix, err := cm.GetComMatrixFromFile()
 			o.Expect(err).To(o.HaveOccurred())
 
-			g.By("Comparing gotten ComDetails to empty ComDetials")
-			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
+			g.By("Expecting nil ComMatrix on error")
+			o.Expect(gotComMatrix).To(o.BeNil())
 		})
 	})
 
