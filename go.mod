@@ -17,7 +17,7 @@ require (
 	k8s.io/apimachinery v0.31.2
 	k8s.io/cli-runtime v0.31.2
 	k8s.io/kubectl v0.31.2
-	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
+	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	sigs.k8s.io/controller-runtime v0.19.0
 	sigs.k8s.io/yaml v1.4.0
 )
