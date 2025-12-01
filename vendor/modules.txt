@@ -351,7 +351,7 @@ github.com/xlab/treeprint
 # go.uber.org/mock v0.1.0
 ## explicit; go 1.19
 go.uber.org/mock/gomock
-# go.yaml.in/yaml/v2 v2.4.2
+# go.yaml.in/yaml/v2 v2.4.3
 ## explicit; go 1.15
 go.yaml.in/yaml/v2
 # go.yaml.in/yaml/v3 v3.0.4
