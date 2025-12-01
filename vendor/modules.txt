@@ -8,7 +8,7 @@ github.com/MakeNowJust/heredoc
 # github.com/Masterminds/semver/v3 v3.3.1
 ## explicit; go 1.21
 github.com/Masterminds/semver/v3
-# github.com/aws/aws-sdk-go v1.50.38
+# github.com/aws/aws-sdk-go v1.55.8
 ## explicit; go 1.19
 github.com/aws/aws-sdk-go/aws/arn
 # github.com/beorn7/perks v1.0.1
