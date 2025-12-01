@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.10
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/coreos/butane v0.22.0
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/onsi/ginkgo/v2 v2.21.0
