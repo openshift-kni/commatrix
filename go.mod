@@ -2,7 +2,7 @@ module github.com/openshift-kni/commatrix
 
 go 1.24.0
 
-toolchain go1.24.10
+toolchain go1.25.5
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
