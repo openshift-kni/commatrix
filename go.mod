@@ -10,7 +10,7 @@ require (
 	github.com/gocarina/gocsv v0.0.0-20240520201108-78e41c74b4b1
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
-	github.com/openshift/api v0.0.0-20251124235416-c11dd82e305c
+	github.com/openshift/api v0.0.0-20251202143230-02f6733e651c
 	github.com/openshift/client-go v0.0.0-20251125141819-b6281947c285
 	github.com/openshift/library-go v0.0.0-20251120164824-14a789e09884
 	github.com/sirupsen/logrus v1.9.3
