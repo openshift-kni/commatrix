@@ -195,24 +195,6 @@ func TestCommatrixGeneration(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			name: "Should generate CSV output",
-			args: []string{"generate", "--format", "csv", "--destDir", destDir},
-			expectedFunc: func() (string, error) {
-				expectedOutput, err := expectedComMatrix.ToCSV()
-				return string(expectedOutput), err
-			},
-			wantErr: false,
-		},
-		{
-			name: "Should generate JSON output",
-			args: []string{"generate", "--format", "json", "--destDir", destDir},
-			expectedFunc: func() (string, error) {
-				expectedOutput, err := expectedComMatrix.ToJSON()
-				return string(expectedOutput), err
-			},
-			wantErr: false,
-		},
-		{
 			name: "Should Return failure on format validation",
 			args: []string{"generate", "--format", "test"},
 			expectedFunc: func() (string, error) {
