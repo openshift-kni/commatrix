@@ -1,6 +1,6 @@
 
 # Make kubectl & oc scripts available for copy
-FROM registry.redhat.io/openshift4/ose-cli-rhel9:v4.20@sha256:b8513a2ae627fa6d748f7e312c2439b7581de41ca0c41e5f01e35f89b9de63e9 AS ose-cli
+FROM registry.redhat.io/openshift4/ose-cli-rhel9:v4.20@sha256:b864ebe10dd8ddcc21f2ae40831732647bb260a8d233cab869a7c451157a55fc AS ose-cli
 
 # Build the manager binary
 FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.24@sha256:8412323224878c4e27cd6f7dc6ce99c50f878f37df323285bff29a53f8ec37cd AS builder
