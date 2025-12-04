@@ -14,7 +14,7 @@ require (
 	github.com/openshift/client-go v0.0.0-20251125141819-b6281947c285
 	github.com/openshift/library-go v0.0.0-20251120164824-14a789e09884
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.1.0
 	golang.org/x/sync v0.18.0
