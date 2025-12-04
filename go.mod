@@ -12,7 +12,7 @@ require (
 	github.com/onsi/gomega v1.35.1
 	github.com/openshift/api v0.0.0-20251124235416-c11dd82e305c
 	github.com/openshift/client-go v0.0.0-20251125141819-b6281947c285
-	github.com/openshift/library-go v0.0.0-20251120164824-14a789e09884
+	github.com/openshift/library-go v0.0.0-20251204132909-8814e976a023
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
