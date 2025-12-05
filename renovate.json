@@ -4,28 +4,44 @@
   "automergeStrategy": "rebase",
   "prConcurrentLimit": 0,
   "pruneBranchAfterAutomerge": true,
-  "schedule": ["at any time"],
+  "schedule": [
+    "at any time"
+  ],
   "dockerfile": {
     "enabled": true,
-    "fileMatch": ["(^|/)Dockerfile$"],
+    "managerFilePatterns": [
+      "/(^|/)Dockerfile$/"
+    ],
     "platformAutomerge": true,
-    "schedule": ["at any time"],
+    "schedule": [
+      "at any time"
+    ],
     "automerge": true,
     "autoApprove": true
   },
-
   "tekton": {
     "enabled": true,
-    "fileMatch": ["^\\.tekton/.*\\.(yaml|yml)$"],
+    "managerFilePatterns": [
+      "/^\\.tekton/.*\\.(yaml|yml)$/"
+    ],
     "platformAutomerge": true,
     "ignoreTests": false,
-    "includePaths": [".tekton/**"],
-    "schedule": ["at any time"],
+    "includePaths": [
+      ".tekton/**"
+    ],
+    "schedule": [
+      "at any time"
+    ],
     "packageRules": [
       {
-        "addLabels": ["approved", "lgtm"],
+        "addLabels": [
+          "approved",
+          "lgtm"
+        ],
         "automerge": true,
-        "matchUpdateTypes": ["digest"]
+        "matchUpdateTypes": [
+          "digest"
+        ]
       }
     ]
   },
