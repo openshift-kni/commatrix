@@ -79,7 +79,7 @@ var _ = Describe("Validation", func() {
 		}
 
 		// Asuming telco partenrs are using only none type and aws platform types for sno clusters.
-		if isSNO {
+		if controlPlaneTopology == configv1.SingleReplicaTopologyMode {
 			docType += "-sno"
 		}
 		docCommatrixFilePath := fmt.Sprintf(docCommatrixBaseFilePath, docType)

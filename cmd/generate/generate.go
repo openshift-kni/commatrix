@@ -197,15 +197,9 @@ func Run(o *GenerateOptions) (err error) {
 	}
 
 	log.Debug("Detecting deployment and infra types")
-	deployment := types.Standard
-
-	isSNO, err := o.utilsHelpers.IsSNOCluster()
+	controlPlaneTopology, err := o.utilsHelpers.GetControlPlaneTopology()
 	if err != nil {
-		return fmt.Errorf("failed to check is sno cluster %s", err)
-	}
-
-	if isSNO {
-		deployment = types.SNO
+		return fmt.Errorf("failed to get control plane topology %s", err)
 	}
 
 	platformType, err := o.utilsHelpers.GetPlatformType()
@@ -217,12 +211,17 @@ func Run(o *GenerateOptions) (err error) {
 		return fmt.Errorf("unsupported platform type: %s. Supported platform types are: %v", platformType, types.SupportedPlatforms)
 	}
 
+	// Validate control plane topology (supports: HA, SNO, HyperShift External)
+	if !types.IsSupportedTopology(controlPlaneTopology) {
+		return fmt.Errorf("unsupported control plane topology: %s. Supported topologies are: %v", controlPlaneTopology, types.SupportedTopologiesList())
+	}
+
 	ipv6Enabled, err := o.utilsHelpers.IsIPv6Enabled()
 	if err != nil {
 		return fmt.Errorf("failed to detect IPv6: %v", err)
 	}
 
-	matrix, err := generateMatrix(o, deployment, platformType, ipv6Enabled)
+	matrix, err := generateMatrix(o, controlPlaneTopology, platformType, ipv6Enabled)
 	if err != nil {
 		return fmt.Errorf("failed to generate endpoint slice matrix: %v", err)
 	}
@@ -251,7 +250,7 @@ func Run(o *GenerateOptions) (err error) {
 	return nil
 }
 
-func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformType configv1.PlatformType, ipv6Enabled bool) (*types.ComMatrix, error) {
+func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMode, platformType configv1.PlatformType, ipv6Enabled bool) (*types.ComMatrix, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -262,7 +261,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformTyp
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, deployment, ipv6Enabled)
+	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, controlPlaneTopology, ipv6Enabled)
 	if err != nil {
 		return nil, err
 	}
