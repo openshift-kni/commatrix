@@ -18,12 +18,12 @@ import (
 )
 
 var (
-	cs           *client.ClientSet
-	isSNO        bool
-	platformType configv1.PlatformType
-	utilsHelpers utils.UtilsInterface
-	nodeList     *corev1.NodeList
-	artifactsDir string
+	cs                   *client.ClientSet
+	platformType         configv1.PlatformType
+	utilsHelpers         utils.UtilsInterface
+	nodeList             *corev1.NodeList
+	artifactsDir         string
+	controlPlaneTopology configv1.TopologyMode
 )
 
 const testNS = "openshift-commatrix-test"
@@ -49,15 +49,21 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	utilsHelpers = utils.New(cs)
-	isSNO, err = utilsHelpers.IsSNOCluster()
-	Expect(err).NotTo(HaveOccurred())
-
 	platformType, err = utilsHelpers.GetPlatformType()
 	Expect(err).NotTo(HaveOccurred())
 
 	// if cluster's type is not supported by the commatrix app, skip tests
 	if !slices.Contains(types.SupportedPlatforms, platformType) {
 		Skip(fmt.Sprintf("unsupported platform type: %s. Supported platform types are: %v", platformType, types.SupportedPlatforms))
+	}
+
+	// also validate control plane topology (HA, SNO, HyperShift External)
+	controlPlaneTopology, err = utilsHelpers.GetControlPlaneTopology()
+	Expect(err).NotTo(HaveOccurred())
+
+	if !types.IsSupportedTopology(controlPlaneTopology) {
+		Skip(fmt.Sprintf("unsupported control plane topology: %s. Supported topologies are: %v",
+			controlPlaneTopology, types.SupportedTopologiesList()))
 	}
 })
 
