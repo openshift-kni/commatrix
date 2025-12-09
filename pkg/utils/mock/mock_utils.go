@@ -92,6 +92,21 @@ func (mr *MockUtilsInterfaceMockRecorder) DeletePod(pod interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePod", reflect.TypeOf((*MockUtilsInterface)(nil).DeletePod), pod)
 }
 
+// GetControlPlaneTopology mocks base method.
+func (m *MockUtilsInterface) GetControlPlaneTopology() (v1.TopologyMode, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetControlPlaneTopology")
+	ret0, _ := ret[0].(v1.TopologyMode)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetControlPlaneTopology indicates an expected call of GetControlPlaneTopology.
+func (mr *MockUtilsInterfaceMockRecorder) GetControlPlaneTopology() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneTopology", reflect.TypeOf((*MockUtilsInterface)(nil).GetControlPlaneTopology))
+}
+
 // GetPlatformType mocks base method.
 func (m *MockUtilsInterface) GetPlatformType() (v1.PlatformType, error) {
 	m.ctrl.T.Helper()
@@ -135,21 +150,6 @@ func (m *MockUtilsInterface) IsIPv6Enabled() (bool, error) {
 func (mr *MockUtilsInterfaceMockRecorder) IsIPv6Enabled() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsIPv6Enabled", reflect.TypeOf((*MockUtilsInterface)(nil).IsIPv6Enabled))
-}
-
-// IsSNOCluster mocks base method.
-func (m *MockUtilsInterface) IsSNOCluster() (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsSNOCluster")
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsSNOCluster indicates an expected call of IsSNOCluster.
-func (mr *MockUtilsInterfaceMockRecorder) IsSNOCluster() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSNOCluster", reflect.TypeOf((*MockUtilsInterface)(nil).IsSNOCluster))
 }
 
 // RunCommandOnPod mocks base method.
