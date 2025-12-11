@@ -1,0 +1,51 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "automergeType": "pr",
+  "automergeStrategy": "rebase",
+  "prConcurrentLimit": 0,
+  "pruneBranchAfterAutomerge": true,
+  "schedule": [
+    "at any time"
+  ],
+  "dockerfile": {
+    "enabled": true,
+    "managerFilePatterns": [
+      "/(^|/)Dockerfile$/"
+    ],
+    "platformAutomerge": true,
+    "schedule": [
+      "at any time"
+    ],
+    "automerge": true,
+    "autoApprove": true
+  },
+  "tekton": {
+    "enabled": true,
+    "managerFilePatterns": [
+      "/^\\.tekton/.*\\.(yaml|yml)$/"
+    ],
+    "platformAutomerge": true,
+    "ignoreTests": false,
+    "includePaths": [
+      ".tekton/**"
+    ],
+    "schedule": [
+      "at any time"
+    ],
+    "packageRules": [
+      {
+        "addLabels": [
+          "approved",
+          "lgtm"
+        ],
+        "automerge": true,
+        "matchUpdateTypes": [
+          "digest"
+        ]
+      }
+    ]
+  },
+  "gomod": {
+    "enabled": false
+  }
+}
