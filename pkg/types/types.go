@@ -30,12 +30,15 @@ var SupportedPlatforms = []configv1.PlatformType{
 	configv1.NonePlatformType,
 }
 
-type Deployment int
-
-const (
-	SNO Deployment = iota
-	Standard
-)
+// SupportedTopologies defines control plane topologies that commatrix supports.
+// - HighlyAvailable → multi-node control plane
+// - SingleReplica   → SNO
+// - External        → HyperShift (external control plane)
+var SupportedTopologies = []configv1.TopologyMode{
+	configv1.HighlyAvailableTopologyMode,
+	configv1.SingleReplicaTopologyMode,
+	configv1.ExternalTopologyMode,
+}
 
 const (
 	FormatJSON = "json"
@@ -112,7 +115,7 @@ func (m *ComMatrix) String() string {
 	return result.String()
 }
 
-func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, fileNamePrefix, format string, deployment Deployment, destDir string) error {
+func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, fileNamePrefix, format string, controlPlaneTopology configv1.TopologyMode, destDir string) error {
 	if format == FormatNFT {
 		pools := m.SeparateMatrixByGroup()
 		for poolName, mat := range pools {
