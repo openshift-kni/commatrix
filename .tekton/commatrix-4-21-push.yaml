@@ -27,7 +27,6 @@ spec:
   - name: build-platforms
     value:
     - linux/x86_64
-    - linux/arm64
   - name: dockerfile
     value: Dockerfile
   pipelineSpec:
@@ -65,7 +64,7 @@ spec:
       description: Skip checks against built image
       name: skip-checks
       type: string
-    - default: "true"
+    - default: "false"
       description: Execute the build with network isolation
       name: hermetic
       type: string
@@ -78,7 +77,7 @@ spec:
         1h, 2d, 3w for hours, days, and weeks, respectively.
       name: image-expires-after
       type: string
-    - default: "true"
+    - default: "false"
       description: Build a source image.
       name: build-source-image
       type: string
@@ -91,6 +90,9 @@ spec:
         oci or docker.
       name: buildah-format
       type: string
+    - default: "false"
+      description: Enable cache proxy configuration
+      name: enable-cache-proxy
     - default: []
       description: Array of --build-arg values ("arg=value" strings) for buildah
       name: build-args
@@ -104,7 +106,8 @@ spec:
         VMs
       name: privileged-nested
       type: string
-    - default: ["linux/x86_64", "linux/arm64"]
+    - default:
+      - linux/x86_64
       description: List of platforms to build the container images on. The available
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
@@ -131,6 +134,8 @@ spec:
         value: $(params.rebuild)
       - name: skip-checks
         value: $(params.skip-checks)
+      - name: enable-cache-proxy
+        value: $(params.enable-cache-proxy)
       taskRef:
         params:
         - name: name
@@ -227,6 +232,10 @@ spec:
         value: $(tasks.clone-repository.results.url)
       - name: BUILDAH_FORMAT
         value: $(params.buildah-format)
+      - name: HTTP_PROXY
+        value: $(tasks.init.results.http-proxy)
+      - name: NO_PROXY
+        value: $(tasks.init.results.no-proxy)
       - name: SOURCE_ARTIFACT
         value: $(tasks.prefetch-dependencies.results.SOURCE_ARTIFACT)
       - name: CACHI2_ARTIFACT
@@ -608,7 +617,7 @@ spec:
         - name: name
           value: rpms-signature-scan
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:20eb21c60522a12198205f70b9c58cb5d71db561a255a3ba1ced56ae7b4af270
+          value: quay.io/konflux-ci/konflux-vanguard/task-rpms-signature-scan:0.2@sha256:20eb21c60522a12198205f70b9c58cb5d71db561a255a3ba1ced56ae7b4af270
         - name: kind
           value: task
         resolver: bundles
