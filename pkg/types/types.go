@@ -112,7 +112,7 @@ func (m *ComMatrix) String() string {
 	return result.String()
 }
 
-func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, fileNamePrefix, format string, deployment Deployment, destDir string) error {
+func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, fileNamePrefix, format string, destDir string) error {
 	if format == FormatNFT {
 		pools := m.SeparateMatrixByGroup()
 		for poolName, mat := range pools {
