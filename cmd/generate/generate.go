@@ -228,7 +228,7 @@ func Run(o *GenerateOptions) (err error) {
 	}
 
 	if o.openPorts {
-		ssMat, err := generateSS(o, deployment)
+		ssMat, err := generateSS(o)
 		if err != nil {
 			return fmt.Errorf("failed to generate SS matrix: %v", err)
 		}
@@ -273,7 +273,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformTyp
 	}
 
 	log.Debug("Writing endpoint matrix to file")
-	err = matrix.WriteMatrixToFileByType(o.utilsHelpers, consts.CommatrixFileNamePrefix, o.format, deployment, o.destDir)
+	err = matrix.WriteMatrixToFileByType(o.utilsHelpers, consts.CommatrixFileNamePrefix, o.format, o.destDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write endpoint matrix to file: %v", err)
 	}
@@ -281,7 +281,7 @@ func generateMatrix(o *GenerateOptions, deployment types.Deployment, platformTyp
 	return matrix, nil
 }
 
-func generateSS(o *GenerateOptions, deployment types.Deployment) (*types.ComMatrix, error) {
+func generateSS(o *GenerateOptions) (*types.ComMatrix, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -332,7 +332,7 @@ func generateSS(o *GenerateOptions, deployment types.Deployment) (*types.ComMatr
 	}
 
 	log.Debug("Writing SS matrix to file")
-	err = ssMat.WriteMatrixToFileByType(o.utilsHelpers, consts.SSMatrixFileNamePrefix, o.format, deployment, o.destDir)
+	err = ssMat.WriteMatrixToFileByType(o.utilsHelpers, consts.SSMatrixFileNamePrefix, o.format, o.destDir)
 	if err != nil {
 		return nil, fmt.Errorf("error while writing SS matrix to file: %v", err)
 	}
