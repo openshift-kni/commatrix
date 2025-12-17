@@ -154,6 +154,109 @@ var (
 			},
 		},
 	}
+
+	// Test resources for localhost filtering test.
+	testPodWithLocalhostPorts = &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "localhost-test-pod",
+			Namespace: "localhost-ns",
+			Labels: map[string]string{
+				"app": "localhost-app",
+			},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "main-container",
+					Image: "test-image:latest",
+					Ports: []corev1.ContainerPort{
+						{
+							ContainerPort: 8080,
+							HostIP:        "127.0.0.1", // Should be filtered out
+						},
+						{
+							ContainerPort: 9090,
+							HostIP:        "0.0.0.0", // Should NOT be filtered out
+						},
+						{
+							ContainerPort: 3000,
+							HostIP:        "::1", // Should be filtered out
+						},
+					},
+				},
+			},
+		},
+	}
+
+	testServiceLocalhost = &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "localhost-service",
+			Namespace: "localhost-ns",
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"app": "localhost-app",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "port-8080",
+					Port:     8080,
+					Protocol: corev1.ProtocolTCP,
+				},
+				{
+					Name:     "port-9090",
+					Port:     9090,
+					Protocol: corev1.ProtocolTCP,
+				},
+				{
+					Name:     "port-3000",
+					Port:     3000,
+					Protocol: corev1.ProtocolTCP,
+				},
+			},
+			Type: corev1.ServiceTypeNodePort,
+		},
+	}
+
+	testEndpointSliceLocalhost = &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "localhost-service-endpoints",
+			Namespace: "localhost-ns",
+			Labels: map[string]string{
+				"kubernetes.io/service-name": "localhost-service",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind: "Service",
+					Name: "localhost-service",
+				},
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				NodeName:  &testNode.Name,
+				Addresses: []string{"192.168.1.10"},
+			},
+		},
+		Ports: []discoveryv1.EndpointPort{
+			{
+				Name:     func(s string) *string { return &s }("port-8080"),
+				Port:     func(i int32) *int32 { return &i }(8080),
+				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+			},
+			{
+				Name:     func(s string) *string { return &s }("port-9090"),
+				Port:     func(i int32) *int32 { return &i }(9090),
+				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+			},
+			{
+				Name:     func(s string) *string { return &s }("port-3000"),
+				Port:     func(i int32) *int32 { return &i }(3000),
+				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+			},
+		},
+	}
 )
 
 var _ = g.Describe("Commatrix creator pkg tests", func() {
@@ -331,6 +434,53 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			diff := matrixdiff.Generate(&wantedMatrix, commatrix)
 			o.Expect(diff.GetUniquePrimary().Matrix).To(o.BeEmpty())
 			o.Expect(diff.GetUniqueSecondary().Matrix).To(o.BeEmpty())
+		})
+
+		g.It("Should filter out localhost-bound ports from endpoint matrix", func() {
+			g.By("Setting up fake client with localhost test resources")
+			sch := runtime.NewScheme()
+			err := corev1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			err = discoveryv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			o.Expect(err).NotTo(o.HaveOccurred())
+
+			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(
+				testNode,
+				testPodWithLocalhostPorts, testServiceLocalhost, testEndpointSliceLocalhost).Build()
+			fakeClientset := fakek.NewSimpleClientset()
+
+			clientset := &client.ClientSet{
+				Client:          fakeClient,
+				CoreV1Interface: fakeClientset.CoreV1(),
+			}
+
+			localhostEndpointSlices, err := endpointslices.New(clientset)
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Creating endpoint matrix")
+			commatrixCreator, err := New(localhostEndpointSlices, "", "", configv1.AWSPlatformType, types.SNO, false)
+			o.Expect(err).ToNot(o.HaveOccurred())
+			commatrix, err := commatrixCreator.CreateEndpointMatrix()
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Verifying that localhost-bound ports (8080 on 127.0.0.1, 3000 on ::1) are filtered out")
+			for _, entry := range commatrix.Matrix {
+				if entry.Service == "localhost-service" {
+					o.Expect(entry.Port).ToNot(o.Equal(8080), "Port 8080 bound to 127.0.0.1 should be filtered out")
+					o.Expect(entry.Port).ToNot(o.Equal(3000), "Port 3000 bound to ::1 should be filtered out")
+				}
+			}
+
+			g.By("Verifying that non-localhost port (9090 on 0.0.0.0) is present")
+			foundPort9090 := false
+			for _, entry := range commatrix.Matrix {
+				if entry.Service == "localhost-service" && entry.Port == 9090 {
+					foundPort9090 = true
+					break
+				}
+			}
+			o.Expect(foundPort9090).To(o.BeTrue(), "Port 9090 bound to 0.0.0.0 should be present in the matrix")
 		})
 	})
 })
