@@ -14,16 +14,6 @@ var GeneralStaticEntriesWorker = []ComDetails{
 	}, {
 		Direction: "Ingress",
 		Protocol:  "TCP",
-		Port:      9637,
-		NodeRole:  "worker",
-		Service:   "kube-rbac-proxy-crio",
-		Namespace: "openshift-machine-config-operator",
-		Pod:       "kube-rbac-proxy-crio",
-		Container: "kube-rbac-proxy-crio",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
 		Port:      10250,
 		NodeRole:  "worker",
 		Service:   "kubelet",
@@ -84,16 +74,6 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Namespace: "openshift-network-operator",
 		Pod:       "network-operator",
 		Container: "network-operator",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
-		Port:      9637,
-		NodeRole:  "master",
-		Service:   "kube-rbac-proxy-crio",
-		Namespace: "openshift-machine-config-operator",
-		Pod:       "kube-rbac-proxy-crio",
-		Container: "kube-rbac-proxy-crio",
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
