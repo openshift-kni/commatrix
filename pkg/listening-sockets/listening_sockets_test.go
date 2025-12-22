@@ -192,7 +192,7 @@ var _ = Describe("GenerateSS", func() {
 
 		Expect(normalizeOutput(string(ssOutTCP))).To(Equal(normalizeOutput(expectedTCPOutput)))
 		Expect(normalizeOutput(string(ssOutUDP))).To(Equal(normalizeOutput(expectedUDPOutput)))
-		Expect(ssMat.Matrix).To(Equal(expectedSSMat))
+		Expect(ssMat.Ports).To(Equal(expectedSSMat))
 	})
 })
 

@@ -61,7 +61,7 @@ var _ = Describe("Validation", func() {
 
 		ComDetailsMatrix, err := types.ParseToComDetailsList(commatrixFileContent, types.FormatCSV)
 		Expect(err).ToNot(HaveOccurred(), "Failed to parse generated commatrix")
-		commatrix = &types.ComMatrix{Matrix: ComDetailsMatrix}
+		commatrix = &types.ComMatrix{Ports: ComDetailsMatrix}
 	})
 
 	It("generated communication matrix should be equal to documented communication matrix", func() {
@@ -93,7 +93,7 @@ var _ = Describe("Validation", func() {
 
 		docComDetailsList, err := types.ParseToComDetailsList(docCommatrixFileContent, types.FormatCSV)
 		Expect(err).ToNot(HaveOccurred(), "Failed to parse documented communication matrix")
-		docComMatrix := &types.ComMatrix{Matrix: docComDetailsList}
+		docComMatrix := &types.ComMatrix{Ports: docComDetailsList}
 
 		By("generating diff between matrices for testing purposes")
 		endpointslicesDiffWithDocMat := matrixdiff.Generate(commatrix, docComMatrix)
@@ -106,7 +106,7 @@ var _ = Describe("Validation", func() {
 		By("comparing new and documented commatrices")
 		// Get ports that are in the documented commatrix but not in the generated commatrix.
 		notUsedPortsMat := endpointslicesDiffWithDocMat.GetUniqueSecondary()
-		if len(notUsedPortsMat.Matrix) > 0 {
+		if len(notUsedPortsMat.Ports) > 0 {
 			logrus.Warningf("the following ports are documented but are not used:\n%s", notUsedPortsMat)
 		}
 
@@ -124,7 +124,7 @@ var _ = Describe("Validation", func() {
 
 			portsToIgnoreComDetails, err := types.ParseToComDetailsList(portsToIgnoreFileContent, openPortsToIgnoreFormat)
 			Expect(err).ToNot(HaveOccurred())
-			portsToIgnoreMat = &types.ComMatrix{Matrix: portsToIgnoreComDetails}
+			portsToIgnoreMat = &types.ComMatrix{Ports: portsToIgnoreComDetails}
 
 			// generate the diff matrix between the open ports to ignore matrix and the missing ports in the documented commatrix (based on the diff between the enpointslice and the doc matrix)
 			nonDocumentedEndpointslicesMat := endpointslicesDiffWithDocMat.GetUniquePrimary()
@@ -132,7 +132,7 @@ var _ = Describe("Validation", func() {
 			missingPortsMat = endpointslicesDiffWithIgnoredPorts.GetUniquePrimary()
 		}
 
-		if len(missingPortsMat.Matrix) > 0 {
+		if len(missingPortsMat.Ports) > 0 {
 			err := fmt.Errorf("the following ports are used but are not documented:\n%s", missingPortsMat)
 			Expect(err).ToNot(HaveOccurred())
 		}
@@ -150,13 +150,13 @@ var _ = Describe("Validation", func() {
 		missingEPSMat, err := extractEPSMatByStatus(matDiffSSFileContent, Missing)
 		Expect(err).ToNot(HaveOccurred(), "Failed to extract missing EPS Matrix")
 
-		if len(notUsedEPSMat.Matrix) > 0 {
+		if len(notUsedEPSMat.Ports) > 0 {
 			logrus.Warningf("the following ports are not used: \n %s", notUsedEPSMat)
 		}
 
 		missingEPSMat, err = filterKnownPorts(missingEPSMat)
 		Expect(err).ToNot(HaveOccurred(), "Failed to filter the known ports")
-		if len(missingEPSMat.Matrix) > 0 {
+		if len(missingEPSMat.Ports) > 0 {
 			err := fmt.Errorf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat)
 			Expect(err).ToNot(HaveOccurred())
 		}
@@ -190,7 +190,7 @@ func filterKnownPorts(mat *types.ComMatrix) (*types.ComMatrix, error) {
 	}
 
 	res := []types.ComDetails{}
-	for _, cd := range mat.Matrix {
+	for _, cd := range mat.Ports {
 		// Skip "ovnkube" ports in the nodePort range, these are dynamic open ports on the node,
 		// no need to mention them in the matrix diff
 		if cd.Service == "ovnkube" && cd.Port >= nodePortMin && cd.Port <= nodePortMax {
@@ -219,7 +219,7 @@ func filterKnownPorts(mat *types.ComMatrix) (*types.ComMatrix, error) {
 		res = append(res, cd)
 	}
 
-	return &types.ComMatrix{Matrix: res}, nil
+	return &types.ComMatrix{Ports: res}, nil
 }
 
 // extractEPSMatByStatus extracts and returns ComMatrix by filtering lines of a CSV content based on a EPS status.
@@ -231,7 +231,7 @@ func extractEPSMatByStatus(csvContent []byte, status EPSStatus) (*types.ComMatri
 		return nil, err
 	}
 
-	return &types.ComMatrix{Matrix: prefixEPSMat}, nil
+	return &types.ComMatrix{Ports: prefixEPSMat}, nil
 }
 
 // extractDiffByStatus filter the lines of the csv content based on the EPS status

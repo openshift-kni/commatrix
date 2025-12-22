@@ -107,7 +107,7 @@ func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byt
 		return nil, nil, nil, err
 	}
 
-	ssComMat := types.ComMatrix{Matrix: nodesComDetails}
+	ssComMat := types.ComMatrix{Ports: nodesComDetails}
 	ssComMat.SortAndRemoveDuplicates()
 
 	return &ssComMat, ssOutTCP, ssOutUDP, nil

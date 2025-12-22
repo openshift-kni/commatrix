@@ -416,15 +416,15 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			g.By("Add to wanted comDetails the example static entries")
 			wantedComDetails = slices.Concat(wantedComDetails, exampleComDetailsList)
 
-			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
+			wantedComMatrix := types.ComMatrix{Ports: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 
 			g.By("Generate diff between created commatrix and eanted commatrix")
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
 
 			g.By("Checking whether diff is empty")
-			o.Expect(diff.GetUniquePrimary().Matrix).To(o.BeEmpty())
-			o.Expect(diff.GetUniqueSecondary().Matrix).To(o.BeEmpty())
+			o.Expect(diff.GetUniquePrimary().Ports).To(o.BeEmpty())
+			o.Expect(diff.GetUniqueSecondary().Ports).To(o.BeEmpty())
 		})
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
@@ -436,15 +436,15 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 			g.By("Generating wanted comDetails")
 			wantedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster)
-			wantedComMatrix := types.ComMatrix{Matrix: wantedComDetails}
+			wantedComMatrix := types.ComMatrix{Ports: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 
 			g.By("Generate diff between created commatrix and eanted commatrix")
 			diff := matrixdiff.Generate(&wantedComMatrix, commatrix)
 
 			g.By("Checking whether diff is empty")
-			o.Expect(diff.GetUniquePrimary().Matrix).To(o.BeEmpty())
-			o.Expect(diff.GetUniqueSecondary().Matrix).To(o.BeEmpty())
+			o.Expect(diff.GetUniquePrimary().Ports).To(o.BeEmpty())
+			o.Expect(diff.GetUniqueSecondary().Ports).To(o.BeEmpty())
 		})
 
 		g.It("Should include IPv6 static entries when ipv6Enabled is true on Standard", func() {
@@ -462,12 +462,12 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				types.GeneralIPv6StaticEntriesMaster,
 				types.GeneralIPv6StaticEntriesWorker,
 			)
-			wantedMatrix := types.ComMatrix{Matrix: wanted}
+			wantedMatrix := types.ComMatrix{Ports: wanted}
 			wantedMatrix.SortAndRemoveDuplicates()
 
 			diff := matrixdiff.Generate(&wantedMatrix, commatrix)
-			o.Expect(diff.GetUniquePrimary().Matrix).To(o.BeEmpty())
-			o.Expect(diff.GetUniqueSecondary().Matrix).To(o.BeEmpty())
+			o.Expect(diff.GetUniquePrimary().Ports).To(o.BeEmpty())
+			o.Expect(diff.GetUniqueSecondary().Ports).To(o.BeEmpty())
 		})
 
 		g.It("Should filter out localhost-bound ports from endpoint matrix", func() {
@@ -502,7 +502,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Verifying that localhost-bound ports (8080 on 127.0.0.1, 3000 on ::1) are filtered out")
-			for _, entry := range commatrix.Matrix {
+			for _, entry := range commatrix.Ports {
 				if entry.Service == "localhost-service" {
 					o.Expect(entry.Port).ToNot(o.Equal(8080), "Port 8080 bound to 127.0.0.1 should be filtered out")
 					o.Expect(entry.Port).ToNot(o.Equal(3000), "Port 3000 bound to ::1 should be filtered out")
@@ -511,7 +511,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 			g.By("Verifying that non-localhost port (9090 on 0.0.0.0) is present")
 			foundPort9090 := false
-			for _, entry := range commatrix.Matrix {
+			for _, entry := range commatrix.Ports {
 				if entry.Service == "localhost-service" && entry.Port == 9090 {
 					foundPort9090 = true
 					break
@@ -607,11 +607,11 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			}
 
 			// Compare ignoring order
-			gotMatrix := types.ComMatrix{Matrix: out}
+			gotMatrix := types.ComMatrix{Ports: out}
 			gotMatrix.SortAndRemoveDuplicates()
-			expectedMatrix := types.ComMatrix{Matrix: expected}
+			expectedMatrix := types.ComMatrix{Ports: expected}
 			expectedMatrix.SortAndRemoveDuplicates()
-			o.Expect(gotMatrix.Matrix).To(o.Equal(expectedMatrix.Matrix))
+			o.Expect(gotMatrix.Ports).To(o.Equal(expectedMatrix.Ports))
 		})
 	})
 })

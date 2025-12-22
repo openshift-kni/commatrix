@@ -59,7 +59,7 @@ const (
 )
 
 type ComMatrix struct {
-	Matrix []ComDetails
+	Ports []ComDetails
 }
 
 type ComDetails struct {
@@ -89,7 +89,7 @@ func (m *ComMatrix) ToCSV() ([]byte, error) {
 	w := bytes.NewBuffer(out)
 	csvwriter := csv.NewWriter(w)
 
-	err := gocsv.MarshalCSV(&m.Matrix, csvwriter)
+	err := gocsv.MarshalCSV(&m.Ports, csvwriter)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (m *ComMatrix) ToCSV() ([]byte, error) {
 }
 
 func (m *ComMatrix) ToJSON() ([]byte, error) {
-	out, err := json.MarshalIndent(m.Matrix, "", "    ")
+	out, err := json.MarshalIndent(m.Ports, "", "    ")
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (m *ComMatrix) ToYAML() ([]byte, error) {
 
 func (m *ComMatrix) String() string {
 	var result strings.Builder
-	for _, details := range m.Matrix {
+	for _, details := range m.Ports {
 		result.WriteString(details.String() + "\n")
 	}
 
@@ -130,7 +130,7 @@ func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, f
 	if format == FormatNFT {
 		pools := m.SeparateMatrixByGroup()
 		for poolName, mat := range pools {
-			if len(mat.Matrix) == 0 {
+			if len(mat.Ports) == 0 {
 				continue
 			}
 			if err := mat.writeMatrixToFile(utilsHelpers, fileNamePrefix+"-"+poolName, format, destDir); err != nil {
@@ -165,13 +165,13 @@ func (m *ComMatrix) print(format string) ([]byte, error) {
 // SeparateMatrixByGroup groups matrix entries by their group name (stored in NodeGroup).
 func (m *ComMatrix) SeparateMatrixByGroup() map[string]ComMatrix {
 	res := make(map[string]ComMatrix)
-	for _, entry := range m.Matrix {
+	for _, entry := range m.Ports {
 		pool := entry.NodeGroup
 		if pool == "" {
 			continue
 		}
 		cm := res[pool]
-		cm.Matrix = append(cm.Matrix, entry)
+		cm.Ports = append(cm.Ports, entry)
 		res[pool] = cm
 	}
 	return res
@@ -188,7 +188,7 @@ func (m *ComMatrix) writeMatrixToFile(utilsHelpers utils.UtilsInterface, fileNam
 }
 
 func (m *ComMatrix) Contains(cd ComDetails) bool {
-	for _, cd1 := range m.Matrix {
+	for _, cd1 := range m.Ports {
 		if cd1.Equals(cd) {
 			return true
 		}
@@ -200,7 +200,7 @@ func (m *ComMatrix) Contains(cd ComDetails) bool {
 func (m *ComMatrix) ToNFTables() ([]byte, error) {
 	var tcpPorts []string
 	var udpPorts []string
-	for _, line := range m.Matrix {
+	for _, line := range m.Ports {
 		if line.Protocol == "TCP" {
 			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
 		} else if line.Protocol == "UDP" {
@@ -243,16 +243,16 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 func (m *ComMatrix) SortAndRemoveDuplicates() {
 	allKeys := make(map[string]bool)
 	res := []ComDetails{}
-	for _, item := range m.Matrix {
+	for _, item := range m.Ports {
 		str := fmt.Sprintf("%s-%d-%s", item.NodeGroup, item.Port, item.Protocol)
 		if _, value := allKeys[str]; !value {
 			allKeys[str] = true
 			res = append(res, item)
 		}
 	}
-	m.Matrix = res
+	m.Ports = res
 
-	slices.SortFunc(m.Matrix, func(a, b ComDetails) int {
+	slices.SortFunc(m.Ports, func(a, b ComDetails) int {
 		res := cmp.Compare(a.NodeGroup, b.NodeGroup)
 		if res != 0 {
 			return res

@@ -29,8 +29,8 @@ func Generate(primary *types.ComMatrix, secondary *types.ComMatrix) MatrixDiff {
 	matrix := types.ComMatrix{}
 	epsStatus := map[string]status{}
 
-	for _, cd := range primary.Matrix {
-		matrix.Matrix = append(matrix.Matrix, cd)
+	for _, cd := range primary.Ports {
+		matrix.Ports = append(matrix.Ports, cd)
 		epsStatus[cd.String()] = both
 
 		if !secondary.Contains(cd) {
@@ -38,8 +38,8 @@ func Generate(primary *types.ComMatrix, secondary *types.ComMatrix) MatrixDiff {
 		}
 	}
 
-	for _, cd := range secondary.Matrix {
-		matrix.Matrix = append(matrix.Matrix, cd)
+	for _, cd := range secondary.Ports {
+		matrix.Ports = append(matrix.Ports, cd)
 		epsStatus[cd.String()] = both
 
 		if !primary.Contains(cd) {
@@ -59,7 +59,7 @@ func (m *MatrixDiff) String() (string, error) {
 	}
 	diff := colNames + "\n"
 
-	for _, cd := range m.Matrix {
+	for _, cd := range m.Ports {
 		switch m.cdToStatus[cd.String()] {
 		case both:
 			diff += fmt.Sprintf("%s\n", cd)
@@ -79,9 +79,9 @@ func (m *MatrixDiff) String() (string, error) {
 func (m *MatrixDiff) GetUniquePrimary() *types.ComMatrix {
 	matrix := types.ComMatrix{}
 
-	for _, cd := range m.Matrix {
+	for _, cd := range m.Ports {
 		if m.cdToStatus[cd.String()] == uniquePrimary {
-			matrix.Matrix = append(matrix.Matrix, cd)
+			matrix.Ports = append(matrix.Ports, cd)
 		}
 	}
 
@@ -92,9 +92,9 @@ func (m *MatrixDiff) GetUniquePrimary() *types.ComMatrix {
 func (m *MatrixDiff) GetUniqueSecondary() *types.ComMatrix {
 	matrix := types.ComMatrix{}
 
-	for _, cd := range m.Matrix {
+	for _, cd := range m.Ports {
 		if m.cdToStatus[cd.String()] == uniqueSecondary {
-			matrix.Matrix = append(matrix.Matrix, cd)
+			matrix.Ports = append(matrix.Ports, cd)
 		}
 	}
 
@@ -105,9 +105,9 @@ func (m *MatrixDiff) GetUniqueSecondary() *types.ComMatrix {
 func (m *MatrixDiff) GetSharedEntries() *types.ComMatrix {
 	matrix := types.ComMatrix{}
 
-	for _, cd := range m.Matrix {
+	for _, cd := range m.Ports {
 		if m.cdToStatus[cd.String()] == both {
-			matrix.Matrix = append(matrix.Matrix, cd)
+			matrix.Ports = append(matrix.Ports, cd)
 		}
 	}
 
