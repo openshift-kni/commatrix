@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/gocarina/gocsv"
@@ -59,7 +60,8 @@ const (
 )
 
 type ComMatrix struct {
-	Ports []ComDetails
+	Ports         []ComDetails
+	DynamicRanges []DynamicRange
 }
 
 type ComDetails struct {
@@ -74,6 +76,15 @@ type ComDetails struct {
 	Optional  bool   `json:"optional" yaml:"optional" csv:"Optional"`
 }
 
+type DynamicRange struct {
+	Direction   string `json:"direction" yaml:"direction" csv:"Direction"`
+	Protocol    string `json:"protocol" yaml:"protocol" csv:"Protocol"`
+	MinPort     int    `json:"minPort" yaml:"minPort" csv:"MinPort"`
+	MaxPort     int    `json:"maxPort" yaml:"maxPort" csv:"MaxPort"`
+	Description string `json:"description" yaml:"description" csv:"Description"`
+	Optional    bool   `json:"optional" yaml:"optional" csv:"Optional"`
+}
+
 type ContainerInfo struct {
 	Containers []struct {
 		Labels struct {
@@ -82,6 +93,10 @@ type ContainerInfo struct {
 			PodNamespace  string `json:"io.kubernetes.pod.namespace"`
 		} `json:"labels"`
 	} `json:"containers"`
+}
+
+func (dr *DynamicRange) PortRangeString() string {
+	return fmt.Sprintf("%d-%d", dr.MinPort, dr.MaxPort)
 }
 
 func (m *ComMatrix) ToCSV() ([]byte, error) {
@@ -94,13 +109,32 @@ func (m *ComMatrix) ToCSV() ([]byte, error) {
 		return nil, err
 	}
 
+	// Append dynamic ranges as rows under ComDetails headers.
+	for i := range m.DynamicRanges {
+		dr := &m.DynamicRanges[i]
+		row := []string{
+			dr.Direction,                    // Direction
+			dr.Protocol,                     // Protocol
+			dr.PortRangeString(),            // Port (min-max)
+			"",                              // Namespace (empty)
+			dr.Description,                  // Service (description)
+			"",                              // Pod (empty)
+			"",                              // Container (empty)
+			"",                              // NodeGroup (empty)
+			strconv.FormatBool(dr.Optional), // Optional
+		}
+		if err := csvwriter.Write(row); err != nil {
+			return nil, err
+		}
+	}
+
 	csvwriter.Flush()
 
 	return w.Bytes(), nil
 }
 
 func (m *ComMatrix) ToJSON() ([]byte, error) {
-	out, err := json.MarshalIndent(m.Ports, "", "    ")
+	out, err := json.MarshalIndent(m, "", "    ")
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +208,11 @@ func (m *ComMatrix) SeparateMatrixByGroup() map[string]ComMatrix {
 		cm.Ports = append(cm.Ports, entry)
 		res[pool] = cm
 	}
+	for pool := range res {
+		cm := res[pool]
+		cm.DynamicRanges = m.DynamicRanges
+		res[pool] = cm
+	}
 	return res
 }
 
@@ -205,6 +244,15 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
 		} else if line.Protocol == "UDP" {
 			udpPorts = append(udpPorts, fmt.Sprint(line.Port))
+		}
+	}
+
+	for _, dr := range m.DynamicRanges {
+		rangeStr := dr.PortRangeString()
+		if dr.Protocol == "TCP" {
+			tcpPorts = append(tcpPorts, rangeStr)
+		} else if dr.Protocol == "UDP" {
+			udpPorts = append(udpPorts, rangeStr)
 		}
 	}
 
@@ -339,23 +387,145 @@ func BuildNodeToGroupMap(c rtclient.Client) (map[string]string, error) {
 	return nodeToGroup, nil
 }
 
-func ParseToComDetailsList(content []byte, format string) ([]ComDetails, error) {
-	var comDetails []ComDetails
+// ParseToComMatrix parses input content in one of the supported formats (json, yaml, csv)
+// and returns a ComMatrix that includes both ComDetails (Ports) and DynamicRanges.
+func ParseToComMatrix(content []byte, format string) (*ComMatrix, error) {
 	switch format {
 	case FormatJSON:
-		if err := json.Unmarshal(content, &comDetails); err != nil {
-			return nil, err
+		var cm ComMatrix
+		if err := json.Unmarshal(content, &cm); err != nil {
+			return nil, fmt.Errorf("failed to parse JSON as ComMatrix: %w", err)
 		}
+		return &cm, nil
 	case FormatYAML:
-		if err := yaml.Unmarshal(content, &comDetails); err != nil {
-			return nil, err
+		var cm ComMatrix
+		if err := yaml.Unmarshal(content, &cm); err != nil {
+			return nil, fmt.Errorf("failed to parse YAML as ComMatrix: %w", err)
 		}
+		return &cm, nil
 	case FormatCSV:
-		if err := gocsv.UnmarshalBytes(content, &comDetails); err != nil {
-			return nil, err
-		}
+		return parseCSVToComMatrix(content)
 	default:
 		return nil, fmt.Errorf("invalid value for format must be (json,yaml,csv)")
 	}
-	return comDetails, nil
+}
+
+func parseDynamicRangeFromCSVRow(direction, protocol, description string, optional bool, portStr string) (DynamicRange, error) {
+	minPort, maxPort, err := ParsePortRangeHyphen(portStr)
+	if err != nil {
+		return DynamicRange{}, fmt.Errorf("invalid port range %q: %w", portStr, err)
+	}
+	return DynamicRange{
+		Direction:   direction,
+		Protocol:    protocol,
+		MinPort:     minPort,
+		MaxPort:     maxPort,
+		Description: description,
+		Optional:    optional,
+	}, nil
+}
+
+func parseComDetailsFromCSVRow(direction, protocol, namespace, service, pod, container, nodeGroup string, optional bool, portStr string) (ComDetails, error) {
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return ComDetails{}, fmt.Errorf("invalid port %q: %w", portStr, err)
+	}
+	return ComDetails{
+		Direction: direction,
+		Protocol:  protocol,
+		Port:      port,
+		Namespace: namespace,
+		Service:   service,
+		Pod:       pod,
+		Container: container,
+		NodeGroup: nodeGroup,
+		Optional:  optional,
+	}, nil
+}
+
+func parseCSVToComMatrix(content []byte) (*ComMatrix, error) {
+	// Use a CSV projection with string fields for Port to allow ranges.
+	type csvRow struct {
+		Direction string `csv:"Direction"`
+		Protocol  string `csv:"Protocol"`
+		Port      string `csv:"Port"`
+		Namespace string `csv:"Namespace"`
+		Service   string `csv:"Service"`
+		Pod       string `csv:"Pod"`
+		Container string `csv:"Container"`
+		NodeGroup string `csv:"NodeGroup"`
+		Optional  bool   `csv:"Optional"`
+	}
+
+	var rows []csvRow
+	if err := gocsv.UnmarshalBytes(content, &rows); err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return &ComMatrix{}, nil
+	}
+
+	var details []ComDetails
+	var ranges []DynamicRange
+	for _, r := range rows {
+		portStr := strings.TrimSpace(r.Port)
+
+		if portStr == "" {
+			// Skip rows with empty port
+			continue
+		}
+
+		// Dynamic range row when Port looks like "min-max"
+		if strings.Contains(portStr, "-") {
+			dr, err := parseDynamicRangeFromCSVRow(r.Direction, r.Protocol, r.Service, r.Optional, portStr)
+			if err != nil {
+				return nil, err
+			}
+			ranges = append(ranges, dr)
+			continue
+		}
+
+		// Regular ComDetails row
+		cd, err := parseComDetailsFromCSVRow(r.Direction, r.Protocol, r.Namespace, r.Service, r.Pod, r.Container, r.NodeGroup, r.Optional, portStr)
+		if err != nil {
+			return nil, err
+		}
+		details = append(details, cd)
+	}
+
+	return &ComMatrix{Ports: details, DynamicRanges: ranges}, nil
+}
+
+// parsePortRangeSpace parses strings like "MIN MAX" (space-separated) into numeric bounds.
+func ParsePortRangeSpace(s string) (int, int, error) {
+	fields := strings.Fields(strings.TrimSpace(s))
+	if len(fields) != 2 {
+		return 0, 0, fmt.Errorf("unexpected range format %q", s)
+	}
+	minPort, err := strconv.Atoi(fields[0])
+	if err != nil {
+		return 0, 0, err
+	}
+	maxPort, err := strconv.Atoi(fields[1])
+	if err != nil {
+		return 0, 0, err
+	}
+	return minPort, maxPort, nil
+}
+
+// parsePortRangeHyphen parses strings like "MIN-MAX" (hyphen-separated) into numeric bounds.
+func ParsePortRangeHyphen(s string) (int, int, error) {
+	parts := strings.Split(strings.TrimSpace(s), "-")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("unexpected range format %q", s)
+	}
+	minPort, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return 0, 0, err
+	}
+	maxPort, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return 0, 0, err
+	}
+	return minPort, maxPort, nil
 }

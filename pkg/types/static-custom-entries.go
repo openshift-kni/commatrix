@@ -288,3 +288,41 @@ var GeneralIPv6StaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	},
 }
+
+var KubeletNodePortDefaultDynamicRange = []DynamicRange{
+	{
+		Direction:   "Ingress",
+		Protocol:    "TCP",
+		MinPort:     30000,
+		MaxPort:     32767,
+		Description: "Kubelet node ports",
+		Optional:    false,
+	},
+	{
+		Direction:   "Ingress",
+		Protocol:    "UDP",
+		MinPort:     30000,
+		MaxPort:     32767,
+		Description: "Kubelet node ports",
+		Optional:    false,
+	},
+}
+
+var LinuxDynamicPrivateDefaultDynamicRange = []DynamicRange{
+	{
+		Direction:   "Ingress",
+		Protocol:    "TCP",
+		MinPort:     32768,
+		MaxPort:     60999,
+		Description: "Linux dynamic/private ports",
+		Optional:    true,
+	},
+	{
+		Direction:   "Ingress",
+		Protocol:    "UDP",
+		MinPort:     32768,
+		MaxPort:     60999,
+		Description: "Linux dynamic/private ports",
+		Optional:    true,
+	},
+}
