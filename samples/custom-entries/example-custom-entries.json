@@ -1,24 +1,36 @@
-[
-    {
-        "direction": "ingress",
-        "protocol": "TCP",
-        "port": 9050,
-        "namespace": "example-namespace",
-        "service": "example-service",
-        "pod": "example-pod",
-        "container": "example-container",
-        "nodeGroup": "master",
-        "optional": false
-    },
-    {
-        "direction": "ingress",
-        "protocol": "UDP",
-        "port": 9051,
-        "namespace": "example-namespace2",
-        "service": "example-service2",
-        "pod": "example-pod2",
-        "container": "example-container2",
-        "nodeGroup": "worker",
-        "optional": false
-    }
-]
+{
+    "Ports": [
+        {
+            "direction": "ingress",
+            "protocol": "TCP",
+            "port": 9050,
+            "namespace": "example-namespace",
+            "service": "example-service",
+            "pod": "example-pod",
+            "container": "example-container",
+            "nodeGroup": "master",
+            "optional": false
+        },
+        {
+            "direction": "ingress",
+            "protocol": "UDP",
+            "port": 9051,
+            "namespace": "example-namespace2",
+            "service": "example-service2",
+            "pod": "example-pod2",
+            "container": "example-container2",
+            "nodeGroup": "worker",
+            "optional": false
+        }
+    ],
+    "DynamicRanges": [
+        {
+            "direction": "ingress",
+            "protocol": "TCP",
+            "minPort": 9000,
+            "maxPort": 9999,
+            "description": "example dynamic range",
+            "optional": false
+        }
+    ]
+}
