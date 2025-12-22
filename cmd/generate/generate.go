@@ -254,7 +254,7 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, controlPlaneTopology, ipv6Enabled)
+	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, controlPlaneTopology, ipv6Enabled, o.utilsHelpers)
 	if err != nil {
 		return nil, err
 	}

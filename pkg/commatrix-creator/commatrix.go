@@ -9,9 +9,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	dynamicranges "github.com/openshift-kni/commatrix/pkg/dynamic-ranges"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/mcp"
 	"github.com/openshift-kni/commatrix/pkg/types"
+	"github.com/openshift-kni/commatrix/pkg/utils"
 	configv1 "github.com/openshift/api/config/v1"
 )
 
@@ -22,9 +24,10 @@ type CommunicationMatrixCreator struct {
 	platformType         configv1.PlatformType
 	controlPlaneTopology configv1.TopologyMode
 	ipv6Enabled          bool
+	utilsHelpers         utils.UtilsInterface
 }
 
-func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, controlPlaneTopology configv1.TopologyMode, ipv6Enabled bool) (*CommunicationMatrixCreator, error) {
+func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, controlPlaneTopology configv1.TopologyMode, ipv6Enabled bool, utilsHelpers utils.UtilsInterface) (*CommunicationMatrixCreator, error) {
 	return &CommunicationMatrixCreator{
 		exporter:             exporter,
 		customEntriesPath:    customEntriesPath,
@@ -32,6 +35,7 @@ func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath stri
 		platformType:         platformType,
 		controlPlaneTopology: controlPlaneTopology,
 		ipv6Enabled:          ipv6Enabled,
+		utilsHelpers:         utilsHelpers,
 	}, nil
 }
 
@@ -74,23 +78,30 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	staticEntries = expandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
 	epSliceComDetails = append(epSliceComDetails, staticEntries...)
 
+	dynamicRanges, err := dynamicranges.GetDynamicRanges(cm.exporter, cm.utilsHelpers, cm.exporter.ClientSet)
+	if err != nil {
+		log.Errorf("Failed to get dynamic ranges: %v", err)
+		return nil, fmt.Errorf("failed to get dynamic ranges: %w", err)
+	}
+
 	if cm.customEntriesPath != "" {
 		log.Debug("Loading custom entries from file")
-		customComDetails, err := cm.GetComDetailsListFromFile()
+		customMatrix, err := cm.GetComMatrixFromFile()
 		if err != nil {
 			log.Errorf("Failed adding custom entries: %s", err)
 			return nil, fmt.Errorf("failed adding custom entries: %s", err)
 		}
-		epSliceComDetails = append(epSliceComDetails, customComDetails...)
+		epSliceComDetails = append(epSliceComDetails, customMatrix.Ports...)
+		dynamicRanges = append(dynamicRanges, customMatrix.DynamicRanges...)
 	}
 
-	commMatrix := &types.ComMatrix{Ports: epSliceComDetails}
+	commMatrix := &types.ComMatrix{Ports: epSliceComDetails, DynamicRanges: dynamicRanges}
 	log.Debug("Sorting ComMatrix and removing duplicates")
 	commMatrix.SortAndRemoveDuplicates()
 	return commMatrix, nil
 }
 
-func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDetails, error) {
+func (cm *CommunicationMatrixCreator) GetComMatrixFromFile() (*types.ComMatrix, error) {
 	log.Debugf("Opening file %s", cm.customEntriesPath)
 	f, err := os.Open(filepath.Clean(cm.customEntriesPath))
 	if err != nil {
@@ -107,7 +118,7 @@ func (cm *CommunicationMatrixCreator) GetComDetailsListFromFile() ([]types.ComDe
 	}
 
 	log.Debugf("Unmarshalling file content with format %s", cm.customEntriesFormat)
-	res, err := types.ParseToComDetailsList(raw, cm.customEntriesFormat)
+	res, err := types.ParseToComMatrix(raw, cm.customEntriesFormat)
 	if err != nil {
 		log.Errorf("Failed to unmarshal %s file: %v", cm.customEntriesFormat, err)
 		return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
