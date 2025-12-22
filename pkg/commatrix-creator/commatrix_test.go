@@ -6,15 +6,18 @@ import (
 
 	g "github.com/onsi/ginkgo/v2"
 	o "github.com/onsi/gomega"
+	gomock "go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
+	mock_utils "github.com/openshift-kni/commatrix/pkg/utils/mock"
 	configv1 "github.com/openshift/api/config/v1"
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -65,6 +68,16 @@ var (
 			Container: "test-container",
 			NodeGroup: "master",
 			Optional:  false,
+		},
+	}
+	exampleDynamicRanges = []types.DynamicRange{
+		{
+			Direction:   "ingress",
+			Protocol:    "TCP",
+			MinPort:     9000,
+			MaxPort:     9999,
+			Description: "example dynamic range",
+			Optional:    false,
 		},
 	}
 )
@@ -289,6 +302,15 @@ var (
 			},
 		},
 	}
+
+	testNetwork = &configv1.Network{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster",
+		},
+		Spec: configv1.NetworkSpec{
+			ServiceNodePortRange: "1024-65535",
+		},
+	}
 )
 
 var _ = g.Describe("Commatrix creator pkg tests", func() {
@@ -296,49 +318,50 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 		for _, format := range []string{types.FormatCSV, types.FormatJSON, types.FormatYAML} {
 			g.It(fmt.Sprintf("Should successfully extract ComDetails from a %s file", format), func() {
 				g.By(fmt.Sprintf("Creating new communication matrix with %s static entries format", format))
-				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false)
+				cm, err := New(nil, fmt.Sprintf("../../samples/custom-entries/example-custom-entries.%s", format), format, configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false, nil)
 				o.Expect(err).ToNot(o.HaveOccurred())
 
-				g.By("Getting ComDetails List From File")
-				gotComDetails, err := cm.GetComDetailsListFromFile()
+				g.By("Getting ComMatrix From File")
+				gotComMatrix, err := cm.GetComMatrixFromFile()
 				o.Expect(err).ToNot(o.HaveOccurred())
 
-				g.By("Comparing gotten ComDetails to wanted ComDetials")
-				o.Expect(gotComDetails).To(o.Equal(exampleComDetailsList))
+				g.By("Comparing gotten ComMatrix.Ports to wanted ComDetials")
+				o.Expect(gotComMatrix.Ports).To(o.Equal(exampleComDetailsList))
+				o.Expect(gotComMatrix.DynamicRanges).To(o.Equal(exampleDynamicRanges))
 			})
 		}
 
 		g.It("Should return an error due to non-matched customEntriesPath and customEntriesFormat types", func() {
 			g.By("Creating new communication matrix with non-matched customEntriesPath and customEntriesFormat")
-			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false)
+			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatJSON, configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false, nil)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
-			g.By("Getting ComDetails List From File")
-			gotComDetails, err := cm.GetComDetailsListFromFile()
+			g.By("Getting ComMatrix From File")
+			gotComMatrix, err := cm.GetComMatrixFromFile()
 			o.Expect(err).To(o.HaveOccurred())
 
-			g.By("Comparing gotten ComDetails to empty ComDetials")
-			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
+			g.By("Expecting nil ComMatrix on error")
+			o.Expect(gotComMatrix).To(o.BeNil())
 		})
 
 		g.It("Should return an error due to an invalid customEntriesFormat", func() {
 			g.By("Creating new communication matrix with invalid customEntriesFormat")
-			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false)
+			cm, err := New(nil, "../../samples/custom-entries/example-custom-entries.csv", types.FormatNFT, configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false, nil)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
-			g.By("Getting ComDetails List From File")
-			gotComDetails, err := cm.GetComDetailsListFromFile()
+			g.By("Getting ComMatrix From File")
+			gotComMatrix, err := cm.GetComMatrixFromFile()
 			o.Expect(err).To(o.HaveOccurred())
 
-			g.By("Comparing gotten ComDetails to empty ComDetials")
-			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
+			g.By("Expecting nil ComMatrix on error")
+			o.Expect(gotComMatrix).To(o.BeNil())
 		})
 	})
 
 	g.Context("Get static entries from file", func() {
 		g.It("Should successfully get static entries suitable to baremetal standard cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal standard cluster")
-			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false)
+			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, configv1.HighlyAvailableTopologyMode, false, nil)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -353,7 +376,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to baremetal SNO cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal SNO cluster")
-			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, configv1.SingleReplicaTopologyMode, false)
+			cm, err := New(nil, "", "", configv1.BareMetalPlatformType, configv1.SingleReplicaTopologyMode, false, nil)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -367,7 +390,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to an invalid value for cluster environment", func() {
 			g.By("Creating new communication matrix with an invalid value for cluster environment")
-			cm, err := New(nil, "", "", "invalid", configv1.SingleReplicaTopologyMode, false)
+			cm, err := New(nil, "", "", "invalid", configv1.SingleReplicaTopologyMode, false, nil)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
@@ -381,6 +404,9 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 	})
 
 	g.Context("Create EndpointSlice Matrix", func() {
+		var ctrl *gomock.Controller
+		var mockUtils *mock_utils.MockUtilsInterface
+
 		g.BeforeEach(func() {
 			sch := runtime.NewScheme()
 
@@ -390,9 +416,11 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).NotTo(o.HaveOccurred())
 			err = machineconfigurationv1.AddToScheme(sch)
 			o.Expect(err).NotTo(o.HaveOccurred())
+			err = configv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
 
-			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode, testNodeWorker, testPod, testService, testEndpointSlice, mcpWorker, mcpMaster).Build()
-			fakeClientset := fakek.NewSimpleClientset()
+			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(testNode, testNodeWorker, testPod, testService, testEndpointSlice, mcpWorker, mcpMaster, testNetwork).Build()
+			fakeClientset := fakek.NewSimpleClientset(testNode, testNodeWorker)
 
 			clientset := &client.ClientSet{
 				Client:          fakeClient,
@@ -401,11 +429,43 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 			endpointSlices, err = endpointslices.New(clientset)
 			o.Expect(err).ToNot(o.HaveOccurred())
+
+			// Set up mock utils to avoid pod creation in tests
+			ctrl = gomock.NewController(g.GinkgoT())
+			mockUtils = mock_utils.NewMockUtilsInterface(ctrl)
+
+			// Mock all the utils calls needed for getLinuxDynamicPrivateRange
+			mockUtils.EXPECT().CreateNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
+			mockUtils.EXPECT().DeleteNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
+
+			// Create a mock pod
+			mockPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "debug-pod",
+					Namespace: consts.DefaultDebugNamespace,
+				},
+				Status: corev1.PodStatus{
+					Phase: corev1.PodRunning,
+				},
+			}
+			mockUtils.EXPECT().CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, gomock.Any(), gomock.Any()).Return(mockPod, nil).AnyTimes()
+			mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
+			mockUtils.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, mockPod, corev1.PodRunning).Return(nil).AnyTimes()
+
+			// Mock the command output to return a default port range
+			mockUtils.EXPECT().RunCommandOnPod(mockPod, gomock.Any()).Return([]byte("32768 60999\n"), nil).AnyTimes()
+		})
+
+		g.AfterEach(func() {
+			// Finish the controller
+			if ctrl != nil {
+				ctrl.Finish()
+			}
 		})
 
 		g.It("Should successfully create an endpoint matrix with custom entries", func() {
 			g.By("Creating new communication matrix with static entries")
-			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false)
+			commatrixCreator, err := New(endpointSlices, "../../samples/custom-entries/example-custom-entries.csv", types.FormatCSV, configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false, mockUtils)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
@@ -429,7 +489,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
 			g.By("Creating new communication matrix without static entries")
-			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false)
+			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false, mockUtils)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
@@ -449,7 +509,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should include IPv6 static entries when ipv6Enabled is true on Standard", func() {
 			g.By("Creating communication matrix with ipv6Enabled=true for Standard")
-			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, configv1.HighlyAvailableTopologyMode, true)
+			commatrixCreator, err := New(endpointSlices, "", "", configv1.AWSPlatformType, configv1.HighlyAvailableTopologyMode, true, mockUtils)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
@@ -479,13 +539,15 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).NotTo(o.HaveOccurred())
 			err = machineconfigurationv1.AddToScheme(sch)
 			o.Expect(err).NotTo(o.HaveOccurred())
+			err = configv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
 
 			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(
 				testNode, testNodeWorker,
 				testPodWithLocalhostPorts, testServiceLocalhost, testEndpointSliceLocalhost,
-				mcpWorker, mcpMaster,
+				mcpWorker, mcpMaster, testNetwork,
 			).Build()
-			fakeClientset := fakek.NewSimpleClientset()
+			fakeClientset := fakek.NewSimpleClientset(testNode, testNodeWorker)
 
 			clientset := &client.ClientSet{
 				Client:          fakeClient,
@@ -496,7 +558,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Creating endpoint matrix")
-			commatrixCreator, err := New(localhostEndpointSlices, "", "", configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false)
+			commatrixCreator, err := New(localhostEndpointSlices, "", "", configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false, mockUtils)
 			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
