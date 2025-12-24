@@ -21,6 +21,7 @@ import (
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
+	"github.com/openshift-kni/commatrix/pkg/consts"
 )
 
 //go:generate ../../bin/mockgen -destination mock/mock_utils.go -source utils.go
@@ -124,7 +125,19 @@ func (u *utils) DeleteNamespace(namespace string) error {
 	if err != nil {
 		return fmt.Errorf("failed deleting namespace %s: %v", namespace, err)
 	}
-
+	if pollErr := wait.PollUntilContextTimeout(context.TODO(), time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+		ns := &corev1.Namespace{}
+		err := u.Get(context.TODO(), clientOptions.ObjectKey{Name: consts.DefaultDebugNamespace}, ns)
+		if k8serrors.IsNotFound(err) {
+			return true, nil
+		}
+		if err != nil {
+			return false, fmt.Errorf("retrying due to error: %v", err) // keep retrying
+		}
+		return false, nil
+	}); pollErr != nil {
+		return fmt.Errorf("error while waiting for namespace %s deletion: %v", consts.DefaultDebugNamespace, pollErr)
+	}
 	return nil
 }
 
