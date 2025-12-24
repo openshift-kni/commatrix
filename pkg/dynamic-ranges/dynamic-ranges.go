@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -16,10 +15,7 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/types"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 	configv1 "github.com/openshift/api/config/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface, cs *client.ClientSet) ([]types.DynamicRange, error) {
@@ -34,7 +30,7 @@ func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter, utilsHelp
 	}
 	dynamicRanges = append(dynamicRanges, nodePortDynamicRange...)
 
-	linuxDynamicPrivateRange, err := getLinuxDynamicPrivateRange(exporter, utilsHelpers, cs)
+	linuxDynamicPrivateRange, err := getLinuxDynamicPrivateRange(exporter, utilsHelpers)
 	if err != nil {
 		log.Errorf("Failed to get Linux dynamic private range: %v", err)
 		return nil, fmt.Errorf("failed to get Linux dynamic private range: %w", err)
@@ -90,7 +86,7 @@ func getNodePortDynamicRange(exporter *endpointslices.EndpointSlicesExporter) ([
 // getLinuxDynamicPrivateRange retrieves the Linux dynamic/private port range from a cluster node
 // by reading the host sysctl:
 //   - /proc/sys/net/ipv4/ip_local_port_range
-func getLinuxDynamicPrivateRange(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface, cs *client.ClientSet) ([]types.DynamicRange, error) {
+func getLinuxDynamicPrivateRange(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface) ([]types.DynamicRange, error) {
 	log.Debug("Getting Linux dynamic/private port range from cluster")
 
 	// Pick an arbitrary node to query (ranges are expected to be consistent across nodes).
@@ -112,20 +108,6 @@ func getLinuxDynamicPrivateRange(exporter *endpointslices.EndpointSlicesExporter
 	defer func() {
 		if delErr := utilsHelpers.DeleteNamespace(consts.DefaultDebugNamespace); delErr != nil {
 			log.Warnf("failed to delete namespace %s: %v", consts.DefaultDebugNamespace, delErr)
-		}
-		if pollErr := wait.PollUntilContextTimeout(context.TODO(), time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-			ns := &corev1.Namespace{}
-			err := cs.Get(context.TODO(), ctrlclient.ObjectKey{Name: consts.DefaultDebugNamespace}, ns)
-			if apierrors.IsNotFound(err) {
-				return true, nil
-			}
-			if err != nil {
-				log.Warningf("retrying due to error: %v", err)
-				return false, nil // keep retrying
-			}
-			return false, nil
-		}); pollErr != nil {
-			log.Errorf("error while waiting for namespace %s deletion: %v", consts.DefaultDebugNamespace, pollErr)
 		}
 	}()
 
