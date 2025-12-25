@@ -185,7 +185,7 @@ var (
 func TestCommatrixGeneration(t *testing.T) {
 	expectedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster, types.GeneralStaticEntriesWorker, types.StandardStaticEntries)
 
-	expectedComMatrix := types.ComMatrix{Matrix: expectedComDetails}
+	expectedComMatrix := types.ComMatrix{Ports: expectedComDetails}
 	expectedComMatrix.SortAndRemoveDuplicates()
 
 	testCases := []struct {

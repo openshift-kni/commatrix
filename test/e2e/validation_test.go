@@ -2,21 +2,17 @@ package e2e
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
 
 	"os"
-	"strconv"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 
 	configv1 "github.com/openshift/api/config/v1"
-	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
@@ -59,9 +55,8 @@ var _ = Describe("Validation", func() {
 		commatrixFileContent, err := os.ReadFile(commatrixFilePath)
 		Expect(err).ToNot(HaveOccurred(), "Failed to read generated commatrix file")
 
-		ComDetailsMatrix, err := types.ParseToComDetailsList(commatrixFileContent, types.FormatCSV)
+		commatrix, err = types.ParseToComMatrix(commatrixFileContent, types.FormatCSV)
 		Expect(err).ToNot(HaveOccurred(), "Failed to parse generated commatrix")
-		commatrix = &types.ComMatrix{Matrix: ComDetailsMatrix}
 	})
 
 	It("generated communication matrix should be equal to documented communication matrix", func() {
@@ -91,9 +86,10 @@ var _ = Describe("Validation", func() {
 		// Normalize header: rename "Node Role" to our csv tag "NodeGroup"
 		docCommatrixFileContent = bytes.Replace(docCommatrixFileContent, []byte("Node Role"), []byte("NodeGroup"), 1)
 
-		docComDetailsList, err := types.ParseToComDetailsList(docCommatrixFileContent, types.FormatCSV)
+		docComMatrix, err := types.ParseToComMatrix(docCommatrixFileContent, types.FormatCSV)
 		Expect(err).ToNot(HaveOccurred(), "Failed to parse documented communication matrix")
-		docComMatrix := &types.ComMatrix{Matrix: docComDetailsList}
+		docComMatrix.DynamicRanges = append(docComMatrix.DynamicRanges, types.KubeletNodePortDefaultDynamicRange...)
+		docComMatrix.DynamicRanges = append(docComMatrix.DynamicRanges, types.LinuxDynamicPrivateDefaultDynamicRange...)
 
 		By("generating diff between matrices for testing purposes")
 		endpointslicesDiffWithDocMat := matrixdiff.Generate(commatrix, docComMatrix)
@@ -106,7 +102,7 @@ var _ = Describe("Validation", func() {
 		By("comparing new and documented commatrices")
 		// Get ports that are in the documented commatrix but not in the generated commatrix.
 		notUsedPortsMat := endpointslicesDiffWithDocMat.GetUniqueSecondary()
-		if len(notUsedPortsMat.Matrix) > 0 {
+		if len(notUsedPortsMat.Ports) > 0 {
 			logrus.Warningf("the following ports are documented but are not used:\n%s", notUsedPortsMat)
 		}
 
@@ -122,9 +118,8 @@ var _ = Describe("Validation", func() {
 			portsToIgnoreFileContent, err := os.ReadFile(openPortsToIgnoreFile)
 			Expect(err).ToNot(HaveOccurred())
 
-			portsToIgnoreComDetails, err := types.ParseToComDetailsList(portsToIgnoreFileContent, openPortsToIgnoreFormat)
+			portsToIgnoreMat, err = types.ParseToComMatrix(portsToIgnoreFileContent, openPortsToIgnoreFormat)
 			Expect(err).ToNot(HaveOccurred())
-			portsToIgnoreMat = &types.ComMatrix{Matrix: portsToIgnoreComDetails}
 
 			// generate the diff matrix between the open ports to ignore matrix and the missing ports in the documented commatrix (based on the diff between the enpointslice and the doc matrix)
 			nonDocumentedEndpointslicesMat := endpointslicesDiffWithDocMat.GetUniquePrimary()
@@ -132,7 +127,9 @@ var _ = Describe("Validation", func() {
 			missingPortsMat = endpointslicesDiffWithIgnoredPorts.GetUniquePrimary()
 		}
 
-		if len(missingPortsMat.Matrix) > 0 {
+		// Don't include in the missing ports matrix ports that are in dynamic ranges of the documented commatrix.
+		missingPortsMat = filterOutPortsInDynamicRanges(missingPortsMat, docComMatrix.DynamicRanges)
+		if len(missingPortsMat.Ports) > 0 {
 			err := fmt.Errorf("the following ports are used but are not documented:\n%s", missingPortsMat)
 			Expect(err).ToNot(HaveOccurred())
 		}
@@ -150,88 +147,49 @@ var _ = Describe("Validation", func() {
 		missingEPSMat, err := extractEPSMatByStatus(matDiffSSFileContent, Missing)
 		Expect(err).ToNot(HaveOccurred(), "Failed to extract missing EPS Matrix")
 
-		if len(notUsedEPSMat.Matrix) > 0 {
+		if len(notUsedEPSMat.Ports) > 0 {
 			logrus.Warningf("the following ports are not used: \n %s", notUsedEPSMat)
 		}
 
-		missingEPSMat, err = filterKnownPorts(missingEPSMat)
-		Expect(err).ToNot(HaveOccurred(), "Failed to filter the known ports")
-		if len(missingEPSMat.Matrix) > 0 {
+		// Don't include in the missing EPS matrix ports that are in dynamic ranges of the generated commatrix.
+		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, commatrix.DynamicRanges)
+		if len(missingEPSMat.Ports) > 0 {
 			err := fmt.Errorf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat)
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred(), "Failed to filter the known ports")
 		}
 	})
 })
 
-// Filter known ports to skip on checking.
-func filterKnownPorts(mat *types.ComMatrix) (*types.ComMatrix, error) {
-	nodePortMin := serviceNodePortMin
-	nodePortMax := serviceNodePortMax
-
-	clusterNetwork := &configv1.Network{}
-	err := cs.Get(context.Background(), clientOptions.ObjectKey{Name: "cluster"}, clusterNetwork)
-	if err != nil {
-		return nil, err
-	}
-
-	serviceNodePortRange := clusterNetwork.Spec.ServiceNodePortRange
-	if serviceNodePortRange != "" {
-		rangeStr := strings.Split(serviceNodePortRange, "-")
-
-		nodePortMin, err = strconv.Atoi(rangeStr[0])
-		if err != nil {
-			return nil, err
-		}
-
-		nodePortMax, err = strconv.Atoi(rangeStr[1])
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges []types.DynamicRange) *types.ComMatrix {
 	res := []types.ComDetails{}
-	for _, cd := range mat.Matrix {
-		// Skip "ovnkube" ports in the nodePort range, these are dynamic open ports on the node,
-		// no need to mention them in the matrix diff
-		if cd.Service == "ovnkube" && cd.Port >= nodePortMin && cd.Port <= nodePortMax {
-			continue
+	for _, cd := range mat.Ports {
+		skip := false
+		for _, dr := range dynamicRanges {
+			if cd.Protocol == dr.Protocol {
+				if cd.Port >= dr.MinPort && cd.Port <= dr.MaxPort {
+					skip = true
+					break
+				}
+			}
 		}
-
-		// Skip "rpc.statd" ports, these are randomly open ports on the node,
-		// no need to mention them in the matrix diff
-		if cd.Service == "rpc.statd" {
-			continue
+		if !skip {
+			res = append(res, cd)
 		}
-
-		// Skip crio stream server port, allocated to a random free port number,
-		// shouldn't be exposed to the public Internet for security reasons,
-		// no need to mention it in the matrix diff
-		if cd.Service == "crio" && cd.Port > nodePortMax {
-			continue
-		}
-
-		// Skip dns ports used during provisioning for dhcp and tftp,
-		// not used for external traffic
-		if cd.Service == "dnsmasq" || cd.Service == "dig" {
-			continue
-		}
-
-		res = append(res, cd)
 	}
 
-	return &types.ComMatrix{Matrix: res}, nil
+	return &types.ComMatrix{Ports: res}
 }
 
 // extractEPSMatByStatus extracts and returns ComMatrix by filtering lines of a CSV content based on a EPS status.
 func extractEPSMatByStatus(csvContent []byte, status EPSStatus) (*types.ComMatrix, error) {
 	filteredCSV := extractDiffByStatus(csvContent, status)
 
-	prefixEPSMat, err := types.ParseToComDetailsList(filteredCSV, types.FormatCSV)
+	prefixEPSMat, err := types.ParseToComMatrix(filteredCSV, types.FormatCSV)
 	if err != nil {
 		return nil, err
 	}
 
-	return &types.ComMatrix{Matrix: prefixEPSMat}, nil
+	return prefixEPSMat, nil
 }
 
 // extractDiffByStatus filter the lines of the csv content based on the EPS status
