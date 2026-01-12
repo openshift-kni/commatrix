@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="900" height="650" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Define gradients and styles -->
+    <linearGradient id="actorGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e3f2fd;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#bbdefb;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="messageGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f3e5f5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e1bee7;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+            refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+    <marker id="returnarrow" markerWidth="10" markerHeight="7" 
+            refX="10" refY="3.5" orient="auto">
+      <polygon points="0 3.5, 10 0, 10 7" fill="#666" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="20" font-weight="bold" fill="#1565c0">
+    EndpointSlice Processing Pipeline - Sequence Diagram
+  </text>
+  
+  <!-- Actors -->
+  <!-- CLI -->
+  <rect x="80" y="60" width="100" height="50" rx="8" fill="url(#actorGrad)" 
+        stroke="#1976d2" stroke-width="2"/>
+  <text x="130" y="80" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="12" font-weight="bold" fill="#1565c0">CLI</text>
+  <text x="130" y="95" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="9" fill="#424242">Command Handler</text>
+  
+  <!-- Creator -->
+  <rect x="250" y="60" width="120" height="50" rx="8" fill="url(#actorGrad)" 
+        stroke="#1976d2" stroke-width="2"/>
+  <text x="310" y="80" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="12" font-weight="bold" fill="#1565c0">Creator</text>
+  <text x="310" y="95" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="9" fill="#424242">Matrix Creator</text>
+  
+  <!-- Exporter -->
+  <rect x="430" y="60" width="120" height="50" rx="8" fill="url(#actorGrad)" 
+        stroke="#1976d2" stroke-width="2"/>
+  <text x="490" y="80" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="12" font-weight="bold" fill="#1565c0">Exporter</text>
+  <text x="490" y="95" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="9" fill="#424242">EndpointSlice Exporter</text>
+  
+  <!-- K8s -->
+  <rect x="620" y="60" width="120" height="50" rx="8" fill="url(#actorGrad)" 
+        stroke="#1976d2" stroke-width="2"/>
+  <text x="680" y="80" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="12" font-weight="bold" fill="#1565c0">K8s</text>
+  <text x="680" y="95" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="9" fill="#424242">Kubernetes API</text>
+  
+  <!-- Lifelines -->
+  <line x1="130" y1="110" x2="130" y2="600" stroke="#ccc" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="310" y1="110" x2="310" y2="600" stroke="#ccc" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="490" y1="110" x2="490" y2="600" stroke="#ccc" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="680" y1="110" x2="680" y2="600" stroke="#ccc" stroke-width="2" stroke-dasharray="5,5"/>
+  
+  <!-- Messages -->
+  
+  <!-- 1. CLI to Creator: CreateEndpointMatrix() -->
+  <line x1="130" y1="140" x2="310" y2="140" stroke="#2e7d32" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="170" y="125" width="150" height="20" fill="url(#messageGrad)" stroke="#7b1fa2" rx="3"/>
+  <text x="245" y="137" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#4a148c">CreateEndpointMatrix()</text>
+  
+  <!-- 2. Creator to Exporter: LoadExposedEndpointSlicesInfo() -->
+  <line x1="310" y1="170" x2="490" y2="170" stroke="#2e7d32" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="330" y="155" width="140" height="20" fill="url(#messageGrad)" stroke="#7b1fa2" rx="3"/>
+  <text x="400" y="167" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="9" font-weight="bold" fill="#4a148c">LoadExposedEndpointSlicesInfo()</text>
+  
+  <!-- 3. Exporter to K8s: List Services -->
+  <line x1="490" y1="200" x2="680" y2="200" stroke="#2e7d32" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="550" y="185" width="80" height="20" fill="url(#messageGrad)" stroke="#7b1fa2" rx="3"/>
+  <text x="590" y="197" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#4a148c">List Services</text>
+  
+  <!-- 4. K8s to Exporter: Service List (return) -->
+  <line x1="680" y1="230" x2="490" y2="230" stroke="#666" stroke-width="2" marker-end="url(#returnarrow)" stroke-dasharray="8,4"/>
+  <rect x="550" y="215" width="80" height="20" fill="#fff3e0" stroke="#ff9800" rx="3"/>
+  <text x="590" y="227" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" fill="#e65100">Service List</text>
+  
+  <!-- 5. Exporter to K8s: List EndpointSlices -->
+  <line x1="490" y1="260" x2="680" y2="260" stroke="#2e7d32" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="535" y="245" width="110" height="20" fill="url(#messageGrad)" stroke="#7b1fa2" rx="3"/>
+  <text x="590" y="257" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#4a148c">List EndpointSlices</text>
+  
+  <!-- 6. K8s to Exporter: EndpointSlice List (return) -->
+  <line x1="680" y1="290" x2="490" y2="290" stroke="#666" stroke-width="2" marker-end="url(#returnarrow)" stroke-dasharray="8,4"/>
+  <rect x="535" y="275" width="110" height="20" fill="#fff3e0" stroke="#ff9800" rx="3"/>
+  <text x="590" y="287" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" fill="#e65100">EndpointSlice List</text>
+  
+  <!-- 7. Exporter to K8s: List Pods -->
+  <line x1="490" y1="320" x2="680" y2="320" stroke="#2e7d32" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="560" y="305" width="70" height="20" fill="url(#messageGrad)" stroke="#7b1fa2" rx="3"/>
+  <text x="595" y="317" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#4a148c">List Pods</text>
+  
+  <!-- 8. K8s to Exporter: Pod List (return) -->
+  <line x1="680" y1="350" x2="490" y2="350" stroke="#666" stroke-width="2" marker-end="url(#returnarrow)" stroke-dasharray="8,4"/>
+  <rect x="570" y="335" width="60" height="20" fill="#fff3e0" stroke="#ff9800" rx="3"/>
+  <text x="600" y="347" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" fill="#e65100">Pod List</text>
+  
+  <!-- 9. Exporter to Creator: EndpointSliceInfo[] (return) -->
+  <line x1="490" y1="380" x2="310" y2="380" stroke="#666" stroke-width="2" marker-end="url(#returnarrow)" stroke-dasharray="8,4"/>
+  <rect x="350" y="365" width="120" height="20" fill="#fff3e0" stroke="#ff9800" rx="3"/>
+  <text x="410" y="377" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" fill="#e65100">EndpointSliceInfo[]</text>
+  
+  <!-- Self-calls on Creator -->
+  
+  <!-- 10. Creator self: ToComDetails() -->
+  <line x1="310" y1="410" x2="350" y2="410" stroke="#1565c0" stroke-width="2"/>
+  <line x1="350" y1="410" x2="350" y2="430" stroke="#1565c0" stroke-width="2"/>
+  <line x1="350" y1="430" x2="310" y2="430" stroke="#1565c0" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="360" y="415" width="100" height="20" fill="#e8eaf6" stroke="#3f51b5" rx="3"/>
+  <text x="410" y="427" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#283593">ToComDetails()</text>
+  
+  <!-- 11. Creator self: GetStaticEntries() -->
+  <line x1="310" y1="460" x2="350" y2="460" stroke="#1565c0" stroke-width="2"/>
+  <line x1="350" y1="460" x2="350" y2="480" stroke="#1565c0" stroke-width="2"/>
+  <line x1="350" y1="480" x2="310" y2="480" stroke="#1565c0" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="360" y="465" width="110" height="20" fill="#e8eaf6" stroke="#3f51b5" rx="3"/>
+  <text x="415" y="477" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#283593">GetStaticEntries()</text>
+  
+  <!-- 12. Creator self: GetCustomEntries() -->
+  <line x1="310" y1="510" x2="350" y2="510" stroke="#1565c0" stroke-width="2"/>
+  <line x1="350" y1="510" x2="350" y2="530" stroke="#1565c0" stroke-width="2"/>
+  <line x1="350" y1="530" x2="310" y2="530" stroke="#1565c0" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <rect x="360" y="515" width="120" height="20" fill="#e8eaf6" stroke="#3f51b5" rx="3"/>
+  <text x="420" y="527" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#283593">GetCustomEntries()</text>
+  
+  <!-- 13. Creator to CLI: ComMatrix (return) -->
+  <line x1="310" y1="560" x2="130" y2="560" stroke="#666" stroke-width="2" marker-end="url(#returnarrow)" stroke-dasharray="8,4"/>
+  <rect x="190" y="545" width="80" height="20" fill="#e8f5e8" stroke="#388e3c" rx="3"/>
+  <text x="230" y="557" text-anchor="middle" font-family="Arial, sans-serif" 
+        font-size="10" font-weight="bold" fill="#1b5e20">ComMatrix</text>
+  
+  <!-- Legend -->
+  <rect x="50" y="620" width="800" height="25" rx="3" fill="#f8f9fa" stroke="#dee2e6"/>
+  <text x="60" y="635" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#495057">Legend:</text>
+  
+  <line x1="130" y1="632" x2="160" y2="632" stroke="#2e7d32" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="165" y="635" font-family="Arial, sans-serif" font-size="10" fill="#495057">Method Call</text>
+  
+  <line x1="250" y1="632" x2="280" y2="632" stroke="#666" stroke-width="2" marker-end="url(#returnarrow)" stroke-dasharray="8,4"/>
+  <text x="285" y="635" font-family="Arial, sans-serif" font-size="10" fill="#495057">Return Value</text>
+  
+  <line x1="380" y1="630" x2="400" y2="630" stroke="#1565c0" stroke-width="2"/>
+  <line x1="400" y1="630" x2="400" y2="634" stroke="#1565c0" stroke-width="2"/>
+  <line x1="400" y1="634" x2="380" y2="634" stroke="#1565c0" stroke-width="2"/>
+  <text x="405" y="635" font-family="Arial, sans-serif" font-size="10" fill="#495057">Self Call</text>
+  
+  <text x="500" y="635" font-family="Arial, sans-serif" font-size="10" fill="#495057">| Processing flows from top to bottom, showing the complete EndpointSlice data extraction sequence</text>
+</svg>
