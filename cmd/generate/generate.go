@@ -6,9 +6,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
-
-	"context"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
@@ -20,13 +17,9 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/kubectl/pkg/util/templates"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
@@ -261,7 +254,7 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, controlPlaneTopology, ipv6Enabled)
+	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, controlPlaneTopology, ipv6Enabled, o.utilsHelpers)
 	if err != nil {
 		return nil, err
 	}
@@ -300,21 +293,6 @@ func generateSS(o *GenerateOptions) (*types.ComMatrix, error) {
 	defer func() {
 		if delErr := o.utilsHelpers.DeleteNamespace(consts.DefaultDebugNamespace); delErr != nil {
 			log.Warnf("failed to delete namespace %s: %v", consts.DefaultDebugNamespace, delErr)
-			return
-		}
-		if pollErr := wait.PollUntilContextTimeout(context.TODO(), time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
-			ns := &corev1.Namespace{}
-			err := o.cs.Get(context.TODO(), ctrlclient.ObjectKey{Name: consts.DefaultDebugNamespace}, ns)
-			if apierrors.IsNotFound(err) {
-				return true, nil
-			}
-			if err != nil {
-				log.Warningf("retrying due to error: %v", err)
-				return false, nil // keep retrying
-			}
-			return false, nil
-		}); pollErr != nil {
-			log.Errorf("error while waiting for namespace %s deletion: %v", consts.DefaultDebugNamespace, pollErr)
 		}
 	}()
 
