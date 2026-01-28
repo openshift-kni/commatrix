@@ -17,18 +17,29 @@ COPY vendor/ vendor/
 ENV GOEXPERIMENT=strictfipsruntime
 ENV CGO_ENABLED=1
 RUN mkdir -p build && \
-    go build -mod=vendor -tags strictfipsruntime -a -trimpath -ldflags="-s -w" \
-      -o build/oc-commatrix ./cmd/main.go
+    go build -mod=vendor -tags strictfipsruntime -a -o build/oc-commatrix ./cmd/main.go
+
+# Copy scripts for generating wrapper (like network-observability-cli)
+COPY scripts/ scripts/
+
+# Embed wrapper script for users who want to extract and run locally
+# TODO: Update IMAGE once the registry URL is known after first Konflux build
+ARG IMAGE=""
+RUN IMAGE=${IMAGE} DIST_DIR=output ./scripts/inject.sh
+
 # Create final image from UBI + built binary and oc
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:bb08f2300cb8d12a7eb91dddf28ea63692b3ec99e7f0fa71a1b300f2756ea829
 
 WORKDIR /
 
-COPY --from=builder /opt/app-root/build .
+COPY --from=builder --chown=65532:65532 /opt/app-root/build/oc-commatrix .
 COPY --from=ose-cli /usr/bin/oc /usr/bin/oc
 
-COPY LICENSE /licenses/
-COPY README.md ./README
+# Copy the wrapper script for users who want to extract and run locally
+COPY --from=builder --chown=65532:65532 /opt/app-root/output/oc-commatrix /output/oc-commatrix
+
+COPY --chown=65532:65532 LICENSE /licenses/
+COPY --chown=65532:65532 README.md ./README
 
 # Required labels for Conforma/Red Hat
 LABEL name="openshift-kni/commatrix"
