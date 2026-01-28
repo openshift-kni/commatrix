@@ -296,7 +296,7 @@ var KubeletNodePortDefaultDynamicRange = []DynamicRange{
 		MinPort:     30000,
 		MaxPort:     32767,
 		Description: "Kubelet node ports",
-		Optional:    false,
+		Optional:    true,
 	},
 	{
 		Direction:   "Ingress",
@@ -304,7 +304,7 @@ var KubeletNodePortDefaultDynamicRange = []DynamicRange{
 		MinPort:     30000,
 		MaxPort:     32767,
 		Description: "Kubelet node ports",
-		Optional:    false,
+		Optional:    true,
 	},
 }
 
