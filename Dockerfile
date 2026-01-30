@@ -18,7 +18,11 @@ ENV GOEXPERIMENT=strictfipsruntime
 ENV CGO_ENABLED=1
 RUN mkdir -p build && \
     go build -mod=vendor -tags strictfipsruntime -a -trimpath -ldflags="-s -w" \
-      -o build/oc-commatrix ./cmd/main.go
+      -o build/oc-commatrix ./cmd/main.go  
+# Build oc-commatrix-mac for macOS arm64
+RUN CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -mod=vendor -a -trimpath -ldflags="-s -w"  \
+    -o build/oc-commatrix-mac ./cmd/main.go
+
 # Create final image from UBI + built binary and oc
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:6fc28bcb6776e387d7a35a2056d9d2b985dc4e26031e98a2bd35a7137cd6fd71
 
