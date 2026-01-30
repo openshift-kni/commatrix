@@ -618,7 +618,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				"poolC": {"master"},
 			}
 
-			out := expandStaticEntriesByPool(entries, poolToRoles)
+			out := ExpandStaticEntriesByPool(entries, poolToRoles)
 
 			// Expect one entry for master in poolA, and worker duplicated for poolA and poolB and one for master poolC
 			expected := []types.ComDetails{
