@@ -68,16 +68,6 @@ var GeneralStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
 		Protocol:  "TCP",
-		Port:      8080,
-		NodeRole:  "master",
-		Service:   "",
-		Namespace: "openshift-network-operator",
-		Pod:       "network-operator",
-		Container: "network-operator",
-		Optional:  false,
-	}, {
-		Direction: "Ingress",
-		Protocol:  "TCP",
 		Port:      10256,
 		NodeRole:  "master",
 		Service:   "ovnkube",
