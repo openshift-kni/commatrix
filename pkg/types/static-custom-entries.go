@@ -307,22 +307,3 @@ var KubeletNodePortDefaultDynamicRange = []DynamicRange{
 		Optional:    true,
 	},
 }
-
-var LinuxDynamicPrivateDefaultDynamicRange = []DynamicRange{
-	{
-		Direction:   "Ingress",
-		Protocol:    "TCP",
-		MinPort:     32768,
-		MaxPort:     60999,
-		Description: "Linux dynamic/private ports",
-		Optional:    true,
-	},
-	{
-		Direction:   "Ingress",
-		Protocol:    "UDP",
-		MinPort:     32768,
-		MaxPort:     60999,
-		Description: "Linux dynamic/private ports",
-		Optional:    true,
-	},
-}
