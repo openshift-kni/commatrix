@@ -381,25 +381,6 @@ var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
 	},
 }
 
-var LinuxDynamicPrivateDefaultDynamicRange = DynamicRangeList{
-	{
-		Direction:   "Ingress",
-		Protocol:    "TCP",
-		MinPort:     32768,
-		MaxPort:     60999,
-		Description: "Linux dynamic/private ports",
-		Optional:    true,
-	},
-	{
-		Direction:   "Ingress",
-		Protocol:    "UDP",
-		MinPort:     32768,
-		MaxPort:     60999,
-		Description: "Linux dynamic/private ports",
-		Optional:    true,
-	},
-}
-
 // GetStaticEntries returns the static entries for the given platform, topology,
 // IPv6 and DHCP configuration.
 func GetStaticEntries(platformType configv1.PlatformType, topology configv1.TopologyMode, ipv6Enabled, dhcpEnabled bool) ([]ComDetails, error) {
