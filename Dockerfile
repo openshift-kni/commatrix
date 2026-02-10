@@ -48,6 +48,7 @@ LABEL release="1"
 LABEL vendor="Red Hat, Inc."
 LABEL url="https://github.com/openshift-kni/commatrix"
 LABEL distribution-scope="public"
+LABEL cpe="cpe:/a:redhat:openshift:4.21::el9"
 
 USER 65532:65532
 
