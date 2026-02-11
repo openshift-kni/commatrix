@@ -5,7 +5,6 @@ Ingress,TCP,2379,openshift-etcd,etcd,etcd,etcdctl,master,FALSE
 Ingress,TCP,2380,openshift-etcd,healthz,etcd,etcd,master,FALSE
 Ingress,TCP,6080,openshift-kube-apiserver,,kube-apiserver,kube-apiserver-insecure-readyz,master,FALSE
 Ingress,TCP,6443,openshift-kube-apiserver,apiserver,kube-apiserver,kube-apiserver,master,FALSE
-Ingress,TCP,8080,openshift-network-operator,,network-operator,network-operator,master,FALSE
 Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,master,FALSE
 Ingress,TCP,9001,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,kube-rbac-proxy,master,FALSE
 Ingress,TCP,9099,openshift-cluster-version,cluster-version-operator,cluster-version-operator,cluster-version-operator,master,FALSE
