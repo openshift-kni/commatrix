@@ -89,7 +89,6 @@ var _ = Describe("Validation", func() {
 		docComMatrix, err := types.ParseToComMatrix(docCommatrixFileContent, types.FormatCSV)
 		Expect(err).ToNot(HaveOccurred(), "Failed to parse documented communication matrix")
 		docComMatrix.DynamicRanges = append(docComMatrix.DynamicRanges, types.KubeletNodePortDefaultDynamicRange...)
-		docComMatrix.DynamicRanges = append(docComMatrix.DynamicRanges, types.LinuxDynamicPrivateDefaultDynamicRange...)
 
 		By("generating diff between matrices for testing purposes")
 		endpointslicesDiffWithDocMat := matrixdiff.Generate(commatrix, docComMatrix)

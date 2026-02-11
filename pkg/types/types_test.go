@@ -84,7 +84,6 @@ var _ = g.Describe("Dynamic range parsing and helpers", func() {
 				"Direction,Protocol,Port,Namespace,Service,Pod,Container,NodeGroup,Optional\n" +
 					"Ingress,TCP,443,ns1,svc1,pod1,ctr1,master,false\n" +
 					"Egress,UDP,30000-30100,,NodePort range,,,,true\n" +
-					"Ingress,TCP,49152-65535,,Linux ephemeral range,,,,true\n" +
 					"Egress,TCP,,,,,,worker,false\n", // empty Port should be skipped
 			)
 
@@ -105,23 +104,13 @@ var _ = g.Describe("Dynamic range parsing and helpers", func() {
 			o.Expect(cm.Ports[0].Optional).To(o.BeFalse())
 
 			// Dynamic ranges
-			o.Expect(cm.DynamicRanges).To(o.HaveLen(2))
-
-			// First range
+			o.Expect(cm.DynamicRanges).To(o.HaveLen(1))
 			o.Expect(cm.DynamicRanges[0].Direction).To(o.Equal("Egress"))
 			o.Expect(cm.DynamicRanges[0].Protocol).To(o.Equal("UDP"))
 			o.Expect(cm.DynamicRanges[0].MinPort).To(o.Equal(30000))
 			o.Expect(cm.DynamicRanges[0].MaxPort).To(o.Equal(30100))
 			o.Expect(cm.DynamicRanges[0].Description).To(o.Equal("NodePort range"))
 			o.Expect(cm.DynamicRanges[0].Optional).To(o.BeTrue())
-
-			// Second range
-			o.Expect(cm.DynamicRanges[1].Direction).To(o.Equal("Ingress"))
-			o.Expect(cm.DynamicRanges[1].Protocol).To(o.Equal("TCP"))
-			o.Expect(cm.DynamicRanges[1].MinPort).To(o.Equal(49152))
-			o.Expect(cm.DynamicRanges[1].MaxPort).To(o.Equal(65535))
-			o.Expect(cm.DynamicRanges[1].Description).To(o.Equal("Linux ephemeral range"))
-			o.Expect(cm.DynamicRanges[1].Optional).To(o.BeTrue())
 		})
 
 		g.It("errors on malformed dynamic range in CSV", func() {

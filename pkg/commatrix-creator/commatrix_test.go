@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
-	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
@@ -433,27 +432,6 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			// Set up mock utils to avoid pod creation in tests
 			ctrl = gomock.NewController(g.GinkgoT())
 			mockUtils = mock_utils.NewMockUtilsInterface(ctrl)
-
-			// Mock all the utils calls needed for getLinuxDynamicPrivateRange
-			mockUtils.EXPECT().CreateNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
-			mockUtils.EXPECT().DeleteNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
-
-			// Create a mock pod
-			mockPod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "debug-pod",
-					Namespace: consts.DefaultDebugNamespace,
-				},
-				Status: corev1.PodStatus{
-					Phase: corev1.PodRunning,
-				},
-			}
-			mockUtils.EXPECT().CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, gomock.Any(), gomock.Any()).Return(mockPod, nil).AnyTimes()
-			mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
-			mockUtils.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, mockPod, corev1.PodRunning).Return(nil).AnyTimes()
-
-			// Mock the command output to return a default port range
-			mockUtils.EXPECT().RunCommandOnPod(mockPod, gomock.Any()).Return([]byte("32768 60999\n"), nil).AnyTimes()
 		})
 
 		g.AfterEach(func() {
