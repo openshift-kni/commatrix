@@ -14,7 +14,10 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
+	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
+	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
+	"github.com/openshift-kni/commatrix/pkg/mcp"
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
 
@@ -25,6 +28,7 @@ const (
 	diffFileComments         = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
 	commatrixFile      = "communication-matrix.csv"
+	ssCommatrixFile    = "ss-generated-matrix.csv"
 	matrixdiffFile     = "matrix-diff-ss"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
@@ -156,6 +160,49 @@ var _ = Describe("Validation", func() {
 		if len(missingEPSMat.Ports) > 0 {
 			err := fmt.Errorf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat)
 			Expect(err).ToNot(HaveOccurred(), "Failed to filter the known ports")
+		}
+	})
+
+	It("should validate all static entries suitable to the cluster are actually open ports", func() {
+		By("Reading the ss-generated matrix (actual open ports from the cluster)")
+		ssCommatrixFilePath := filepath.Join(artifactsDir, ssCommatrixFile)
+		ssCommatrixFileContent, err := os.ReadFile(ssCommatrixFilePath)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read ss-generated matrix file")
+
+		ssCommatrix, err := types.ParseToComMatrix(ssCommatrixFileContent, types.FormatCSV)
+		Expect(err).ToNot(HaveOccurred(), "Failed to parse ss-generated matrix")
+
+		By("Getting IPv6 enabled status")
+		ipv6Enabled, err := utilsHelpers.IsIPv6Enabled()
+		Expect(err).ToNot(HaveOccurred(), "Failed to get IPv6 enabled status")
+
+		By("Creating communication matrix creator to get static entries")
+		exporter, err := endpointslices.New(cs)
+		Expect(err).ToNot(HaveOccurred(), "Failed to create endpointslices exporter")
+
+		cm, err := commatrixcreator.New(exporter, "", "", platformType, controlPlaneTopology, ipv6Enabled, utilsHelpers)
+		Expect(err).ToNot(HaveOccurred(), "Failed to create communication matrix creator")
+
+		By("Getting static entries suitable to the cluster")
+		staticEntries, err := cm.GetStaticEntries()
+		Expect(err).ToNot(HaveOccurred(), "Failed to get static entries")
+
+		By("Expand static entries for all MCPs based on their roles")
+		PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(exporter.ClientSet, exporter.NodeToGroup())
+		Expect(err).ToNot(HaveOccurred(), "Failed to get pool roles for static entries expansion")
+		staticEntries = commatrixcreator.ExpandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
+
+		By("Checking that all static entries are present in the ss (open ports) matrix")
+		var missingStaticEntries []types.ComDetails
+		for _, staticEntry := range staticEntries {
+			if !ssCommatrix.Contains(staticEntry) {
+				missingStaticEntries = append(missingStaticEntries, staticEntry)
+			}
+		}
+
+		if len(missingStaticEntries) > 0 {
+			missingMatrix := &types.ComMatrix{Ports: missingStaticEntries}
+			Fail(fmt.Sprintf("the following static entries are not open ports:\n%s", missingMatrix))
 		}
 	})
 })

@@ -75,7 +75,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	}
 
 	// Expand static entries for all MCPs based on their roles
-	staticEntries = expandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
+	staticEntries = ExpandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
 	epSliceComDetails = append(epSliceComDetails, staticEntries...)
 
 	dynamicRanges, err := dynamicranges.GetDynamicRanges(cm.exporter, cm.utilsHelpers, cm.exporter.ClientSet)
@@ -168,7 +168,7 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 }
 
 // expandStaticEntriesByPool uses MCP-derived role per pool.
-func expandStaticEntriesByPool(staticEntries []types.ComDetails, poolToRoles map[string][]string) []types.ComDetails {
+func ExpandStaticEntriesByPool(staticEntries []types.ComDetails, poolToRoles map[string][]string) []types.ComDetails {
 	if len(poolToRoles) == 0 {
 		return staticEntries
 	}
