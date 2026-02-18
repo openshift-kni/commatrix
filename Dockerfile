@@ -24,7 +24,7 @@ RUN CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -mod=vendor -a -trimpath -ld
     -o build/oc-commatrix-mac ./cmd/main.go
 
 # Create final image from UBI + built binary and oc
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:bb08f2300cb8d12a7eb91dddf28ea63692b3ec99e7f0fa71a1b300f2756ea829
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:c7d44146f826037f6873d99da479299b889473492d3c1ab8af86f08af04ec8a0
 
 WORKDIR /
 
