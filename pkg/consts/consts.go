@@ -15,4 +15,9 @@ const (
 	SSRawTCP                = "raw-ss-tcp"
 	SSRawUDP                = "raw-ss-udp"
 	MatrixDiffSSfileName    = "matrix-diff-ss"
+
+	// Butane and MachineConfig output constants.
+	ButaneFileNamePrefix         = "butane"
+	MCFileNamePrefix             = "mc"
+	NodeDisruptionPolicyFileName = "node-disruption-policy.yaml"
 )
