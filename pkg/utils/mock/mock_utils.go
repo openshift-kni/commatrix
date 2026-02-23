@@ -107,6 +107,21 @@ func (mr *MockUtilsInterfaceMockRecorder) GetControlPlaneTopology() *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControlPlaneTopology", reflect.TypeOf((*MockUtilsInterface)(nil).GetControlPlaneTopology))
 }
 
+// GetClusterVersion mocks base method.
+func (m *MockUtilsInterface) GetClusterVersion() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetClusterVersion")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetClusterVersion indicates an expected call of GetClusterVersion.
+func (mr *MockUtilsInterfaceMockRecorder) GetClusterVersion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterVersion", reflect.TypeOf((*MockUtilsInterface)(nil).GetClusterVersion))
+}
+
 // GetPlatformType mocks base method.
 func (m *MockUtilsInterface) GetPlatformType() (v1.PlatformType, error) {
 	m.ctrl.T.Helper()

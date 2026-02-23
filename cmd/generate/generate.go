@@ -48,7 +48,12 @@ var (
 			 
 			 # Generate the communication matrix in json format with custom entries:
 			 oc commatrix generate --format json --customEntriesPath /path/to/customEntriesFile --customEntriesFormat json
-			 
+
+			 # Generate Butane configs with nftables firewall rules (per node pool) and a NodeDisruptionPolicy patch:
+			 oc commatrix generate --format butane
+
+			 # Generate MachineConfig CRs with nftables firewall rules (per node pool) and a NodeDisruptionPolicy patch:
+			 oc commatrix generate --format mc
 	`)
 )
 
@@ -58,6 +63,8 @@ var (
 		types.FormatJSON,
 		types.FormatYAML,
 		types.FormatNFT,
+		types.FormatButane,
+		types.FormatMC,
 	}
 
 	validCustomEntriesFormats = []string{
@@ -125,7 +132,7 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 		},
 	}
 	cmd.Flags().StringVar(&o.destDir, "destDir", "", "Output files dir (default communication-matrix)")
-	cmd.Flags().StringVar(&o.format, "format", consts.FilesDefaultFormat, "Desired format (json,yaml,csv,nft)")
+	cmd.Flags().StringVar(&o.format, "format", consts.FilesDefaultFormat, "Desired format (json,yaml,csv,nft,butane,mc)")
 	cmd.Flags().BoolVar(&o.debug, "debug", false, "Debug logs")
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
@@ -265,7 +272,7 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 	}
 
 	log.Debug("Writing endpoint matrix to file")
-	err = matrix.WriteMatrixToFileByType(o.utilsHelpers, consts.CommatrixFileNamePrefix, o.format, o.destDir)
+	err = matrix.WriteMatrixToFileByType(o.utilsHelpers, fileNamePrefix(o.format, consts.CommatrixFileNamePrefix), o.format, o.destDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write endpoint matrix to file: %v", err)
 	}
@@ -309,10 +316,21 @@ func generateSS(o *GenerateOptions) (*types.ComMatrix, error) {
 	}
 
 	log.Debug("Writing SS matrix to file")
-	err = ssMat.WriteMatrixToFileByType(o.utilsHelpers, consts.SSMatrixFileNamePrefix, o.format, o.destDir)
+	err = ssMat.WriteMatrixToFileByType(o.utilsHelpers, fileNamePrefix(o.format, consts.SSMatrixFileNamePrefix), o.format, o.destDir)
 	if err != nil {
 		return nil, fmt.Errorf("error while writing SS matrix to file: %v", err)
 	}
 
 	return ssMat, nil
+}
+
+func fileNamePrefix(format, defaultPrefix string) string {
+	switch format {
+	case types.FormatButane:
+		return consts.ButaneFileNamePrefix
+	case types.FormatMC:
+		return consts.MCFileNamePrefix
+	default:
+		return defaultPrefix
+	}
 }

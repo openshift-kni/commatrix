@@ -37,6 +37,7 @@ type UtilsInterface interface {
 	GetControlPlaneTopology() (configv1.TopologyMode, error)
 	WaitForPodStatus(namespace string, pod *corev1.Pod, PodPhase corev1.PodPhase) error
 	IsIPv6Enabled() (bool, error)
+	GetClusterVersion() (string, error)
 }
 
 type utils struct {
@@ -330,6 +331,20 @@ func (u *utils) GetPodLogs(namespace string, pod *corev1.Pod) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// GetClusterVersion returns the cluster's major.minor version (e.g. "4.17").
+func (u *utils) GetClusterVersion() (string, error) {
+	cv := &configv1.ClusterVersion{}
+	err := u.Get(context.Background(), clientOptions.ObjectKey{Name: "version"}, cv)
+	if err != nil {
+		return "", err
+	}
+	parts := strings.SplitN(cv.Status.Desired.Version, ".", 3)
+	if len(parts) < 2 {
+		return "", fmt.Errorf("unexpected cluster version format: %q", cv.Status.Desired.Version)
+	}
+	return strings.Join(parts[:2], "."), nil
 }
 
 // IsIPv6Enabled detects whether the cluster networking includes IPv6.
