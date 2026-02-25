@@ -134,3 +134,140 @@ var _ = g.Describe("Dynamic range parsing and helpers", func() {
 		})
 	})
 })
+
+var _ = g.Describe("Butane and MachineConfig output formats", func() {
+	var mat ComMatrix
+
+	g.BeforeEach(func() {
+		mat = ComMatrix{
+			Ports: []ComDetails{
+				{Direction: "Ingress", Protocol: "TCP", Port: 443, Namespace: "ns1", Service: "svc1", Pod: "pod1", Container: "ctr1", NodeGroup: "master", Optional: false},
+				{Direction: "Ingress", Protocol: "UDP", Port: 53, Namespace: "ns2", Service: "svc2", Pod: "pod2", Container: "ctr2", NodeGroup: "master", Optional: false},
+			},
+		}
+	})
+
+	g.Describe("ToButane", func() {
+		g.It("produces valid Butane YAML with the correct pool name and nftables rules", func() {
+			out, err := mat.ToButane("master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			result := string(out)
+			o.Expect(result).To(o.ContainSubstring("variant: openshift"))
+			o.Expect(result).To(o.ContainSubstring("name: 98-nftables-commatrix-master"))
+			o.Expect(result).To(o.ContainSubstring("machineconfiguration.openshift.io/role: master"))
+			o.Expect(result).To(o.ContainSubstring("nftables.service"))
+			o.Expect(result).To(o.ContainSubstring("/etc/sysconfig/nftables.conf"))
+			o.Expect(result).To(o.ContainSubstring("tcp dport { 443 }"))
+			o.Expect(result).To(o.ContainSubstring("udp dport { 53 }"))
+		})
+
+		g.It("uses the correct pool name for worker", func() {
+			mat.Ports[0].NodeGroup = "worker"
+			mat.Ports[1].NodeGroup = "worker"
+
+			out, err := mat.ToButane("worker")
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			result := string(out)
+			o.Expect(result).To(o.ContainSubstring("name: 98-nftables-commatrix-worker"))
+			o.Expect(result).To(o.ContainSubstring("machineconfiguration.openshift.io/role: worker"))
+		})
+
+		g.It("strips the shebang line from nftables rules", func() {
+			out, err := mat.ToButane("master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+			o.Expect(string(out)).ToNot(o.ContainSubstring("#!/usr/sbin/nft"))
+		})
+	})
+
+	g.Describe("ToMachineConfig", func() {
+		g.It("produces valid MachineConfig YAML with the correct pool name", func() {
+			out, err := mat.ToMachineConfig("master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			result := string(out)
+			o.Expect(result).To(o.ContainSubstring("kind: MachineConfig"))
+			o.Expect(result).To(o.ContainSubstring("name: 98-nftables-commatrix-master"))
+			o.Expect(result).To(o.ContainSubstring("machineconfiguration.openshift.io/role: master"))
+		})
+
+		g.It("embeds the nftables rules in the ignition storage section", func() {
+			out, err := mat.ToMachineConfig("master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			result := string(out)
+			o.Expect(result).To(o.ContainSubstring("storage:"))
+			o.Expect(result).To(o.ContainSubstring("/etc/sysconfig/nftables.conf"))
+		})
+
+		g.It("includes the nftables systemd unit", func() {
+			out, err := mat.ToMachineConfig("master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			result := string(out)
+			o.Expect(result).To(o.ContainSubstring("systemd:"))
+			o.Expect(result).To(o.ContainSubstring("nftables.service"))
+		})
+	})
+
+	g.Describe("ToButane and ToMachineConfig with dynamic ranges", func() {
+		g.It("includes dynamic port ranges in the output", func() {
+			mat.DynamicRanges = []DynamicRange{
+				{Direction: "Ingress", Protocol: "TCP", MinPort: 30000, MaxPort: 32767, Description: "NodePort range", Optional: true},
+			}
+
+			butaneOut, err := mat.ToButane("master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+			o.Expect(string(butaneOut)).To(o.ContainSubstring("443, 30000-32767"))
+
+			mcOut, err := mat.ToMachineConfig("master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+			// MachineConfig encodes the file content, so just verify it succeeds
+			o.Expect(mcOut).ToNot(o.BeEmpty())
+		})
+	})
+
+	g.Describe("print dispatches butane and mc formats", func() {
+		g.It("returns butane output for FormatButane", func() {
+			out, err := mat.print(FormatButane, "master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+			o.Expect(string(out)).To(o.ContainSubstring("variant: openshift"))
+		})
+
+		g.It("returns MachineConfig output for FormatMC", func() {
+			out, err := mat.print(FormatMC, "master")
+			o.Expect(err).ToNot(o.HaveOccurred())
+			o.Expect(string(out)).To(o.ContainSubstring("kind: MachineConfig"))
+		})
+
+		g.It("returns error for invalid format", func() {
+			_, err := mat.print("invalid", "")
+			o.Expect(err).To(o.HaveOccurred())
+			o.Expect(err.Error()).To(o.ContainSubstring("invalid format"))
+		})
+	})
+})
+
+var _ = g.Describe("SeparateMatrixByGroup", func() {
+	g.It("separates entries by node group and preserves dynamic ranges", func() {
+		mat := ComMatrix{
+			Ports: []ComDetails{
+				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 80, Protocol: "TCP", NodeGroup: "worker"},
+				{Port: 53, Protocol: "UDP", NodeGroup: "master"},
+				{Port: 0, Protocol: "TCP", NodeGroup: ""},
+			},
+			DynamicRanges: []DynamicRange{
+				{Protocol: "TCP", MinPort: 30000, MaxPort: 32767},
+			},
+		}
+
+		pools := mat.SeparateMatrixByGroup()
+		o.Expect(pools).To(o.HaveLen(2))
+		o.Expect(pools["master"].Ports).To(o.HaveLen(2))
+		o.Expect(pools["worker"].Ports).To(o.HaveLen(1))
+		o.Expect(pools["master"].DynamicRanges).To(o.HaveLen(1))
+		o.Expect(pools["worker"].DynamicRanges).To(o.HaveLen(1))
+	})
+})

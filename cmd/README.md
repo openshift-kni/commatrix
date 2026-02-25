@@ -47,7 +47,7 @@ Flags:
       --customEntriesPath string     Add custom entries from a file to the matrix
       --debug                        Debug logs (default is false)
       --destDir string               Output files dir (default communication-matrix)
-      --format string                Desired format (json,yaml,csv,nft) (default "csv")
+      --format string                Desired format (json,yaml,csv,nft,butane,mc) (default "csv")
       --host-open-ports              Generate communication matrix, host open port matrix, and their difference.
   ```
 
@@ -101,6 +101,76 @@ $ oc commatrix generate --format json
         "optional": false
     }
 ]
+```
+
+`butane example`
+```sh
+$ oc commatrix generate --format butane
+```
+
+The command generates per-pool Butane YAML configs and a `node-disruption-policy.yaml` patch file.
+
+`butane-master.yaml`
+```yaml
+variant: openshift
+version: 4.17.0
+metadata:
+  name: 98-nftables-commatrix-master
+  labels:
+    machineconfiguration.openshift.io/role: master
+systemd:
+  units:
+    - name: "nftables.service"
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Netfilter Tables
+        ...
+storage:
+  files:
+    - path: /etc/sysconfig/nftables.conf
+      mode: 0600
+      overwrite: true
+      contents:
+        inline: |
+          table inet openshift_filter
+          delete table inet openshift_filter
+          ...
+```
+
+`mc example`
+```sh
+$ oc commatrix generate --format mc
+```
+
+The command generates per-pool MachineConfig CRs (transpiled from Butane) and a `node-disruption-policy.yaml` patch file.
+
+`node-disruption-policy.yaml`
+
+Both `butane` and `mc` formats produce this patch file. Apply it to avoid full node reboots when nftables rules are updated:
+```sh
+$ oc patch machineconfiguration cluster --type=merge --patch-file=node-disruption-policy.yaml
+```
+
+```yaml
+apiVersion: operator.openshift.io/v1
+kind: MachineConfiguration
+metadata:
+  name: cluster
+spec:
+  nodeDisruptionPolicy:
+    units:
+      - name: nftables.service
+        actions:
+          - type: Reload
+            reload:
+              serviceName: nftables.service
+    files:
+      - path: /etc/sysconfig/nftables.conf
+        actions:
+          - type: Restart
+            restart:
+              serviceName: nftables.service
 ```
 
 `host-open-ports example command`

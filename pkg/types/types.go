@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/openshift-kni/commatrix/pkg/consts"
+	"github.com/openshift-kni/commatrix/pkg/firewall"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 )
 
@@ -53,10 +54,12 @@ func SupportedTopologiesList() []configv1.TopologyMode {
 }
 
 const (
-	FormatJSON = "json"
-	FormatYAML = "yaml"
-	FormatCSV  = "csv"
-	FormatNFT  = "nft"
+	FormatJSON   = "json"
+	FormatYAML   = "yaml"
+	FormatCSV    = "csv"
+	FormatNFT    = "nft"
+	FormatButane = "butane" // Butane config with embedded nftables firewall rules
+	FormatMC     = "mc"     // MachineConfig with embedded nftables firewall rules (transpiled from Butane)
 )
 
 type ComMatrix struct {
@@ -151,6 +154,24 @@ func (m *ComMatrix) ToYAML() ([]byte, error) {
 	return out, nil
 }
 
+func (m *ComMatrix) ToButane(nodePool string) ([]byte, error) {
+	nftRules, err := m.ToNFTables()
+	if err != nil {
+		return nil, err
+	}
+
+	return firewall.NFTablesToButane(nftRules, nodePool), nil
+}
+
+func (m *ComMatrix) ToMachineConfig(nodePool string) ([]byte, error) {
+	nftRules, err := m.ToNFTables()
+	if err != nil {
+		return nil, err
+	}
+
+	return firewall.NFTablesToMachineConfig(nftRules, nodePool)
+}
+
 func (m *ComMatrix) String() string {
 	var result strings.Builder
 	for _, details := range m.Ports {
@@ -161,27 +182,35 @@ func (m *ComMatrix) String() string {
 }
 
 func (m *ComMatrix) WriteMatrixToFileByType(utilsHelpers utils.UtilsInterface, fileNamePrefix, format string, destDir string) error {
-	if format == FormatNFT {
+	if format == FormatNFT || format == FormatButane || format == FormatMC {
+		prefix := fileNamePrefix
+		switch format {
+		case FormatButane:
+			prefix = consts.ButaneFileNamePrefix
+		case FormatMC:
+			prefix = consts.MCFileNamePrefix
+		}
+
 		pools := m.SeparateMatrixByGroup()
 		for poolName, mat := range pools {
 			if len(mat.Ports) == 0 {
 				continue
 			}
-			if err := mat.writeMatrixToFile(utilsHelpers, fileNamePrefix+"-"+poolName, format, destDir); err != nil {
+			if err := mat.writeMatrixToFile(utilsHelpers, prefix+"-"+poolName, format, poolName, destDir); err != nil {
 				return err
 			}
+		}
+
+		if format == FormatButane || format == FormatMC {
+			return writeNodeDisruptionPolicyFile(utilsHelpers, destDir)
 		}
 		return nil
 	}
 
-	err := m.writeMatrixToFile(utilsHelpers, fileNamePrefix, format, destDir)
-	if err != nil {
-		return err
-	}
-	return nil
+	return m.writeMatrixToFile(utilsHelpers, fileNamePrefix, format, "", destDir)
 }
 
-func (m *ComMatrix) print(format string) ([]byte, error) {
+func (m *ComMatrix) print(format, nodePool string) ([]byte, error) {
 	switch format {
 	case FormatJSON:
 		return m.ToJSON()
@@ -191,8 +220,12 @@ func (m *ComMatrix) print(format string) ([]byte, error) {
 		return m.ToYAML()
 	case FormatNFT:
 		return m.ToNFTables()
+	case FormatButane:
+		return m.ToButane(nodePool)
+	case FormatMC:
+		return m.ToMachineConfig(nodePool)
 	default:
-		return nil, fmt.Errorf("invalid format: %s. Please specify json, csv, yaml, or nft", format)
+		return nil, fmt.Errorf("invalid format: %s. Please specify json, csv, yaml, nft, butane, or mc", format)
 	}
 }
 
@@ -216,14 +249,26 @@ func (m *ComMatrix) SeparateMatrixByGroup() map[string]ComMatrix {
 	return res
 }
 
-func (m *ComMatrix) writeMatrixToFile(utilsHelpers utils.UtilsInterface, fileName, format string, destDir string) error {
-	res, err := m.print(format)
+func (m *ComMatrix) writeMatrixToFile(utilsHelpers utils.UtilsInterface, fileName, format, nodePool, destDir string) error {
+	res, err := m.print(format, nodePool)
 	if err != nil {
 		return err
 	}
 
-	comMatrixFileName := filepath.Join(destDir, fmt.Sprintf("%s.%s", fileName, format))
+	ext := format
+	if format == FormatButane || format == FormatMC {
+		ext = "yaml"
+	}
+	comMatrixFileName := filepath.Join(destDir, fmt.Sprintf("%s.%s", fileName, ext))
 	return utilsHelpers.WriteFile(comMatrixFileName, res)
+}
+
+func writeNodeDisruptionPolicyFile(utilsHelpers utils.UtilsInterface, destDir string) error {
+	patchPath := filepath.Join(destDir, consts.NodeDisruptionPolicyFileName)
+	if err := utilsHelpers.WriteFile(patchPath, []byte(firewall.NodeDisruptionPolicyPatch)); err != nil {
+		return fmt.Errorf("failed to write NodeDisruptionPolicy patch file: %v", err)
+	}
+	return nil
 }
 
 func (m *ComMatrix) Contains(cd ComDetails) bool {
