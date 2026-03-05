@@ -89,7 +89,7 @@ var _ = Describe("Nftables", func() {
 		for pool, nftablesConfig := range poolToNFTables {
 			By(fmt.Sprintf("Applying firewall on pool %s", pool))
 
-			machineConfig, err := firewall.CreateMachineConfig(cs, nftablesConfig, artifactsDir,
+			machineConfig, err := firewall.CreateMachineConfig(nftablesConfig, artifactsDir,
 				pool, utilsHelpers)
 			Expect(err).ToNot(HaveOccurred())
 
