@@ -85,7 +85,7 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 		}
 
 		if len(epl.Items) == 0 {
-			log.Debug("no endpoint slice found for service name", service.Name)
+			log.Debugf("no endpoint slice found for service name %q", service.Name)
 			continue
 		}
 
@@ -94,7 +94,7 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 		if len(service.Spec.Selector) == 0 {
 			// If an internal service has no selector, ports can't be exposed, skip.
 			if !exposedService {
-				log.Debug("no pods found for internal service, selector wasn't defined", service.Name)
+				log.Debugf("no pods found for internal service, selector wasn't defined %q", service.Name)
 				continue
 			}
 		} else {
@@ -106,7 +106,7 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 
 			// If there are no pods found for the service, skip.
 			if len(pods.Items) == 0 {
-				log.Debug("no pods found for service name", service.Name)
+				log.Debugf("no pods found for service name %q", service.Name)
 				continue
 			}
 
@@ -128,11 +128,11 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 			epl.Items[0].Ports = portsNoLocalhost
 		}
 		epsliceInfo := createEPSliceInfo(service, epl.Items[0], pods.Items)
-		log.Debug("epsliceInfo created", epsliceInfo)
+		log.Debugf("epsliceInfo created %+v", epsliceInfo)
 		epsliceInfos = append(epsliceInfos, epsliceInfo)
 	}
 
-	log.Debug("length of the created epsliceInfos slice: ", len(epsliceInfos))
+	log.Debugf("length of the created epsliceInfos slice: %d", len(epsliceInfos))
 	ep.sliceInfo = epsliceInfos
 	return nil
 }
