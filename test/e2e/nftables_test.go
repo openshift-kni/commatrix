@@ -89,7 +89,7 @@ var _ = Describe("Nftables", func() {
 		for pool, nftablesConfig := range poolToNFTables {
 			By(fmt.Sprintf("Applying firewall on pool %s", pool))
 
-			machineConfig, err := firewall.CreateMachineConfig(cs, nftablesConfig, artifactsDir,
+			machineConfig, err := firewall.CreateMachineConfig(nftablesConfig, artifactsDir,
 				pool, utilsHelpers)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -156,7 +156,7 @@ var _ = Describe("Nftables", func() {
 func AddPortsToNFTables(nftables []byte, extraNFTablesFile string) ([]byte, error) {
 	nftStr := string(nftables)
 
-	insertPoint := "# Logging and default drop"
+	insertPoint := "# Rate-limited logging and default drop"
 	if !strings.Contains(nftStr, insertPoint) {
 		return nftables, fmt.Errorf("insert point not found in nftables configuration")
 	}
