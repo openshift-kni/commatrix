@@ -14,7 +14,10 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 
+	commatrixcreator "github.com/openshift-kni/commatrix/pkg/commatrix-creator"
+	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
+	"github.com/openshift-kni/commatrix/pkg/mcp"
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
 
@@ -25,6 +28,7 @@ const (
 	diffFileComments         = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
 	commatrixFile      = "communication-matrix.csv"
+	ssCommatrixFile    = "ss-generated-matrix.csv"
 	matrixdiffFile     = "matrix-diff-ss"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
@@ -158,7 +162,64 @@ var _ = Describe("Validation", func() {
 			Expect(err).ToNot(HaveOccurred(), "Failed to filter the known ports")
 		}
 	})
+
+	It("should validate all static entries suitable to the cluster are actually open ports", func() {
+		By("Reading the ss-generated matrix (actual open ports from the cluster)")
+		ssCommatrixFilePath := filepath.Join(artifactsDir, ssCommatrixFile)
+		ssCommatrixFileContent, err := os.ReadFile(ssCommatrixFilePath)
+		Expect(err).ToNot(HaveOccurred(), "Failed to read ss-generated matrix file")
+
+		ssCommatrix, err := types.ParseToComMatrix(ssCommatrixFileContent, types.FormatCSV)
+		Expect(err).ToNot(HaveOccurred(), "Failed to parse ss-generated matrix")
+
+		By("Getting IPv6 enabled status")
+		ipv6Enabled, err := utilsHelpers.IsIPv6Enabled()
+		Expect(err).ToNot(HaveOccurred(), "Failed to get IPv6 enabled status")
+
+		By("Getting DHCP enabled status")
+		dhcpEnabled, err := utilsHelpers.IsDHCPEnabled()
+		Expect(err).ToNot(HaveOccurred(), "Failed to get DHCP enabled status")
+
+		By("Creating communication matrix creator to get static entries")
+		exporter, err := endpointslices.New(cs)
+		Expect(err).ToNot(HaveOccurred(), "Failed to create endpointslices exporter")
+
+		cm, err := commatrixcreator.New(exporter, "", "", platformType, controlPlaneTopology, ipv6Enabled, dhcpEnabled, utilsHelpers)
+		Expect(err).ToNot(HaveOccurred(), "Failed to create communication matrix creator")
+
+		By("Getting static entries suitable to the cluster")
+		staticEntries, err := cm.GetStaticEntries()
+		Expect(err).ToNot(HaveOccurred(), "Failed to get static entries")
+
+		By("Expand static entries for all MCPs based on their roles")
+		PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(exporter.ClientSet, exporter.NodeToGroup())
+		Expect(err).ToNot(HaveOccurred(), "Failed to get pool roles for static entries expansion")
+		staticEntries = commatrixcreator.ExpandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
+
+		By("Checking that all static entries are present in the ss (open ports) matrix")
+		var missingStaticEntries []types.ComDetails
+		for _, staticEntry := range staticEntries {
+			if isDHCPClientPort(staticEntry) {
+				continue
+			}
+			if !ssCommatrix.Contains(staticEntry) {
+				missingStaticEntries = append(missingStaticEntries, staticEntry)
+			}
+		}
+
+		if len(missingStaticEntries) > 0 {
+			missingMatrix := &types.ComMatrix{Ports: missingStaticEntries}
+			Fail(fmt.Sprintf("the following static entries are not open ports:\n%s", missingMatrix))
+		}
+	})
 })
+
+// isDHCPClientPort returns true if the entry is a DHCP client port (UDP 68).
+// The DHCP client binds briefly during lease requests and may not be captured
+// by ss as a listening socket, so it's skipped in the open ports validation.
+func isDHCPClientPort(cd types.ComDetails) bool {
+	return cd.Protocol == "UDP" && cd.Port == 68
+}
 
 func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges []types.DynamicRange) *types.ComMatrix {
 	res := []types.ComDetails{}
