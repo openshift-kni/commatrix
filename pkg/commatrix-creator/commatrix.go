@@ -24,10 +24,11 @@ type CommunicationMatrixCreator struct {
 	platformType         configv1.PlatformType
 	controlPlaneTopology configv1.TopologyMode
 	ipv6Enabled          bool
+	dhcpEnabled          bool
 	utilsHelpers         utils.UtilsInterface
 }
 
-func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, controlPlaneTopology configv1.TopologyMode, ipv6Enabled bool, utilsHelpers utils.UtilsInterface) (*CommunicationMatrixCreator, error) {
+func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, controlPlaneTopology configv1.TopologyMode, ipv6Enabled bool, dhcpEnabled bool, utilsHelpers utils.UtilsInterface) (*CommunicationMatrixCreator, error) {
 	return &CommunicationMatrixCreator{
 		exporter:             exporter,
 		customEntriesPath:    customEntriesPath,
@@ -35,6 +36,7 @@ func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath stri
 		platformType:         platformType,
 		controlPlaneTopology: controlPlaneTopology,
 		ipv6Enabled:          ipv6Enabled,
+		dhcpEnabled:          dhcpEnabled,
 		utilsHelpers:         utilsHelpers,
 	}, nil
 }
@@ -140,10 +142,15 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 			break
 		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
+	case configv1.NonePlatformType:
+		log.Debug("Adding None Platform Type static entries")
+		comDetails = append(comDetails, types.NoneStaticEntriesMaster...)
+		if cm.controlPlaneTopology == configv1.SingleReplicaTopologyMode {
+			break
+		}
+		comDetails = append(comDetails, types.NoneStaticEntriesWorker...)
 	case configv1.AWSPlatformType:
 		log.Debug("There are no Cloud static entries to be added")
-	case configv1.NonePlatformType:
-		break
 	default:
 		log.Errorf("Invalid value for cluster environment: %v", cm.platformType)
 		return nil, fmt.Errorf("invalid value for cluster environment")
@@ -154,6 +161,9 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 	if cm.ipv6Enabled {
 		comDetails = append(comDetails, types.GeneralIPv6StaticEntriesMaster...)
 	}
+	if cm.dhcpEnabled {
+		comDetails = append(comDetails, types.GeneralDHCPStaticEntriesMaster...)
+	}
 	if cm.controlPlaneTopology == configv1.SingleReplicaTopologyMode {
 		return comDetails, nil
 	}
@@ -162,6 +172,9 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 	comDetails = append(comDetails, types.GeneralStaticEntriesWorker...)
 	if cm.ipv6Enabled {
 		comDetails = append(comDetails, types.GeneralIPv6StaticEntriesWorker...)
+	}
+	if cm.dhcpEnabled {
+		comDetails = append(comDetails, types.GeneralDHCPStaticEntriesWorker...)
 	}
 	log.Debug("Successfully determined static entries")
 	return comDetails, nil
