@@ -136,7 +136,7 @@ var BaremetalStaticEntriesWorker = []ComDetails{
 		NodeGroup: "worker",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -146,7 +146,7 @@ var BaremetalStaticEntriesWorker = []ComDetails{
 		NodeGroup: "worker",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -170,7 +170,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		NodeGroup: "master",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -180,7 +180,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		NodeGroup: "master",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -234,7 +234,7 @@ var NoneStaticEntriesWorker = []ComDetails{
 		NodeGroup: "worker",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -244,7 +244,7 @@ var NoneStaticEntriesWorker = []ComDetails{
 		NodeGroup: "worker",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	},
@@ -258,7 +258,7 @@ var NoneStaticEntriesMaster = []ComDetails{
 		NodeGroup: "master",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -268,7 +268,7 @@ var NoneStaticEntriesMaster = []ComDetails{
 		NodeGroup: "master",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	},
