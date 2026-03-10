@@ -69,7 +69,7 @@ similar to the following. Note that `Node Group` resolves as:
 $ oc commatrix generate --format csv
 Direction,Protocol,Port,Namespace,Service,Pod,Container,NodeGroup,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,true
-Ingress,TCP,53,openshift-dns,dns-default,dnf-default,dns,master,false
+Ingress,TCP,53,openshift-dns,dns-default,dns-default,dns,master,false
 Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,master,false
 Ingress,TCP,111,Host system service,rpcbind,,,master,true
 ```
@@ -95,7 +95,7 @@ $ oc commatrix generate --format json
         "port": 53,
         "namespace": "openshift-dns",
         "service": "dns-default",
-        "pod": "dnf-default",
+        "pod": "dns-default",
         "container": "dns",
         "nodeGroup": "master",
         "optional": false
@@ -175,7 +175,7 @@ The output would look like this:
 ```
 Direction,Protocol,Port,Namespace,Service,Pod,Container,NodeGroup,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,true
-Ingress,TCP,53,openshift-dns,dns-default,dnf-default,dns,master,false
+Ingress,TCP,53,openshift-dns,dns-default,dns-default,dns,master,false
 ingress,TCP,9050,example-namespace,example-service,example-pod,example-container,master,false
 ingress,UDP,9051,example-namespace2,example-service2,example-pod2,example-container2,worker,false
 ```
