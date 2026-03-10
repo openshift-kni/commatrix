@@ -184,7 +184,19 @@ var _ = Describe("Validation", func() {
 		exporter, err := endpointslices.New(cs)
 		Expect(err).ToNot(HaveOccurred(), "Failed to create endpointslices exporter")
 
-		cm, err := commatrixcreator.New(exporter, "", "", platformType, controlPlaneTopology, ipv6Enabled, dhcpEnabled, utilsHelpers)
+		opts := []commatrixcreator.Option{
+			commatrixcreator.WithExporter(exporter),
+			commatrixcreator.WithUtilsHelpers(utilsHelpers),
+		}
+		if ipv6Enabled {
+			opts = append(opts, commatrixcreator.WithIPv6())
+		}
+		if dhcpEnabled {
+			opts = append(opts, commatrixcreator.WithDHCP())
+		}
+		cm, err := commatrixcreator.New(
+			platformType, controlPlaneTopology, opts...,
+		)
 		Expect(err).ToNot(HaveOccurred(), "Failed to create communication matrix creator")
 
 		By("Getting static entries suitable to the cluster")

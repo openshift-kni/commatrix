@@ -273,7 +273,26 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, controlPlaneTopology, ipv6Enabled, dhcpEnabled, o.utilsHelpers)
+	opts := []commatrixcreator.Option{
+		commatrixcreator.WithExporter(epExporter),
+		commatrixcreator.WithUtilsHelpers(o.utilsHelpers),
+	}
+	if o.customEntriesPath != "" {
+		opts = append(opts,
+			commatrixcreator.WithCustomEntries(
+				o.customEntriesPath, o.customEntriesFormat,
+			),
+		)
+	}
+	if ipv6Enabled {
+		opts = append(opts, commatrixcreator.WithIPv6())
+	}
+	if dhcpEnabled {
+		opts = append(opts, commatrixcreator.WithDHCP())
+	}
+	commMatrix, err := commatrixcreator.New(
+		platformType, controlPlaneTopology, opts...,
+	)
 	if err != nil {
 		return nil, err
 	}
