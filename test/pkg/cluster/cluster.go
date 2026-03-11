@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/onsi/gomega"
 	"github.com/openshift-kni/commatrix/pkg/client"
+	"github.com/openshift-kni/commatrix/pkg/utils"
 
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
 	ocpoperatorv1 "github.com/openshift/api/operator/v1"
-	configv1client "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	mcoac "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
@@ -27,17 +26,6 @@ const (
 	timeout          = 20 * time.Minute
 	interval         = 5 * time.Second
 )
-
-// getClusterVersion return cluster's Y stream version.
-func GetClusterVersion(cs *client.ClientSet) (string, error) {
-	configClient := configv1client.NewForConfigOrDie(cs.Config)
-	clusterVersion, err := configClient.ClusterVersions().Get(context.Background(), "version", metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-	clusterVersionParts := strings.SplitN(clusterVersion.Status.Desired.Version, ".", 3)
-	return strings.Join(clusterVersionParts[:2], "."), nil
-}
 
 func WaitForMCPUpdateToStart(cs *client.ClientSet, role string) {
 	gomega.Eventually(func() (bool, error) {
@@ -128,7 +116,8 @@ func WaitForMCPReadyState(c *client.ClientSet, role string) {
 
 func ValidateClusterVersionAndMachineConfiguration(cs *client.ClientSet) error {
 	thresholdVersionSemver := semver.MustParse(thresholdVersion)
-	clusterVersion, err := GetClusterVersion(cs)
+	utilsHelpers := utils.New(cs)
+	clusterVersion, err := utilsHelpers.GetClusterVersion()
 	if err != nil {
 		return err
 	}

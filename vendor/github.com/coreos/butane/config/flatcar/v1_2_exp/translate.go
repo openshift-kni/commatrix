@@ -18,27 +18,33 @@ import (
 	"github.com/coreos/butane/config/common"
 	cutil "github.com/coreos/butane/config/util"
 
-	"github.com/coreos/ignition/v2/config/v3_5_experimental/types"
+	"github.com/coreos/ignition/v2/config/v3_7_experimental/types"
 	"github.com/coreos/vcontext/report"
+)
+
+var (
+	fieldFilters = cutil.NewFilters(types.Config{}, cutil.FilterMap{
+		"storage.luks.cex": common.ErrCexNotSupported,
+	})
 )
 
 // Return FieldFilters for this spec.
 func (c Config) FieldFilters() *cutil.FieldFilters {
-	return nil
+	return &fieldFilters
 }
 
 // ToIgn3_5 translates the config to an Ignition config.  It returns a
 // report of any errors or warnings in the source and resultant config.  If
 // the report has fatal errors or it encounters other problems translating,
 // an error is returned.
-func (c Config) ToIgn3_5(options common.TranslateOptions) (types.Config, report.Report, error) {
-	cfg, r, err := cutil.Translate(c, "ToIgn3_5Unvalidated", options)
+func (c Config) ToIgn3_7(options common.TranslateOptions) (types.Config, report.Report, error) {
+	cfg, r, err := cutil.Translate(c, "ToIgn3_7Unvalidated", options)
 	return cfg.(types.Config), r, err
 }
 
 // ToIgn3_5Bytes translates from a v1.2 Butane config to a v3.5.0 Ignition config. It returns a report of any errors or
 // warnings in the source and resultant config. If the report has fatal errors or it encounters other problems
 // translating, an error is returned.
-func ToIgn3_5Bytes(input []byte, options common.TranslateBytesOptions) ([]byte, report.Report, error) {
-	return cutil.TranslateBytes(input, &Config{}, "ToIgn3_5", options)
+func ToIgn3_7Bytes(input []byte, options common.TranslateBytesOptions) ([]byte, report.Report, error) {
+	return cutil.TranslateBytes(input, &Config{}, "ToIgn3_7", options)
 }

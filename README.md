@@ -32,7 +32,7 @@ Examples are available in the `example-custom-entries` files.
 
 The following environment variables are used to configure:
 ```
-FORMAT (csv/json/yaml/nft)
+FORMAT (csv/json/yaml/nft/butane/mc)
 DEST_DIR (path to the directory containing the artifacts)
 CUSTOM_ENTRIES_PATH (path to the file containing custom entries to add to the matrix)
 CUSTOM_ENTRIES_FORMAT (the format of the custom entries file (json,yaml,csv))
@@ -72,4 +72,4 @@ If MCPs are not present in the cluster (e.g., HyperShift), `nodeGroup` is comput
 1) use `hypershift.openshift.io/nodePool` label when available.
 2) otherwise fall back to the node role.
 
-The resolved group is recorded in the `nodeGroup` field for CSV/JSON/YAML outputs. NFT output is generated per node pool (MCP) or node role accordingly.
+The resolved group is recorded in the `nodeGroup` field for CSV/JSON/YAML outputs. NFT, Butane, and MachineConfig outputs are generated per node pool (MCP) or node role accordingly. The Butane and MachineConfig formats also produce a `node-disruption-policy.yaml` patch file to avoid full node reboots when nftables rules are updated.
