@@ -155,11 +155,11 @@ var _ = Describe("Validation", func() {
 			logrus.Warningf("the following ports are not used: \n %s", notUsedEPSMat)
 		}
 
+		missingEPSMat = filterOutPortsOfKnownServices(missingEPSMat)
 		// Don't include in the missing EPS matrix ports that are in dynamic ranges of the generated commatrix.
 		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, commatrix.DynamicRanges)
 		if len(missingEPSMat.Ports) > 0 {
-			err := fmt.Errorf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat)
-			Expect(err).ToNot(HaveOccurred(), "Failed to filter the known ports")
+			Fail(fmt.Sprintf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat))
 		}
 	})
 
@@ -231,6 +231,24 @@ var _ = Describe("Validation", func() {
 // by ss as a listening socket, so it's skipped in the open ports validation.
 func isDHCPClientPort(cd types.ComDetails) bool {
 	return cd.Protocol == "UDP" && cd.Port == 68
+}
+
+func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
+	res := []types.ComDetails{}
+	for _, cd := range mat.Ports {
+		// Skip "rpc.statd" ports, these are randomly open ports on the node
+		// no need to mention them in the matrix diff
+		if cd.Service == "rpc.statd" {
+			continue
+		}
+
+		// Skip dns ports used during provisioning for dhcp and tftp,
+		// not used for external traffic
+		if cd.Service == "dnsmasq" || cd.Service == "dig" {
+			continue
+		}
+	}
+	return &types.ComMatrix{Ports: res}
 }
 
 func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges []types.DynamicRange) *types.ComMatrix {
