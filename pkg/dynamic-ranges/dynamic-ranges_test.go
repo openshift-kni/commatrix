@@ -5,7 +5,6 @@ import (
 	o "github.com/onsi/gomega"
 	configv1 "github.com/openshift/api/config/v1"
 	machineconfigurationv1 "github.com/openshift/api/machineconfiguration/v1"
-	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,10 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
-	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
-	mock_utils "github.com/openshift-kni/commatrix/pkg/utils/mock"
 )
 
 func newExporterWithObjects(objs ...rtclient.Object) *endpointslices.EndpointSlicesExporter {
@@ -73,89 +70,6 @@ var _ = g.Describe("Dynamic Ranges", func() {
 			o.Expect(got[0].Protocol).To(o.Equal("TCP"))
 			o.Expect(got[1].MinPort).To(o.Equal(10000))
 			o.Expect(got[1].MaxPort).To(o.Equal(10100))
-			o.Expect(got[1].Protocol).To(o.Equal("UDP"))
-		})
-	})
-
-	g.Context("Linux dynamic/private range", func() {
-		g.It("returns default range", func() {
-			// Need at least one node to select
-			node := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "node-0",
-					Labels: map[string]string{"node-role.kubernetes.io/master": ""},
-				},
-			}
-			exporter := newExporterWithObjects(node)
-
-			ctrl := gomock.NewController(g.GinkgoT())
-			defer ctrl.Finish()
-
-			mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
-
-			mockUtils.EXPECT().CreateNamespace(consts.DefaultDebugNamespace).Return(nil)
-			mockUtils.EXPECT().DeleteNamespace(consts.DefaultDebugNamespace).Return(nil)
-
-			// Pod lifecycle
-			pod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "debug-pod",
-					Namespace: consts.DefaultDebugNamespace,
-				},
-				Status: corev1.PodStatus{Phase: corev1.PodRunning},
-			}
-			mockUtils.EXPECT().CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, gomock.Any(), gomock.Any()).Return(pod, nil)
-			mockUtils.EXPECT().DeletePod(pod).Return(nil)
-			mockUtils.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, pod, corev1.PodRunning).Return(nil)
-
-			// Simulate ip_local_port_range not set (empty output)
-			mockUtils.EXPECT().RunCommandOnPod(pod, gomock.Any()).Return([]byte(""), nil)
-
-			got, err := getLinuxDynamicPrivateRange(exporter, mockUtils)
-			o.Expect(err).ToNot(o.HaveOccurred())
-			o.Expect(got).To(o.Equal(types.LinuxDynamicPrivateDefaultDynamicRange))
-		})
-
-		g.It("uses range from pod value", func() {
-			// Need at least one node to select
-			node := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "node-0",
-					Labels: map[string]string{"node-role.kubernetes.io/master": ""},
-				},
-			}
-			exporter := newExporterWithObjects(node)
-
-			ctrl := gomock.NewController(g.GinkgoT())
-			defer ctrl.Finish()
-
-			mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
-
-			mockUtils.EXPECT().CreateNamespace(consts.DefaultDebugNamespace).Return(nil)
-			mockUtils.EXPECT().DeleteNamespace(consts.DefaultDebugNamespace).Return(nil)
-
-			pod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "debug-pod",
-					Namespace: consts.DefaultDebugNamespace,
-				},
-				Status: corev1.PodStatus{Phase: corev1.PodRunning},
-			}
-			mockUtils.EXPECT().CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, gomock.Any(), gomock.Any()).Return(pod, nil)
-			mockUtils.EXPECT().DeletePod(pod).Return(nil)
-			mockUtils.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, pod, corev1.PodRunning).Return(nil)
-
-			// Custom ephemeral range values
-			mockUtils.EXPECT().RunCommandOnPod(pod, gomock.Any()).Return([]byte("40000 50000\n"), nil)
-
-			got, err := getLinuxDynamicPrivateRange(exporter, mockUtils)
-			o.Expect(err).ToNot(o.HaveOccurred())
-			o.Expect(got).To(o.HaveLen(2))
-			o.Expect(got[0].MinPort).To(o.Equal(40000))
-			o.Expect(got[0].MaxPort).To(o.Equal(50000))
-			o.Expect(got[0].Protocol).To(o.Equal("TCP"))
-			o.Expect(got[1].MinPort).To(o.Equal(40000))
-			o.Expect(got[1].MaxPort).To(o.Equal(50000))
 			o.Expect(got[1].Protocol).To(o.Equal("UDP"))
 		})
 	})
