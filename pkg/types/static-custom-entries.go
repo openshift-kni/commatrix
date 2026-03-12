@@ -136,7 +136,7 @@ var BaremetalStaticEntriesWorker = []ComDetails{
 		NodeGroup: "worker",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -146,7 +146,7 @@ var BaremetalStaticEntriesWorker = []ComDetails{
 		NodeGroup: "worker",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -170,7 +170,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		NodeGroup: "master",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -180,7 +180,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		NodeGroup: "master",
 		Service:   "dns-default",
 		Namespace: "openshift-dns",
-		Pod:       "dnf-default",
+		Pod:       "dns-default",
 		Container: "dns",
 		Optional:  false,
 	}, {
@@ -222,6 +222,54 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Namespace: "openshift-kni-infra",
 		Pod:       "coredns",
 		Container: "coredns",
+		Optional:  false,
+	},
+}
+
+var NoneStaticEntriesWorker = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      53,
+		NodeGroup: "worker",
+		Service:   "dns-default",
+		Namespace: "openshift-dns",
+		Pod:       "dns-default",
+		Container: "dns",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      53,
+		NodeGroup: "worker",
+		Service:   "dns-default",
+		Namespace: "openshift-dns",
+		Pod:       "dns-default",
+		Container: "dns",
+		Optional:  false,
+	},
+}
+
+var NoneStaticEntriesMaster = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "TCP",
+		Port:      53,
+		NodeGroup: "master",
+		Service:   "dns-default",
+		Namespace: "openshift-dns",
+		Pod:       "dns-default",
+		Container: "dns",
+		Optional:  false,
+	}, {
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      53,
+		NodeGroup: "master",
+		Service:   "dns-default",
+		Namespace: "openshift-dns",
+		Pod:       "dns-default",
+		Container: "dns",
 		Optional:  false,
 	},
 }
@@ -270,6 +318,35 @@ var GeneralIPv6StaticEntriesMaster = []ComDetails{
 		Direction: "Ingress",
 		Protocol:  "UDP",
 		Port:      546,
+		NodeGroup: "master",
+		Service:   "NetworkManager",
+		Namespace: "",
+		Pod:       "",
+		Container: "",
+		Optional:  false,
+	},
+}
+
+// DHCP static entries that should be applied when the host uses DHCP for network configuration.
+var GeneralDHCPStaticEntriesWorker = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      68,
+		NodeGroup: "worker",
+		Service:   "NetworkManager",
+		Namespace: "",
+		Pod:       "",
+		Container: "",
+		Optional:  false,
+	},
+}
+
+var GeneralDHCPStaticEntriesMaster = []ComDetails{
+	{
+		Direction: "Ingress",
+		Protocol:  "UDP",
+		Port:      68,
 		NodeGroup: "master",
 		Service:   "NetworkManager",
 		Namespace: "",

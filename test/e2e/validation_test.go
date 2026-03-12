@@ -176,11 +176,27 @@ var _ = Describe("Validation", func() {
 		ipv6Enabled, err := utilsHelpers.IsIPv6Enabled()
 		Expect(err).ToNot(HaveOccurred(), "Failed to get IPv6 enabled status")
 
+		By("Getting DHCP enabled status")
+		dhcpEnabled, err := utilsHelpers.IsDHCPEnabled()
+		Expect(err).ToNot(HaveOccurred(), "Failed to get DHCP enabled status")
+
 		By("Creating communication matrix creator to get static entries")
 		exporter, err := endpointslices.New(cs)
 		Expect(err).ToNot(HaveOccurred(), "Failed to create endpointslices exporter")
 
-		cm, err := commatrixcreator.New(exporter, "", "", platformType, controlPlaneTopology, ipv6Enabled, utilsHelpers)
+		opts := []commatrixcreator.Option{
+			commatrixcreator.WithExporter(exporter),
+			commatrixcreator.WithUtilsHelpers(utilsHelpers),
+		}
+		if ipv6Enabled {
+			opts = append(opts, commatrixcreator.WithIPv6())
+		}
+		if dhcpEnabled {
+			opts = append(opts, commatrixcreator.WithDHCP())
+		}
+		cm, err := commatrixcreator.New(
+			platformType, controlPlaneTopology, opts...,
+		)
 		Expect(err).ToNot(HaveOccurred(), "Failed to create communication matrix creator")
 
 		By("Getting static entries suitable to the cluster")
@@ -195,6 +211,9 @@ var _ = Describe("Validation", func() {
 		By("Checking that all static entries are present in the ss (open ports) matrix")
 		var missingStaticEntries []types.ComDetails
 		for _, staticEntry := range staticEntries {
+			if isDHCPClientPort(staticEntry) {
+				continue
+			}
 			if !ssCommatrix.Contains(staticEntry) {
 				missingStaticEntries = append(missingStaticEntries, staticEntry)
 			}
@@ -206,6 +225,13 @@ var _ = Describe("Validation", func() {
 		}
 	})
 })
+
+// isDHCPClientPort returns true if the entry is a DHCP client port (UDP 68).
+// The DHCP client binds briefly during lease requests and may not be captured
+// by ss as a listening socket, so it's skipped in the open ports validation.
+func isDHCPClientPort(cd types.ComDetails) bool {
+	return cd.Protocol == "UDP" && cd.Port == 68
+}
 
 func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges []types.DynamicRange) *types.ComMatrix {
 	res := []types.ComDetails{}

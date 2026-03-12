@@ -152,6 +152,21 @@ func (mr *MockUtilsInterfaceMockRecorder) GetPodLogs(namespace, pod interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPodLogs", reflect.TypeOf((*MockUtilsInterface)(nil).GetPodLogs), namespace, pod)
 }
 
+// IsDHCPEnabled mocks base method.
+func (m *MockUtilsInterface) IsDHCPEnabled() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsDHCPEnabled")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsDHCPEnabled indicates an expected call of IsDHCPEnabled.
+func (mr *MockUtilsInterfaceMockRecorder) IsDHCPEnabled() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDHCPEnabled", reflect.TypeOf((*MockUtilsInterface)(nil).IsDHCPEnabled))
+}
+
 // IsIPv6Enabled mocks base method.
 func (m *MockUtilsInterface) IsIPv6Enabled() (bool, error) {
 	m.ctrl.T.Helper()
