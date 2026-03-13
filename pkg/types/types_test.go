@@ -290,3 +290,110 @@ var _ = g.Describe("SeparateMatrixByGroup", func() {
 		o.Expect(pools["worker"].DynamicRanges).To(o.HaveLen(1))
 	})
 })
+
+var _ = g.Describe("Merge", func() {
+	g.It("merges two non-nil matrices with ports and ranges", func() {
+		m1 := &ComMatrix{
+			Ports: []ComDetails{
+				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 80, Protocol: "TCP", NodeGroup: "worker"},
+			},
+			DynamicRanges: []DynamicRange{
+				{Protocol: "TCP", MinPort: 30000, MaxPort: 32767},
+			},
+		}
+		m2 := &ComMatrix{
+			Ports: []ComDetails{
+				{Port: 53, Protocol: "UDP", NodeGroup: "master"},
+			},
+			DynamicRanges: []DynamicRange{
+				{Protocol: "UDP", MinPort: 49152, MaxPort: 65535},
+			},
+		}
+
+		result := m1.Merge(m2)
+		o.Expect(result).ToNot(o.BeNil())
+		o.Expect(result.Ports).To(o.ContainElements(
+			ComDetails{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+			ComDetails{Port: 80, Protocol: "TCP", NodeGroup: "worker"},
+			ComDetails{Port: 53, Protocol: "UDP", NodeGroup: "master"},
+		))
+		o.Expect(result.DynamicRanges).To(o.ContainElements(
+			DynamicRange{Protocol: "TCP", MinPort: 30000, MaxPort: 32767},
+			DynamicRange{Protocol: "UDP", MinPort: 49152, MaxPort: 65535},
+		))
+	})
+
+	g.It("returns other when m is nil", func() {
+		var m1 *ComMatrix
+		m2 := &ComMatrix{
+			Ports: []ComDetails{
+				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+			},
+		}
+
+		result := m1.Merge(m2)
+		o.Expect(result).To(o.Equal(m2))
+	})
+
+	g.It("returns m when other is nil", func() {
+		m1 := &ComMatrix{
+			Ports: []ComDetails{
+				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+			},
+		}
+		var m2 *ComMatrix
+
+		result := m1.Merge(m2)
+		o.Expect(result).To(o.Equal(m1))
+	})
+
+	g.It("returns empty matrix when both are nil", func() {
+		var m1 *ComMatrix
+		var m2 *ComMatrix
+
+		result := m1.Merge(m2)
+		o.Expect(*result).To(o.Equal(ComMatrix{}))
+		o.Expect(result.Ports).To(o.BeNil())
+		o.Expect(result.DynamicRanges).To(o.BeNil())
+	})
+
+	g.It("handles nil slices in m", func() {
+		m1 := &ComMatrix{
+			Ports:         nil,
+			DynamicRanges: nil,
+		}
+		m2 := &ComMatrix{
+			Ports: []ComDetails{
+				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+			},
+		}
+
+		result := m1.Merge(m2)
+		o.Expect(result).ToNot(o.BeNil())
+		o.Expect(result.Ports).To(o.Equal([]ComDetails{
+			{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+		}))
+	})
+
+	g.It("removes duplicates after merge", func() {
+		m1 := &ComMatrix{
+			Ports: []ComDetails{
+				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+			},
+		}
+		m2 := &ComMatrix{
+			Ports: []ComDetails{
+				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 80, Protocol: "TCP", NodeGroup: "master"},
+			},
+		}
+
+		result := m1.Merge(m2)
+		o.Expect(result).ToNot(o.BeNil())
+		o.Expect(result.Ports).To(o.ConsistOf(
+			ComDetails{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+			ComDetails{Port: 80, Protocol: "TCP", NodeGroup: "master"},
+		))
+	})
+})

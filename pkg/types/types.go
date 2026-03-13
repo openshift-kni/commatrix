@@ -327,6 +327,36 @@ table inet openshift_filter {
 	return []byte(result), nil
 }
 
+// Merge creates a copy of the current matrix and merges another matrix into it.
+// When both m and other are not nil, it returns a new ComMatrix containing all ports and dynamic ranges from both
+// matrices, sorted and merged. Otherwise, it returns m (if other is nil), other (if m is nil), or an empty ComMatrix{}.
+func (m *ComMatrix) Merge(other *ComMatrix) *ComMatrix {
+	if m == nil && other == nil {
+		return &ComMatrix{}
+	}
+	if m == nil {
+		return other
+	}
+	if other == nil {
+		return m
+	}
+
+	result := &ComMatrix{
+		Ports:         make([]ComDetails, len(m.Ports)),
+		DynamicRanges: make([]DynamicRange, len(m.DynamicRanges)),
+	}
+
+	copy(result.Ports, m.Ports)
+	copy(result.DynamicRanges, m.DynamicRanges)
+
+	result.Ports = append(result.Ports, other.Ports...)
+	result.DynamicRanges = append(result.DynamicRanges, other.DynamicRanges...)
+
+	result.SortAndRemoveDuplicates()
+
+	return result
+}
+
 // SortAndRemoveDuplicates removes duplicates in the matrix and sort it.
 func (m *ComMatrix) SortAndRemoveDuplicates() {
 	allKeys := make(map[string]bool)

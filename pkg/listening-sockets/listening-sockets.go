@@ -27,9 +27,12 @@ const (
 
 type ConnectionCheck struct {
 	*client.ClientSet
-	podUtils    utils.UtilsInterface
-	destDir     string
-	nodeToGroup map[string]string
+	podUtils     utils.UtilsInterface
+	destDir      string
+	nodeToGroup  map[string]string
+	ssOutTCP     []byte
+	ssOutUDP     []byte
+	SSCommMatrix *types.ComMatrix
 }
 
 func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string) (*ConnectionCheck, error) {
@@ -56,7 +59,8 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string
 	}, nil
 }
 
-func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byte, []byte, error) {
+// GenerateSS generates the SS flows and stores then in SSOutTCP, SSOutUDP and SSCommMatrix.
+func (cc *ConnectionCheck) GenerateSS(namespace string) error {
 	var ssOutTCP, ssOutUDP []byte
 	nodesComDetails := []types.ComDetails{}
 
@@ -99,26 +103,34 @@ func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byt
 		})
 	}
 
-	err := g.Wait()
-	if err != nil {
-		return nil, nil, nil, err
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	ssComMat := types.ComMatrix{Ports: nodesComDetails}
 	ssComMat.SortAndRemoveDuplicates()
 
-	return &ssComMat, ssOutTCP, ssOutUDP, nil
+	cc.SSCommMatrix = &ssComMat
+	cc.ssOutTCP = ssOutTCP
+	cc.ssOutUDP = ssOutUDP
+
+	return nil
 }
 
-func (cc *ConnectionCheck) WriteSSRawFiles(ssOutTCP, ssOutUDP []byte) error {
-	err := cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawTCP), ssOutTCP)
-	if err != nil {
-		return fmt.Errorf("failed writing to file: %s", err)
+// WriteSSRawFiles writes the SSOutTCP and SSOutUDP to files. Run GenerateSS() first.
+func (cc *ConnectionCheck) WriteSSRawFiles() error {
+	if cc.ssOutTCP == nil || cc.ssOutUDP == nil {
+		return fmt.Errorf("cannot write SS Raw Files, run GenerateSS() first")
 	}
 
-	err = cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawUDP), ssOutUDP)
+	err := cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawTCP), cc.ssOutTCP)
 	if err != nil {
-		return fmt.Errorf("failed writing to file: %s", err)
+		return fmt.Errorf("failed writing to file: %w", err)
+	}
+
+	err = cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawUDP), cc.ssOutUDP)
+	if err != nil {
+		return fmt.Errorf("failed writing to file: %w", err)
 	}
 
 	return nil
