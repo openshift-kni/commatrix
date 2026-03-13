@@ -28,7 +28,6 @@ const (
 type ConnectionCheck struct {
 	*client.ClientSet
 	podUtils    utils.UtilsInterface
-	destDir     string
 	nodeToGroup map[string]string
 }
 
@@ -38,7 +37,6 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string
 		return &ConnectionCheck{
 			ClientSet:   c,
 			podUtils:    podUtils,
-			destDir:     destDir,
 			nodeToGroup: nodeToPool,
 		}, nil
 	}
@@ -51,12 +49,12 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string
 	return &ConnectionCheck{
 		ClientSet:   c,
 		podUtils:    podUtils,
-		destDir:     destDir,
 		nodeToGroup: nodeToGroup,
 	}, nil
 }
 
-func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byte, []byte, error) {
+// GenerateSS generates the SS flows and stores then in SSOutTCP, SSOutUDP and SSCommMatrix.
+func (cc *ConnectionCheck) GenerateSS(namespace string) (*SSResult, error) {
 	var ssOutTCP, ssOutUDP []byte
 	nodesComDetails := []types.ComDetails{}
 
@@ -99,29 +97,18 @@ func (cc *ConnectionCheck) GenerateSS(namespace string) (*types.ComMatrix, []byt
 		})
 	}
 
-	err := g.Wait()
-	if err != nil {
-		return nil, nil, nil, err
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 
 	ssComMat := types.ComMatrix{Ports: nodesComDetails}
 	ssComMat.SortAndRemoveDuplicates()
 
-	return &ssComMat, ssOutTCP, ssOutUDP, nil
-}
-
-func (cc *ConnectionCheck) WriteSSRawFiles(ssOutTCP, ssOutUDP []byte) error {
-	err := cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawTCP), ssOutTCP)
-	if err != nil {
-		return fmt.Errorf("failed writing to file: %s", err)
-	}
-
-	err = cc.podUtils.WriteFile(path.Join(cc.destDir, consts.SSRawUDP), ssOutUDP)
-	if err != nil {
-		return fmt.Errorf("failed writing to file: %s", err)
-	}
-
-	return nil
+	return &SSResult{
+		ssOutTCP,
+		ssOutUDP,
+		&ssComMat,
+	}, nil
 }
 
 func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, group string) ([]types.ComDetails, []byte, []byte, error) {
@@ -237,6 +224,27 @@ func (cc *ConnectionCheck) extractContainerInfo(debugPod *corev1.Pod, containerI
 	}
 
 	return containerInfo, nil
+}
+
+type SSResult struct {
+	rawTCP       []byte
+	rawUDP       []byte
+	SSCommMatrix *types.ComMatrix
+}
+
+// WriteSSRawFiles writes the SSOutTCP and SSOutUDP to files.
+func (ssr *SSResult) WriteSSRawFiles(podUtils utils.UtilsInterface, destDir string) error {
+	err := podUtils.WriteFile(path.Join(destDir, consts.SSRawTCP), ssr.rawTCP)
+	if err != nil {
+		return fmt.Errorf("failed writing to file: %w", err)
+	}
+
+	err = podUtils.WriteFile(path.Join(destDir, consts.SSRawUDP), ssr.rawUDP)
+	if err != nil {
+		return fmt.Errorf("failed writing to file: %w", err)
+	}
+
+	return nil
 }
 
 // extractPID receives an ss entry and returns the PID number of it.
