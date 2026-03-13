@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -24,8 +23,6 @@ import (
 
 const (
 	localAddrPortFieldIdx = 3
-	interval              = time.Millisecond * 500
-	duration              = time.Second * 5
 )
 
 type ConnectionCheck struct {
