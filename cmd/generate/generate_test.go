@@ -365,7 +365,20 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 	mockUtils.EXPECT().CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, gomock.Any(), gomock.Any()).Return(mockPod, nil).AnyTimes()
 	mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
 	mockUtils.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, mockPod, corev1.PodRunning).Return(nil).AnyTimes()
-	mockUtils.EXPECT().RunCommandOnPod(mockPod, gomock.Any()).Return([]byte("32768 60999\n"), nil).AnyTimes()
+	mockUtils.EXPECT().RunCommandOnPod(
+		mockPod,
+		[]string{"chroot", "/host", "/bin/sh", "-c", "ip -j addr show lo"},
+	).Return([]byte(""), nil).AnyTimes()
+	mockUtils.EXPECT().RunCommandOnPod(
+		mockPod,
+		[]string{"/bin/sh", "-c", "cat /host/proc/sys/net/ipv4/ip_local_port_range"},
+	).Return([]byte("32768 60999\n"), nil).AnyTimes()
+	mockUtils.EXPECT().RunCommandOnPod(mockPod, []string{"/bin/sh", "-c", "ss -anpltH"}).Return([]byte(
+		"LISTEN 0 4096 0.0.0.0:5355 0.0.0.0:* \n",
+	), nil).AnyTimes()
+	mockUtils.EXPECT().RunCommandOnPod(mockPod, []string{"/bin/sh", "-c", "ss -anpluH"}).Return([]byte(
+		"LISTEN 0 4096 0.0.0.0:5356 0.0.0.0:* \n",
+	), nil).AnyTimes()
 
 	// Capture all written files
 	writtenFiles := map[string][]byte{}
@@ -379,6 +392,7 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 	testCases := []struct {
 		name           string
 		format         string
+		openPorts      bool
 		expectedFiles  []string
 		expectedInFile map[string][]string
 	}{
@@ -396,8 +410,33 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 					"machineconfiguration.openshift.io/role: master",
 					"nftables.service",
 					"/etc/sysconfig/nftables.conf",
-					"tcp dport { 22, 80, 111, 9107, 10250, 10256",
-					"udp dport { 111, 6081",
+					"tcp dport { 22, 80, 111, 9107, 10250, 10256, 30000-32767, 32768-60999 } accept",
+					"udp dport { 111, 6081, 30000-32767, 32768-60999 } accept",
+				},
+				"node-disruption-policy.yaml": {
+					"oc patch machineconfiguration cluster",
+					"nodeDisruptionPolicy",
+					"nftables.service",
+				},
+			},
+		},
+		{
+			name:      "butane format produces per-pool butane files and node disruption policy with openPorts",
+			format:    "butane",
+			openPorts: true,
+			expectedFiles: []string{
+				"butane-master.yaml",
+				"node-disruption-policy.yaml",
+			},
+			expectedInFile: map[string][]string{
+				"butane-master.yaml": {
+					"variant: openshift",
+					"name: 98-nftables-commatrix-master",
+					"machineconfiguration.openshift.io/role: master",
+					"nftables.service",
+					"/etc/sysconfig/nftables.conf",
+					"tcp dport { 22, 80, 111, 5355, 9107, 10250, 10256, 30000-32767, 32768-60999 } accept",
+					"udp dport { 111, 5356, 6081, 30000-32767, 32768-60999 } accept",
 				},
 				"node-disruption-policy.yaml": {
 					"oc patch machineconfiguration cluster",
@@ -440,6 +479,7 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 				format:       tt.format,
 				cs:           clientset,
 				utilsHelpers: mockUtils,
+				openPorts:    tt.openPorts,
 			}
 
 			err := Run(opts)
