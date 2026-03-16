@@ -410,8 +410,8 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 					"machineconfiguration.openshift.io/role: master",
 					"nftables.service",
 					"/etc/sysconfig/nftables.conf",
-					"tcp dport { 22, 80, 111, 9107, 10250, 10256, 30000-32767, 32768-60999 } accept",
-					"udp dport { 111, 6081, 30000-32767, 32768-60999 } accept",
+					"tcp dport { 22, 80, 111, 9107, 10250, 10256, 30000-60999 } accept",
+					"udp dport { 111, 6081, 30000-60999 } accept",
 				},
 				"node-disruption-policy.yaml": {
 					"oc patch machineconfiguration cluster",
@@ -435,8 +435,8 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 					"machineconfiguration.openshift.io/role: master",
 					"nftables.service",
 					"/etc/sysconfig/nftables.conf",
-					"tcp dport { 22, 80, 111, 5355, 9107, 10250, 10256, 30000-32767, 32768-60999 } accept",
-					"udp dport { 111, 5356, 6081, 30000-32767, 32768-60999 } accept",
+					"tcp dport { 22, 80, 111, 5355, 9107, 10250, 10256, 30000-60999 } accept",
+					"udp dport { 111, 5356, 6081, 30000-60999 } accept",
 				},
 				"node-disruption-policy.yaml": {
 					"oc patch machineconfiguration cluster",

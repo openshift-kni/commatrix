@@ -18,10 +18,10 @@ import (
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface, cs *client.ClientSet) ([]types.DynamicRange, error) {
+func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface, cs *client.ClientSet) (types.DynamicRangeList, error) {
 	log.Debug("Getting dynamic ranges")
 
-	dynamicRanges := []types.DynamicRange{}
+	dynamicRanges := types.DynamicRangeList{}
 
 	nodePortDynamicRange, err := getNodePortDynamicRange(exporter)
 	if err != nil {
@@ -42,7 +42,7 @@ func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter, utilsHelp
 
 // GetNodePortDynamicRange returns the cluster's Service NodePort range as dynamic ranges.
 // If the cluster does not define a custom range, it falls back to the Kubernetes default (30000-32767).
-func getNodePortDynamicRange(exporter *endpointslices.EndpointSlicesExporter) ([]types.DynamicRange, error) {
+func getNodePortDynamicRange(exporter *endpointslices.EndpointSlicesExporter) (types.DynamicRangeList, error) {
 	log.Debug("Getting node port dynamic range")
 	network := &configv1.Network{}
 	if err := exporter.Get(context.TODO(), clientOptions.ObjectKey{Name: "cluster"}, network); err != nil {
@@ -63,7 +63,7 @@ func getNodePortDynamicRange(exporter *endpointslices.EndpointSlicesExporter) ([
 		return nil, fmt.Errorf("invalid ServiceNodePortRange format %q: %w", rangeStr, err)
 	}
 
-	return []types.DynamicRange{
+	return types.DynamicRangeList{
 		{
 			Direction:   "Ingress",
 			Protocol:    "TCP",
@@ -86,7 +86,7 @@ func getNodePortDynamicRange(exporter *endpointslices.EndpointSlicesExporter) ([
 // getLinuxDynamicPrivateRange retrieves the Linux dynamic/private port range from a cluster node
 // by reading the host sysctl:
 //   - /proc/sys/net/ipv4/ip_local_port_range
-func getLinuxDynamicPrivateRange(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface) ([]types.DynamicRange, error) {
+func getLinuxDynamicPrivateRange(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface) (types.DynamicRangeList, error) {
 	log.Debug("Getting Linux dynamic/private port range from cluster")
 
 	// Pick an arbitrary node to query (ranges are expected to be consistent across nodes).
@@ -146,7 +146,7 @@ func getLinuxDynamicPrivateRange(exporter *endpointslices.EndpointSlicesExporter
 		return nil, fmt.Errorf("failed to parse IPv4 ip_local_port_range: %w", err)
 	}
 
-	return []types.DynamicRange{
+	return types.DynamicRangeList{
 		{
 			Direction:   "Ingress",
 			Protocol:    "TCP",

@@ -64,7 +64,7 @@ const (
 
 type ComMatrix struct {
 	Ports         []ComDetails
-	DynamicRanges []DynamicRange
+	DynamicRanges DynamicRangeList
 }
 
 type ComDetails struct {
@@ -100,6 +100,63 @@ type ContainerInfo struct {
 
 func (dr *DynamicRange) PortRangeString() string {
 	return fmt.Sprintf("%d-%d", dr.MinPort, dr.MaxPort)
+}
+
+// CanMerge returns true if the current DynamicRange can be merged with next. For this comparison to succeed, next must
+// start in dr's range or at max one element after it.
+func (dr *DynamicRange) CanMerge(next DynamicRange) bool {
+	return dr.Direction == next.Direction &&
+		dr.Protocol == next.Protocol &&
+		next.MinPort >= dr.MinPort &&
+		next.MinPort <= dr.MaxPort+1
+}
+
+// Merge merges next into dr if the 2 ranges can merge and returns true. If the ranges cannot merge, dr is not modified
+// and false is returned. See CanMerge() for the criteria of a successful merge.
+// A merge will combine the Descriptions of both elements. If either element into the Merge is mandatory, the entire
+// result of the Merge will be marked as mandatory.
+func (dr *DynamicRange) Merge(next DynamicRange) bool {
+	if !dr.CanMerge(next) {
+		return false
+	}
+	if next.MaxPort > dr.MaxPort {
+		dr.MaxPort = next.MaxPort
+	}
+	dr.Description = fmt.Sprintf("%s %s", dr.Description, next.Description)
+	dr.Optional = dr.Optional && next.Optional
+	return true
+}
+
+type DynamicRangeList []DynamicRange
+
+// Squash merges DynamicRanges with matching Direction and Protocol into a single range.
+// Note that this Squash will potentially lose information as Description and Optional will be combined. See
+// DynamicRange.Merge() for details.
+func (drl *DynamicRangeList) Squash() {
+	if len(*drl) < 2 {
+		return
+	}
+
+	// Sort by Direction, Protocol, MinPort
+	slices.SortFunc(*drl, func(a, b DynamicRange) int {
+		if c := cmp.Compare(a.Direction, b.Direction); c != 0 {
+			return c
+		}
+		if c := cmp.Compare(a.Protocol, b.Protocol); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.MinPort, b.MinPort)
+	})
+
+	// Merge all ranges with same Direction/Protocol
+	merged := DynamicRangeList{(*drl)[0]}
+	for _, next := range (*drl)[1:] {
+		if merged[len(merged)-1].Merge(next) {
+			continue
+		}
+		merged = append(merged, next)
+	}
+	*drl = merged
 }
 
 func (m *ComMatrix) ToCSV() ([]byte, error) {
@@ -343,7 +400,7 @@ func (m *ComMatrix) Merge(other *ComMatrix) *ComMatrix {
 
 	result := &ComMatrix{
 		Ports:         make([]ComDetails, len(m.Ports)),
-		DynamicRanges: make([]DynamicRange, len(m.DynamicRanges)),
+		DynamicRanges: make(DynamicRangeList, len(m.DynamicRanges)),
 	}
 
 	copy(result.Ports, m.Ports)
@@ -536,7 +593,7 @@ func parseCSVToComMatrix(content []byte) (*ComMatrix, error) {
 	}
 
 	var details []ComDetails
-	var ranges []DynamicRange
+	var ranges DynamicRangeList
 	for _, r := range rows {
 		portStr := strings.TrimSpace(r.Port)
 

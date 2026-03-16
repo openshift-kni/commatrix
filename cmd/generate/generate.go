@@ -272,6 +272,9 @@ func writeMergedMatrix(o *GenerateOptions, matrix *types.ComMatrix, ssResult *li
 		matrix = matrix.Merge(ssResult.SSCommMatrix)
 	}
 
+	// Squash ranges together for the merged matrix.
+	matrix.DynamicRanges.Squash()
+
 	log.Debug("Writing endpoint matrix to file")
 	if err := matrix.WriteMatrixToFileByType(o.utilsHelpers, fileNamePrefix(o.format, consts.CommatrixFileNamePrefix),
 		o.format, o.destDir); err != nil {
