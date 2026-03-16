@@ -70,7 +70,7 @@ var (
 			Optional:  false,
 		},
 	}
-	exampleDynamicRanges = []types.DynamicRange{
+	exampleDynamicRanges = types.DynamicRangeList{
 		{
 			Direction:   "ingress",
 			Protocol:    "TCP",

@@ -64,7 +64,7 @@ const (
 
 type ComMatrix struct {
 	Ports         []ComDetails
-	DynamicRanges []DynamicRange
+	DynamicRanges DynamicRangeList
 }
 
 type ComDetails struct {
@@ -100,6 +100,51 @@ type ContainerInfo struct {
 
 func (dr *DynamicRange) PortRangeString() string {
 	return fmt.Sprintf("%d-%d", dr.MinPort, dr.MaxPort)
+}
+
+type DynamicRangeList []DynamicRange
+
+// Squash merges DynamicRanges with matching Direction and Protocol into a single range.
+func (drl *DynamicRangeList) Squash() {
+	if len(*drl) < 2 {
+		return
+	}
+
+	// Sort by Direction, Protocol, MinPort
+	slices.SortFunc(*drl, func(a, b DynamicRange) int {
+		if c := cmp.Compare(a.Direction, b.Direction); c != 0 {
+			return c
+		}
+		if c := cmp.Compare(a.Protocol, b.Protocol); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.MinPort, b.MinPort)
+	})
+
+	// Merge all ranges with same Direction/Protocol
+	merged := make([]DynamicRange, 0, len(*drl))
+	current := (*drl)[0]
+
+	for i := 1; i < len(*drl); i++ {
+		next := (*drl)[i]
+
+		// Merge if same Direction/Protocol
+		if current.Direction == next.Direction &&
+			current.Protocol == next.Protocol &&
+			current.MaxPort >= next.MinPort-1 {
+			// Extend to cover the full range
+			if next.MaxPort > current.MaxPort {
+				current.MaxPort = next.MaxPort
+			}
+		} else {
+			// Different Direction/Protocol, save current and move to next
+			merged = append(merged, current)
+			current = next
+		}
+	}
+	merged = append(merged, current)
+
+	*drl = merged
 }
 
 func (m *ComMatrix) ToCSV() ([]byte, error) {
@@ -383,6 +428,8 @@ func (m *ComMatrix) SortAndRemoveDuplicates() {
 
 		return cmp.Compare(a.Port, b.Port)
 	})
+
+	m.DynamicRanges.Squash()
 }
 
 func (cd ComDetails) String() string {
