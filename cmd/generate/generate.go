@@ -378,5 +378,7 @@ func fileNamePrefix(format, defaultPrefix string) string {
 // formatRequiresMerge returns true for formats that combine both static and open ports
 // into a single output (Butane and MachineConfig formats).
 func formatRequiresMerge(o *GenerateOptions) bool {
-	return o.format == types.FormatButane || o.format == types.FormatMC
+	return o.format == types.FormatButane ||
+		o.format == types.FormatMC ||
+		o.format == types.FormatNFT
 }
