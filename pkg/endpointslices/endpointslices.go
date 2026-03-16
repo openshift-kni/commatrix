@@ -48,9 +48,12 @@ func (e *NoOwnerRefErr) Error() string {
 	return fmt.Sprintf("empty OwnerReferences in EndpointSlice %s/%s. skipping", e.namespace, e.name)
 }
 
-func New(cs *client.ClientSet) (*EndpointSlicesExporter, error) {
+func New(cs *client.ClientSet, customNodeGroups map[string][]string) (*EndpointSlicesExporter, error) {
 	// Try MCP-based resolution first
 	if nodeToPool, err := mcp.ResolveNodeToPool(cs); err == nil {
+		if err := types.ApplyCustomNodeGroupOverrides(nodeToPool, customNodeGroups); err != nil {
+			return nil, err
+		}
 		return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToPool, sliceInfo: []EndpointSlicesInfo{}}, nil
 	}
 
@@ -59,6 +62,11 @@ func New(cs *client.ClientSet) (*EndpointSlicesExporter, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if err := types.ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups); err != nil {
+		return nil, err
+	}
+
 	return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToGroup, sliceInfo: []EndpointSlicesInfo{}}, nil
 }
 

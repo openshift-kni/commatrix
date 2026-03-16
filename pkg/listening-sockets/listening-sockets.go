@@ -35,9 +35,12 @@ type ConnectionCheck struct {
 	nodeToGroup map[string]string
 }
 
-func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string) (*ConnectionCheck, error) {
+func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string, customNodeGroups map[string][]string) (*ConnectionCheck, error) {
 	// Try MCP-based resolution first
 	if nodeToPool, err := mcp.ResolveNodeToPool(c); err == nil {
+		if err := types.ApplyCustomNodeGroupOverrides(nodeToPool, customNodeGroups); err != nil {
+			return nil, err
+		}
 		return &ConnectionCheck{
 			ClientSet:   c,
 			podUtils:    podUtils,
@@ -51,6 +54,11 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string
 	if err != nil {
 		return nil, err
 	}
+
+	if err := types.ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups); err != nil {
+		return nil, err
+	}
+
 	return &ConnectionCheck{
 		ClientSet:   c,
 		podUtils:    podUtils,

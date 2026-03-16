@@ -54,6 +54,9 @@ var (
 
 			 # Generate MachineConfig CRs with nftables firewall rules (per node pool) and a NodeDisruptionPolicy patch:
 			 oc commatrix generate --format mc
+
+			 # Generate separate MachineConfig CRs for nodes with additional services:
+			 oc commatrix generate --format mc --custom-node-group mc-ingress=nodeA,nodeB
 	`)
 )
 
@@ -81,6 +84,8 @@ type GenerateOptions struct {
 	customEntriesFormat string
 	debug               bool
 	openPorts           bool
+	customNodeGroupRaw  []string
+	customNodeGroups    map[string][]string
 	cs                  *client.ClientSet
 	utilsHelpers        utils.UtilsInterface
 	configFlags         *genericclioptions.ConfigFlags
@@ -137,6 +142,8 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 	cmd.Flags().BoolVar(&o.openPorts, "host-open-ports", false, "Generate communication matrix, host open ports matrix, and their difference")
+	cmd.Flags().StringArrayVar(&o.customNodeGroupRaw, "custom-node-group", nil,
+		"Assign nodes to a custom group for separate firewall CRs (format: groupName=node1,node2,...). Repeatable.")
 
 	return cmd
 }
@@ -151,7 +158,49 @@ func Validate(o *GenerateOptions) error {
 		return err
 	}
 
+	parsed, err := parseCustomNodeGroups(o.customNodeGroupRaw)
+	if err != nil {
+		return err
+	}
+	o.customNodeGroups = parsed
+
 	return nil
+}
+
+// parseCustomNodeGroups parses --custom-node-group flag values in the format
+// "groupName=node1,node2,..." into a map[string][]string.
+// It validates that group names and node names are non-empty and that
+// no node is assigned to more than one group.
+func parseCustomNodeGroups(raw []string) (map[string][]string, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	result := make(map[string][]string, len(raw))
+	nodeOwner := make(map[string]string)
+
+	for _, entry := range raw {
+		parts := strings.SplitN(entry, "=", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return nil, fmt.Errorf("invalid --custom-node-group value %q: expected format groupName=node1,node2", entry)
+		}
+		groupName := parts[0]
+		nodes := strings.Split(parts[1], ",")
+
+		for _, n := range nodes {
+			n = strings.TrimSpace(n)
+			if n == "" {
+				return nil, fmt.Errorf("invalid --custom-node-group value %q: node name must not be empty", entry)
+			}
+			if prev, exists := nodeOwner[n]; exists {
+				return nil, fmt.Errorf("node %q is assigned to multiple custom groups: %q and %q", n, prev, groupName)
+			}
+			nodeOwner[n] = groupName
+			result[groupName] = append(result[groupName], n)
+		}
+	}
+
+	return result, nil
 }
 
 func validateCustomEntries(path, format string, validFormats []string) error {
@@ -267,7 +316,7 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 		log.SetLevel(log.DebugLevel)
 	}
 
-	epExporter, err := endpointslices.New(o.cs)
+	epExporter, err := endpointslices.New(o.cs, o.customNodeGroups)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating the endpointslices exporter %s", err)
 	}
@@ -317,7 +366,7 @@ func generateSS(o *GenerateOptions) (*types.ComMatrix, error) {
 	}
 
 	log.Debug("Creating listening socket check")
-	listeningCheck, err := listeningsockets.NewCheck(o.cs, o.utilsHelpers, o.destDir)
+	listeningCheck, err := listeningsockets.NewCheck(o.cs, o.utilsHelpers, o.destDir, o.customNodeGroups)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating listening socket check: %v", err)
 	}
