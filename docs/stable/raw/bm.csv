@@ -10,7 +10,6 @@ Ingress,TCP,6183,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,F
 Ingress,TCP,6385,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
 Ingress,TCP,6388,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
 Ingress,TCP,6443,openshift-kube-apiserver,apiserver,kube-apiserver,kube-apiserver,master,FALSE
-Ingress,TCP,8080,openshift-network-operator,,network-operator,network-operator,master,FALSE
 Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,master,FALSE
 Ingress,TCP,9001,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,kube-rbac-proxy,master,FALSE
 Ingress,TCP,9099,openshift-cluster-version,cluster-version-operator,cluster-version-operator,cluster-version-operator,master,FALSE
