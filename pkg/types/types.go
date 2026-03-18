@@ -64,7 +64,7 @@ const (
 
 type ComMatrix struct {
 	Ports         []ComDetails
-	DynamicRanges []DynamicRange
+	DynamicRanges DynamicRangeList
 }
 
 type ComDetails struct {
@@ -100,6 +100,51 @@ type ContainerInfo struct {
 
 func (dr *DynamicRange) PortRangeString() string {
 	return fmt.Sprintf("%d-%d", dr.MinPort, dr.MaxPort)
+}
+
+type DynamicRangeList []DynamicRange
+
+// Squash merges DynamicRanges with matching Direction and Protocol into a single range.
+func (drl *DynamicRangeList) Squash() {
+	if len(*drl) < 2 {
+		return
+	}
+
+	// Sort by Direction, Protocol, MinPort
+	slices.SortFunc(*drl, func(a, b DynamicRange) int {
+		if c := cmp.Compare(a.Direction, b.Direction); c != 0 {
+			return c
+		}
+		if c := cmp.Compare(a.Protocol, b.Protocol); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.MinPort, b.MinPort)
+	})
+
+	// Merge all ranges with same Direction/Protocol
+	merged := make([]DynamicRange, 0, len(*drl))
+	current := (*drl)[0]
+
+	for i := 1; i < len(*drl); i++ {
+		next := (*drl)[i]
+
+		// Merge if same Direction/Protocol
+		if current.Direction == next.Direction &&
+			current.Protocol == next.Protocol &&
+			current.MaxPort >= next.MinPort-1 {
+			// Extend to cover the full range
+			if next.MaxPort > current.MaxPort {
+				current.MaxPort = next.MaxPort
+			}
+		} else {
+			// Different Direction/Protocol, save current and move to next
+			merged = append(merged, current)
+			current = next
+		}
+	}
+	merged = append(merged, current)
+
+	*drl = merged
 }
 
 func (m *ComMatrix) ToCSV() ([]byte, error) {
@@ -327,6 +372,36 @@ table inet openshift_filter {
 	return []byte(result), nil
 }
 
+// Merge creates a copy of the current matrix and merges another matrix into it.
+// When both m and other are not nil, it returns a new ComMatrix containing all ports and dynamic ranges from both
+// matrices, sorted and merged. Otherwise, it returns m (if other is nil), other (if m is nil), or an empty ComMatrix{}.
+func (m *ComMatrix) Merge(other *ComMatrix) *ComMatrix {
+	if m == nil && other == nil {
+		return &ComMatrix{}
+	}
+	if m == nil {
+		return other
+	}
+	if other == nil {
+		return m
+	}
+
+	result := &ComMatrix{
+		Ports:         make([]ComDetails, len(m.Ports)),
+		DynamicRanges: make([]DynamicRange, len(m.DynamicRanges)),
+	}
+
+	copy(result.Ports, m.Ports)
+	copy(result.DynamicRanges, m.DynamicRanges)
+
+	result.Ports = append(result.Ports, other.Ports...)
+	result.DynamicRanges = append(result.DynamicRanges, other.DynamicRanges...)
+
+	result.SortAndRemoveDuplicates()
+
+	return result
+}
+
 // SortAndRemoveDuplicates removes duplicates in the matrix and sort it.
 func (m *ComMatrix) SortAndRemoveDuplicates() {
 	allKeys := make(map[string]bool)
@@ -353,6 +428,8 @@ func (m *ComMatrix) SortAndRemoveDuplicates() {
 
 		return cmp.Compare(a.Port, b.Port)
 	})
+
+	m.DynamicRanges.Squash()
 }
 
 func (cd ComDetails) String() string {
