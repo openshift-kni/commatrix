@@ -181,7 +181,7 @@ var _ = Describe("Validation", func() {
 		Expect(err).ToNot(HaveOccurred(), "Failed to get DHCP enabled status")
 
 		By("Creating communication matrix creator to get static entries")
-		exporter, err := endpointslices.New(cs)
+		exporter, err := endpointslices.New(cs, nil)
 		Expect(err).ToNot(HaveOccurred(), "Failed to create endpointslices exporter")
 
 		opts := []commatrixcreator.Option{

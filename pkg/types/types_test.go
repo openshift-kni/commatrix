@@ -268,6 +268,73 @@ var _ = g.Describe("Butane and MachineConfig output formats", func() {
 	})
 })
 
+var _ = g.Describe("ApplyCustomNodeGroupOverrides", func() {
+	g.It("reassigns nodes to the specified custom group", func() {
+		nodeToGroup := map[string]string{
+			"master1": "master",
+			"worker1": "worker",
+			"worker2": "worker",
+			"worker3": "worker",
+		}
+		customNodeGroups := map[string][]string{
+			"mc-ingress": {"worker1", "worker2"},
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups)
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["master1"]).To(o.Equal("master"))
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("mc-ingress"))
+		o.Expect(nodeToGroup["worker2"]).To(o.Equal("mc-ingress"))
+		o.Expect(nodeToGroup["worker3"]).To(o.Equal("worker"))
+	})
+
+	g.It("supports multiple custom groups", func() {
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+			"worker2": "worker",
+			"worker3": "worker",
+		}
+		customNodeGroups := map[string][]string{
+			"mc-ingress": {"worker1"},
+			"mc-storage": {"worker2"},
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups)
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("mc-ingress"))
+		o.Expect(nodeToGroup["worker2"]).To(o.Equal("mc-storage"))
+		o.Expect(nodeToGroup["worker3"]).To(o.Equal("worker"))
+	})
+
+	g.It("returns error when node is not in the cluster", func() {
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+		}
+		customNodeGroups := map[string][]string{
+			"mc-ingress": {"nonexistent-node"},
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups)
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(err.Error()).To(o.ContainSubstring("not found in cluster"))
+	})
+
+	g.It("is a no-op when customNodeGroups is nil", func() {
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, nil)
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("worker"))
+	})
+
+	g.It("is a no-op when customNodeGroups is empty", func() {
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, map[string][]string{})
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("worker"))
+	})
+})
+
 var _ = g.Describe("SeparateMatrixByGroup", func() {
 	g.It("separates entries by node group and preserves dynamic ranges", func() {
 		mat := ComMatrix{

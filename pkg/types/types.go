@@ -404,6 +404,22 @@ func GetNodeRole(node *corev1.Node) (string, error) {
 	return "", fmt.Errorf("unable to determine role for node %s", node.Name)
 }
 
+// ApplyCustomNodeGroupOverrides reassigns nodes listed in customNodeGroups from their
+// current group to the specified group. Each key in customNodeGroups is a new group
+// name, and the corresponding slice contains the node names to move into it.
+// Returns an error if a listed node is not present in nodeToGroup.
+func ApplyCustomNodeGroupOverrides(nodeToGroup map[string]string, customNodeGroups map[string][]string) error {
+	for groupName, nodes := range customNodeGroups {
+		for _, nodeName := range nodes {
+			if _, exists := nodeToGroup[nodeName]; !exists {
+				return fmt.Errorf("custom node group node %q not found in cluster", nodeName)
+			}
+			nodeToGroup[nodeName] = groupName
+		}
+	}
+	return nil
+}
+
 // BuildNodeToGroupMap builds a node->group map for clusters without MCP:
 // - Prefer HyperShift NodePool label when present.
 // - Otherwise fall back to Kubernetes node role derived from labels.

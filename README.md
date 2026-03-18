@@ -38,6 +38,39 @@ CUSTOM_ENTRIES_PATH (path to the file containing custom entries to add to the ma
 CUSTOM_ENTRIES_FORMAT (the format of the custom entries file (json,yaml,csv))
 ```
 
+### Custom Node Groups
+
+In some clusters, a subset of worker nodes may run additional services (e.g., ingress controllers, storage agents) that require separate firewall configurations. By default, all nodes in the same MachineConfigPool share a single set of firewall rules. The `--custom-node-group` flag lets you split selected nodes into a custom group so they get their own Butane/MachineConfig CR with the correct ports.
+
+**Usage:**
+```
+oc commatrix generate --format butane --custom-node-group <groupName>=<node1>,<node2>,...
+```
+
+The flag is repeatable for multiple groups:
+```
+oc commatrix generate --format butane \
+  --custom-node-group mc-ingress=worker-2,worker-5 \
+  --custom-node-group mc-storage=worker-3
+```
+
+**Example scenario:** 3 masters + 9 workers, where workers 2, 5, and 6 run an ingress controller on ports 80/443 in addition to the standard worker services.
+
+```
+oc commatrix generate --format butane --custom-node-group mc-ingress=worker-2,worker-5,worker-6
+```
+
+This produces:
+- `butane-master.yaml` — master firewall rules
+- `butane-worker.yaml` — standard worker firewall rules (workers 1, 3, 4, 7, 8, 9)
+- `butane-mc-ingress.yaml` — worker rules **plus** ports 80/443 for the ingress nodes
+
+Static entries (SSH, kubelet, node-exporter, etc.) are automatically included in the custom group based on the original node role.
+
+**Note:** Each node can only be assigned to one custom group. The flag is optional — when omitted, behavior is unchanged.
+
+**Important (Butane/MC formats):** The generated Butane/MachineConfig CRs for custom groups can only be applied if the nodes are already placed in a matching MachineConfigPool. You must create the custom MCP first, then apply the generated CR. For NFT/CSV/JSON/YAML formats, the output can be used directly without this prerequisite.
+
 The generated artifcats are:
 ```
 communication-matrix - The generated communication matrix.
@@ -57,7 +90,8 @@ service        EndpointSlice owner Service name
 pod            EndpointSlice target Pod name
 container      Port owner Container name
 nodeGroup      Resolved node group. Resolution logic:
-               - If MCP API available: nodeGroup = pool name parsed from node annotation
+               - If --custom-node-group assigns the node to a custom group: nodeGroup = that group name
+               - Else if MCP API available: nodeGroup = pool name parsed from node annotation
                  machineconfiguration.openshift.io/currentConfig (e.g., master, worker, custom-ws)
                - Else if label hypershift.openshift.io/nodePool present: nodeGroup = that label value
                - Else: nodeGroup = node role (e.g., master, worker)
