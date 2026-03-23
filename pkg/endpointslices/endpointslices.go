@@ -119,8 +119,13 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 			}
 
 			ports := epl.Items[0].Ports
-			// 	Check if all pod ports are exposed, otherwise, keep only ports linked to an EndpointSlice and hostPort.
-			if !exposedService && !isHostNetworked(pods.Items[0]) {
+			// For non-hostNetwork pods, the targetPort (containerPort) is inside the pod's
+			// network namespace and is not reachable on the host. Only ports with an
+			// explicit hostPort are on the host and need firewall entries.
+			// NodePort/LoadBalancer nodePorts are covered by the dynamic NodePort range.
+			// hostNetwork pods listen directly on the host, so all their
+			// containerPorts need firewall entries and are kept as-is.
+			if !isHostNetworked(pods.Items[0]) {
 				epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], epl.Items[0].Ports)
 				ports = filterEndpointPortsByPodHostPort(epsPortsInfo)
 			}

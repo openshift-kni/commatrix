@@ -113,6 +113,7 @@ var (
 			},
 		},
 		Spec: corev1.PodSpec{
+			HostNetwork: true,
 			Containers: []corev1.Container{
 				{
 					Name:  "test-container",
@@ -437,6 +438,7 @@ func TestSpecialNodesButaneOutput(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{{Kind: "DaemonSet", Name: "common-ds"}},
 		},
 		Spec: corev1.PodSpec{
+			HostNetwork: true,
 			Containers: []corev1.Container{{
 				Name: "common-ctr", Image: "img",
 				Ports: []corev1.ContainerPort{{ContainerPort: 8080}},
@@ -476,6 +478,7 @@ func TestSpecialNodesButaneOutput(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{{Kind: "DaemonSet", Name: "ingress-ds"}},
 		},
 		Spec: corev1.PodSpec{
+			HostNetwork: true,
 			Containers: []corev1.Container{{
 				Name: "ingress-ctr", Image: "img",
 				Ports: []corev1.ContainerPort{{ContainerPort: 443}},
