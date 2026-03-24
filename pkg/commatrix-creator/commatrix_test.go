@@ -531,7 +531,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				CoreV1Interface: fakeClientset.CoreV1(),
 			}
 
-			endpointSlices, err = endpointslices.New(clientset)
+			endpointSlices, err = endpointslices.New(clientset, nil)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			// Set up mock utils to avoid pod creation in tests
@@ -678,7 +678,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				CoreV1Interface: fakeClientset.CoreV1(),
 			}
 
-			localhostEndpointSlices, err := endpointslices.New(clientset)
+			localhostEndpointSlices, err := endpointslices.New(clientset, nil)
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Creating endpoint matrix")

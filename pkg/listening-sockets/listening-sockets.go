@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
@@ -31,21 +32,24 @@ type ConnectionCheck struct {
 	nodeToGroup map[string]string
 }
 
-func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string) (*ConnectionCheck, error) {
-	// Try MCP-based resolution first
-	if nodeToPool, err := mcp.ResolveNodeToPool(c); err == nil {
-		return &ConnectionCheck{
-			ClientSet:   c,
-			podUtils:    podUtils,
-			nodeToGroup: nodeToPool,
-		}, nil
-	}
-
-	// Fallback: build node->group map (HyperShift or clusters without MCP): prefer NodePool label, else role
-	nodeToGroup, err := types.BuildNodeToGroupMap(c)
+func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string, customNodeGroups map[string]labels.Selector) (*ConnectionCheck, error) {
+	nodes, err := podUtils.ListNodes()
 	if err != nil {
 		return nil, err
 	}
+
+	nodeToGroup, err := mcp.ResolveNodeToPool(c)
+	if err != nil {
+		// Fallback: build node->group map (HyperShift or clusters without MCP): prefer NodePool label, else role
+		if nodeToGroup, err = types.BuildNodeToGroupMap(c); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := types.ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups, nodes); err != nil {
+		return nil, err
+	}
+
 	return &ConnectionCheck{
 		ClientSet:   c,
 		podUtils:    podUtils,

@@ -5,6 +5,9 @@ import (
 
 	g "github.com/onsi/ginkgo/v2"
 	o "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // fakeUtils embeds UtilsInterface and overrides only GetClusterVersion
@@ -16,6 +19,14 @@ type fakeUtils struct {
 
 func (f fakeUtils) GetClusterVersion() (string, error) {
 	return f.version, nil
+}
+
+func mustParseLabels(s string) labels.Selector {
+	l, err := labels.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return l
 }
 
 var _ = g.Describe("Dynamic range parsing and helpers", func() {
@@ -265,6 +276,107 @@ var _ = g.Describe("Butane and MachineConfig output formats", func() {
 			o.Expect(err).To(o.HaveOccurred())
 			o.Expect(err.Error()).To(o.ContainSubstring("invalid format"))
 		})
+	})
+})
+
+var _ = g.Describe("ApplyCustomNodeGroupOverrides", func() {
+	g.It("reassigns nodes matching the selector to the specified custom group", func() {
+		nodes := []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "master1", Labels: map[string]string{"node-role.kubernetes.io/master": ""}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker1", Labels: map[string]string{"node-role.kubernetes.io/worker": "", "custom-group": "ingress"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker2", Labels: map[string]string{"node-role.kubernetes.io/worker": "", "custom-group": "ingress"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker3", Labels: map[string]string{"node-role.kubernetes.io/worker": ""}}},
+		}
+		nodeToGroup := map[string]string{
+			"master1": "master",
+			"worker1": "worker",
+			"worker2": "worker",
+			"worker3": "worker",
+		}
+		customNodeGroups := map[string]labels.Selector{
+			"mc-ingress": mustParseLabels("custom-group=ingress"),
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups, nodes)
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["master1"]).To(o.Equal("master"))
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("mc-ingress"))
+		o.Expect(nodeToGroup["worker2"]).To(o.Equal("mc-ingress"))
+		o.Expect(nodeToGroup["worker3"]).To(o.Equal("worker"))
+	})
+
+	g.It("supports multiple custom groups", func() {
+		nodes := []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker1", Labels: map[string]string{"node-role.kubernetes.io/worker": "", "custom-group": "ingress"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker2", Labels: map[string]string{"node-role.kubernetes.io/worker": "", "custom-group": "storage"}}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker3", Labels: map[string]string{"node-role.kubernetes.io/worker": ""}}},
+		}
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+			"worker2": "worker",
+			"worker3": "worker",
+		}
+		customNodeGroups := map[string]labels.Selector{
+			"mc-ingress": mustParseLabels("custom-group=ingress"),
+			"mc-storage": mustParseLabels("custom-group=storage"),
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups, nodes)
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("mc-ingress"))
+		o.Expect(nodeToGroup["worker2"]).To(o.Equal("mc-storage"))
+		o.Expect(nodeToGroup["worker3"]).To(o.Equal("worker"))
+	})
+
+	g.It("returns error when selector matches no nodes", func() {
+		nodes := []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker1", Labels: map[string]string{"node-role.kubernetes.io/worker": ""}}},
+		}
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+		}
+		customNodeGroups := map[string]labels.Selector{
+			"mc-ingress": mustParseLabels("nonexistent-label=true"),
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups, nodes)
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(err.Error()).To(o.ContainSubstring("matched no nodes"))
+	})
+
+	g.It("returns error when a node matches multiple custom group selectors", func() {
+		nodes := []corev1.Node{
+			{ObjectMeta: metav1.ObjectMeta{Name: "worker1", Labels: map[string]string{
+				"node-role.kubernetes.io/worker": "",
+				"custom-group":                   "ingress",
+				"tier":                           "frontend",
+			}}},
+		}
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+		}
+		customNodeGroups := map[string]labels.Selector{
+			"group1": mustParseLabels("custom-group=ingress"),
+			"group2": mustParseLabels("tier=frontend"),
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, customNodeGroups, nodes)
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(err.Error()).To(o.ContainSubstring("multiple custom groups"))
+	})
+
+	g.It("is a no-op when customNodeGroups is nil", func() {
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, nil, nil)
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("worker"))
+	})
+
+	g.It("is a no-op when customNodeGroups is empty", func() {
+		nodeToGroup := map[string]string{
+			"worker1": "worker",
+		}
+		err := ApplyCustomNodeGroupOverrides(nodeToGroup, map[string]labels.Selector{}, nil)
+		o.Expect(err).ToNot(o.HaveOccurred())
+		o.Expect(nodeToGroup["worker1"]).To(o.Equal("worker"))
 	})
 })
 

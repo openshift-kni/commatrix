@@ -17,6 +17,7 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/kubectl/pkg/util/templates"
@@ -54,6 +55,12 @@ var (
 
 			 # Generate MachineConfig CRs with nftables firewall rules (per node pool) and a NodeDisruptionPolicy patch:
 			 oc commatrix generate --format mc
+
+			 # Generate separate MachineConfig CRs for nodes matching a label selector:
+			 oc commatrix generate --format mc --custom-node-group mc-ingress=node-role.kubernetes.io/ingress
+
+			 # Generate a MachineConfig CR for a specific node by hostname:
+			 oc commatrix generate --format mc --custom-node-group mc-egress=kubernetes.io/hostname=worker01
 	`)
 )
 
@@ -81,6 +88,8 @@ type GenerateOptions struct {
 	customEntriesFormat string
 	debug               bool
 	openPorts           bool
+	customNodeGroupRaw  []string
+	customNodeGroups    map[string]labels.Selector
 	cs                  *client.ClientSet
 	utilsHelpers        utils.UtilsInterface
 	configFlags         *genericclioptions.ConfigFlags
@@ -137,6 +146,9 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 	cmd.Flags().StringVar(&o.customEntriesPath, "customEntriesPath", "", "Add custom entries from a file to the matrix")
 	cmd.Flags().StringVar(&o.customEntriesFormat, "customEntriesFormat", "", "Set the format of the custom entries file (json,yaml,csv)")
 	cmd.Flags().BoolVar(&o.openPorts, "host-open-ports", false, "Generate communication matrix, host open ports matrix, and their difference")
+	cmd.Flags().StringArrayVar(&o.customNodeGroupRaw, "custom-node-group", nil,
+		"Assign nodes matching a label selector to a custom group for separate firewall CRs "+
+			"(format: groupName=labelSelector, e.g. mc-ingress=node-role.kubernetes.io/ingress). Repeatable.")
 
 	return cmd
 }
@@ -151,7 +163,48 @@ func Validate(o *GenerateOptions) error {
 		return err
 	}
 
+	parsed, err := parseCustomNodeGroups(o.customNodeGroupRaw)
+	if err != nil {
+		return err
+	}
+	o.customNodeGroups = parsed
+
 	return nil
+}
+
+// parseCustomNodeGroups parses --custom-node-group flag values in the format
+// "groupName=labelSelector" into a map[string]labels.Selector.
+// The labelSelector follows standard Kubernetes label selector syntax
+// (e.g. "node-role.kubernetes.io/ingress" for existence,
+// "env=prod,tier=frontend" for equality).
+func parseCustomNodeGroups(raw []string) (map[string]labels.Selector, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+
+	result := make(map[string]labels.Selector, len(raw))
+
+	for _, entry := range raw {
+		parts := strings.SplitN(entry, "=", 2)
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			return nil, fmt.Errorf("invalid --custom-node-group value %q: expected format groupName=labelSelector"+
+				" (e.g. mc-ingress=node-role.kubernetes.io/ingress)", entry)
+		}
+		groupName := parts[0]
+		selectorStr := parts[1]
+
+		if _, exists := result[groupName]; exists {
+			return nil, fmt.Errorf("duplicate --custom-node-group group name %q", groupName)
+		}
+
+		selector, err := labels.Parse(selectorStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid --custom-node-group label selector %q for group %q: %w", selectorStr, groupName, err)
+		}
+		result[groupName] = selector
+	}
+
+	return result, nil
 }
 
 func validateCustomEntries(path, format string, validFormats []string) error {
@@ -337,7 +390,7 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 		log.SetLevel(log.DebugLevel)
 	}
 
-	epExporter, err := endpointslices.New(o.cs)
+	epExporter, err := endpointslices.New(o.cs, o.customNodeGroups)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating the endpointslices exporter %s", err)
 	}
@@ -381,7 +434,7 @@ func generateSS(o *GenerateOptions) (*listeningsockets.SSResult, error) {
 	}
 
 	log.Debug("Creating listening socket check")
-	listeningCheck, err := listeningsockets.NewCheck(o.cs, o.utilsHelpers, o.destDir)
+	listeningCheck, err := listeningsockets.NewCheck(o.cs, o.utilsHelpers, o.destDir, o.customNodeGroups)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating listening socket check: %v", err)
 	}
