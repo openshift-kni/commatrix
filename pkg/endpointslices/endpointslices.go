@@ -55,10 +55,10 @@ func New(cs *client.ClientSet, customNodeGroups map[string]labels.Selector) (*En
 	}
 	nodes := nodeList.Items
 
-	nodeToPool, err := mcp.ResolveNodeToPool(cs)
+	nodeToPool, err := mcp.ResolveNodeToPool(nodes)
 	if err != nil {
 		// Fallback: build node->group map (HyperShift or clusters without MCP): prefer NodePool label, else role
-		if nodeToPool, err = types.BuildNodeToGroupMap(cs); err != nil {
+		if nodeToPool, err = types.BuildNodeToGroupMap(nodes); err != nil {
 			return nil, err
 		}
 	}

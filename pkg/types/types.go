@@ -13,14 +13,11 @@ import (
 	"strconv"
 	"strings"
 
-	"context"
-
 	"github.com/gocarina/gocsv"
 
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"sigs.k8s.io/yaml"
 
@@ -538,13 +535,9 @@ func ApplyCustomNodeGroupOverrides(nodeToGroup map[string]string, customNodeGrou
 // BuildNodeToGroupMap builds a node->group map for clusters without MCP:
 // - Prefer HyperShift NodePool label when present.
 // - Otherwise fall back to Kubernetes node role derived from labels.
-func BuildNodeToGroupMap(c rtclient.Client) (map[string]string, error) {
-	nodeList := &corev1.NodeList{}
-	if err := c.List(context.TODO(), nodeList); err != nil {
-		return nil, err
-	}
-	nodeToGroup := make(map[string]string, len(nodeList.Items))
-	for _, node := range nodeList.Items {
+func BuildNodeToGroupMap(nodes []corev1.Node) (map[string]string, error) {
+	nodeToGroup := make(map[string]string, len(nodes))
+	for _, node := range nodes {
 		if np, ok := node.Labels["hypershift.openshift.io/nodePool"]; ok && np != "" {
 			nodeToGroup[node.Name] = np
 			continue

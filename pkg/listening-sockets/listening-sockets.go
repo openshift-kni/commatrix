@@ -38,10 +38,10 @@ func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string
 		return nil, err
 	}
 
-	nodeToGroup, err := mcp.ResolveNodeToPool(c)
+	nodeToGroup, err := mcp.ResolveNodeToPool(nodes)
 	if err != nil {
 		// Fallback: build node->group map (HyperShift or clusters without MCP): prefer NodePool label, else role
-		if nodeToGroup, err = types.BuildNodeToGroupMap(c); err != nil {
+		if nodeToGroup, err = types.BuildNodeToGroupMap(nodes); err != nil {
 			return nil, err
 		}
 	}

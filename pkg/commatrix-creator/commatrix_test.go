@@ -558,6 +558,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 			// Mock the command output to return a default port range
 			mockUtils.EXPECT().RunCommandOnPod(mockPod, gomock.Any()).Return([]byte("32768 60999\n"), nil).AnyTimes()
+			mockUtils.EXPECT().ListNodes().Return([]corev1.Node{*testNode, *testNodeWorker}, nil).AnyTimes()
 		})
 
 		g.AfterEach(func() {
