@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
@@ -18,7 +17,7 @@ import (
 	clientOptions "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface, cs *client.ClientSet) (types.DynamicRangeList, error) {
+func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter, utilsHelpers utils.UtilsInterface) (types.DynamicRangeList, error) {
 	log.Debug("Getting dynamic ranges")
 
 	dynamicRanges := types.DynamicRangeList{}

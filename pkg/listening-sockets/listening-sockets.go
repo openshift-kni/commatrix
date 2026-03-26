@@ -32,7 +32,7 @@ type ConnectionCheck struct {
 	nodeToGroup map[string]string
 }
 
-func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, destDir string, customNodeGroups map[string]labels.Selector) (*ConnectionCheck, error) {
+func NewCheck(c *client.ClientSet, podUtils utils.UtilsInterface, customNodeGroups map[string]labels.Selector) (*ConnectionCheck, error) {
 	nodes, err := podUtils.ListNodes()
 	if err != nil {
 		return nil, err
