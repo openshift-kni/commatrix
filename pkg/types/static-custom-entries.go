@@ -334,11 +334,11 @@ var GeneralDHCPStaticEntriesWorker = []ComDetails{
 		Protocol:  "UDP",
 		Port:      68,
 		NodeGroup: "worker",
-		Service:   "NetworkManager",
+		Service:   "dhcp-client",
 		Namespace: "",
 		Pod:       "",
 		Container: "",
-		Optional:  false,
+		Optional:  true,
 	},
 }
 
@@ -348,11 +348,11 @@ var GeneralDHCPStaticEntriesMaster = []ComDetails{
 		Protocol:  "UDP",
 		Port:      68,
 		NodeGroup: "master",
-		Service:   "NetworkManager",
+		Service:   "dhcp-client",
 		Namespace: "",
 		Pod:       "",
 		Container: "",
-		Optional:  false,
+		Optional:  true,
 	},
 }
 
