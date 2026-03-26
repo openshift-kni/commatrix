@@ -1,5 +1,6 @@
 Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
 Ingress,TCP,22,Host system service,sshd,,,master,TRUE
+Ingress,TCP,53,openshift-dns,dns-default,dns-default,dns,master,FALSE
 Ingress,TCP,80,openshift-ingress,router-internal-default,router-default,router,master,FALSE
 Ingress,TCP,111,Host system service,rpcbind,,,master,TRUE
 Ingress,TCP,443,openshift-ingress,router-internal-default,router-default,router,master,FALSE
@@ -30,4 +31,6 @@ Ingress,TCP,10259,openshift-kube-scheduler,scheduler,openshift-kube-scheduler,ku
 Ingress,TCP,17697,openshift-kube-apiserver,openshift-kube-apiserver-healthz,kube-apiserver,kube-apiserver-check-endpoints,master,FALSE
 Ingress,TCP,22623,openshift-machine-config-operator,machine-config-server,machine-config-server,machine-config-server,master,FALSE
 Ingress,TCP,22624,openshift-machine-config-operator,machine-config-server,machine-config-server,machine-config-server,master,FALSE
+Ingress,UDP,53,openshift-dns,dns-default,dns-default,dns,master,FALSE
+Ingress,UDP,68,,NetworkManager (dhcp client),,,master,TRUE
 Ingress,UDP,111,Host system service,rpcbind,,,master,TRUE
