@@ -187,12 +187,12 @@ var _ = Describe("GenerateSS", func() {
 		connectionCheck, err := NewCheck(clientset, mockUtils, "/some/dest/dir")
 		Expect(err).NotTo(HaveOccurred())
 
-		ssMat, ssOutTCP, ssOutUDP, err := connectionCheck.GenerateSS(consts.DefaultDebugNamespace)
+		ssResult, err := connectionCheck.GenerateSS(consts.DefaultDebugNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(normalizeOutput(string(ssOutTCP))).To(Equal(normalizeOutput(expectedTCPOutput)))
-		Expect(normalizeOutput(string(ssOutUDP))).To(Equal(normalizeOutput(expectedUDPOutput)))
-		Expect(ssMat.Ports).To(Equal(expectedSSMat))
+		Expect(normalizeOutput(string(ssResult.rawTCP))).To(Equal(normalizeOutput(expectedTCPOutput)))
+		Expect(normalizeOutput(string(ssResult.rawUDP))).To(Equal(normalizeOutput(expectedUDPOutput)))
+		Expect(ssResult.SSCommMatrix.Ports).To(Equal(expectedSSMat))
 	})
 })
 

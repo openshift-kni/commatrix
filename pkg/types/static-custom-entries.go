@@ -356,7 +356,7 @@ var GeneralDHCPStaticEntriesMaster = []ComDetails{
 	},
 }
 
-var KubeletNodePortDefaultDynamicRange = []DynamicRange{
+var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
 	{
 		Direction:   "Ingress",
 		Protocol:    "TCP",
@@ -375,7 +375,7 @@ var KubeletNodePortDefaultDynamicRange = []DynamicRange{
 	},
 }
 
-var LinuxDynamicPrivateDefaultDynamicRange = []DynamicRange{
+var LinuxDynamicPrivateDefaultDynamicRange = DynamicRangeList{
 	{
 		Direction:   "Ingress",
 		Protocol:    "TCP",

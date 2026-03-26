@@ -233,32 +233,102 @@ func Run(o *GenerateOptions) (err error) {
 		}
 	}
 
+	// Generate the comm matrix, but do not write it, yet.
 	matrix, err := generateMatrix(o, controlPlaneTopology, platformType, ipv6Enabled, dhcpEnabled)
 	if err != nil {
-		return fmt.Errorf("failed to generate endpoint slice matrix: %v", err)
+		return fmt.Errorf("failed to generate endpoint slice matrix: %w", err)
 	}
 
+	// Generate the flow comm matrix and other info, but do not write it, yet.
+	var ssResult *listeningsockets.SSResult
 	if o.openPorts {
-		ssMat, err := generateSS(o)
-		if err != nil {
-			return fmt.Errorf("failed to generate SS matrix: %v", err)
+		if ssResult, err = generateSS(o); err != nil {
+			return fmt.Errorf("failed to generate SS matrix: %w", err)
 		}
-
-		log.Debug("Generating diff between the endpoint slice and SS matrix")
-		diff := matrixdiff.Generate(matrix, ssMat)
-		diffStr, err := diff.String()
-		if err != nil {
-			return fmt.Errorf("error while generating matrix diff string: %v", err)
-		}
-
-		log.Debug("Writing the matrix diff to file")
-		err = o.utilsHelpers.WriteFile(filepath.Join(o.destDir, consts.MatrixDiffSSfileName), []byte(diffStr))
-		if err != nil {
-			return fmt.Errorf("error writing the diff matrix file: %v", err)
-		}
-
-		log.Debug("Matrix diff successfully written to file")
 	}
+
+	// If format is all in one, merge the SS matrix and the normal matrix and write the result.
+	if formatRequiresMerge(o) {
+		return writeMergedMatrix(o, matrix, ssResult)
+	}
+
+	// Otherwise, write the matrix and ss result files individually.
+	return writeMatrix(o, matrix, ssResult)
+}
+
+// writeMergedMatrix merges the communication matrix with the SS (listening sockets) matrix
+// and writes the combined result to a single file. Used for formats that require all-in-one
+// output (NFT, Butane, MachineConfig).
+func writeMergedMatrix(o *GenerateOptions, matrix *types.ComMatrix, ssResult *listeningsockets.SSResult) error {
+	if o == nil {
+		return fmt.Errorf("writeMergedMatrix called with nil GenerateOptions")
+	}
+	if matrix == nil {
+		return fmt.Errorf("writeMergedMatrix called with nil ComMatrix")
+	}
+
+	if ssResult != nil {
+		log.Debug("Merging matrix and ss matrix")
+		matrix = matrix.Merge(ssResult.SSCommMatrix)
+	}
+
+	// Squash ranges together for the merged matrix.
+	matrix.DynamicRanges.Squash()
+
+	log.Debug("Writing endpoint matrix to file")
+	if err := matrix.WriteMatrixToFileByType(o.utilsHelpers, fileNamePrefix(o.format, consts.CommatrixFileNamePrefix),
+		o.format, o.destDir); err != nil {
+		return fmt.Errorf("failed to write endpoint matrix to file: %w", err)
+	}
+	return nil
+}
+
+// writeMatrix writes the communication matrix and optionally the SS (listening sockets) results
+// as separate files. This includes the main matrix file, SS raw files, SS matrix file, and
+// a diff file comparing the two matrices (when ssResult is provided).
+func writeMatrix(o *GenerateOptions, matrix *types.ComMatrix, ssResult *listeningsockets.SSResult) error {
+	if o == nil {
+		return fmt.Errorf("writeMatrix called with nil GenerateOptions")
+	}
+	if matrix == nil {
+		return fmt.Errorf("writeMatrix called with nil ComMatrix")
+	}
+
+	log.Debug("Writing endpoint matrix to file")
+	if err := matrix.WriteMatrixToFileByType(o.utilsHelpers, fileNamePrefix(o.format, consts.CommatrixFileNamePrefix),
+		o.format, o.destDir); err != nil {
+		return fmt.Errorf("failed to write endpoint matrix to file: %w", err)
+	}
+
+	if ssResult == nil {
+		return nil
+	}
+
+	log.Debug("Writing SS raw files")
+	if err := ssResult.WriteSSRawFiles(o.utilsHelpers, o.destDir); err != nil {
+		return fmt.Errorf("error while writing the SS raw files: %w", err)
+	}
+
+	log.Debug("Writing SS matrix to file")
+	if err := ssResult.SSCommMatrix.WriteMatrixToFileByType(
+		o.utilsHelpers, fileNamePrefix(o.format, consts.SSMatrixFileNamePrefix), o.format, o.destDir); err != nil {
+		return fmt.Errorf("error while writing SS matrix to file: %w", err)
+	}
+
+	log.Debug("Generating diff between the endpoint slice and SS matrix")
+	diff := matrixdiff.Generate(matrix, ssResult.SSCommMatrix)
+	diffStr, err := diff.String()
+	if err != nil {
+		return fmt.Errorf("error while generating matrix diff string: %w", err)
+	}
+
+	log.Debug("Writing the matrix diff to file")
+	if err := o.utilsHelpers.WriteFile(filepath.Join(o.destDir, consts.MatrixDiffSSfileName),
+		[]byte(diffStr)); err != nil {
+		return fmt.Errorf("error writing the diff matrix file: %w", err)
+	}
+
+	log.Debug("Matrix diff successfully written to file")
 	return nil
 }
 
@@ -302,16 +372,10 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 		return nil, err
 	}
 
-	log.Debug("Writing endpoint matrix to file")
-	err = matrix.WriteMatrixToFileByType(o.utilsHelpers, fileNamePrefix(o.format, consts.CommatrixFileNamePrefix), o.format, o.destDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write endpoint matrix to file: %v", err)
-	}
-
 	return matrix, nil
 }
 
-func generateSS(o *GenerateOptions) (*types.ComMatrix, error) {
+func generateSS(o *GenerateOptions) (*listeningsockets.SSResult, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -335,24 +399,11 @@ func generateSS(o *GenerateOptions) (*types.ComMatrix, error) {
 	}()
 
 	log.Debug("Generating SS matrix and raw files")
-	ssMat, ssOutTCP, ssOutUDP, err := listeningCheck.GenerateSS(consts.DefaultDebugNamespace)
+	result, err := listeningCheck.GenerateSS(consts.DefaultDebugNamespace)
 	if err != nil {
 		return nil, fmt.Errorf("error while generating the listening check matrix and ss raws: %v", err)
 	}
-
-	log.Debug("Writing SS raw files")
-	err = listeningCheck.WriteSSRawFiles(ssOutTCP, ssOutUDP)
-	if err != nil {
-		return nil, fmt.Errorf("error while writing the SS raw files: %v", err)
-	}
-
-	log.Debug("Writing SS matrix to file")
-	err = ssMat.WriteMatrixToFileByType(o.utilsHelpers, fileNamePrefix(o.format, consts.SSMatrixFileNamePrefix), o.format, o.destDir)
-	if err != nil {
-		return nil, fmt.Errorf("error while writing SS matrix to file: %v", err)
-	}
-
-	return ssMat, nil
+	return result, nil
 }
 
 func fileNamePrefix(format, defaultPrefix string) string {
@@ -364,4 +415,12 @@ func fileNamePrefix(format, defaultPrefix string) string {
 	default:
 		return defaultPrefix
 	}
+}
+
+// formatRequiresMerge returns true for formats that combine both static and open ports
+// into a single output (Butane and MachineConfig formats).
+func formatRequiresMerge(o *GenerateOptions) bool {
+	return o.format == types.FormatButane ||
+		o.format == types.FormatMC ||
+		o.format == types.FormatNFT
 }

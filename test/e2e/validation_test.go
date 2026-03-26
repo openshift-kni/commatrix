@@ -253,7 +253,7 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 	return &types.ComMatrix{Ports: res}
 }
 
-func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges []types.DynamicRange) *types.ComMatrix {
+func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges types.DynamicRangeList) *types.ComMatrix {
 	res := []types.ComDetails{}
 	for _, cd := range mat.Ports {
 		skip := false
