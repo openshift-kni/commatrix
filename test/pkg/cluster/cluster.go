@@ -27,21 +27,45 @@ const (
 	interval         = 5 * time.Second
 )
 
-func WaitForMCPUpdateToStart(cs *client.ClientSet, role string) {
+// GetMachineConfigPool returns the MachineConfigPool with the given name.
+func GetMachineConfigPool(cs *client.ClientSet, name string) (*machineconfigurationv1.MachineConfigPool, error) {
+	mcp := &machineconfigurationv1.MachineConfigPool{}
+	if err := cs.Get(context.TODO(), controllersClient.ObjectKey{Name: name}, mcp); err != nil {
+		return nil, fmt.Errorf("failed to get %q MachineConfigPool: %w", name, err)
+	}
+	return mcp, nil
+}
+
+// WaitForMCPUpdate waits for the MCO to render a new MachineConfig (by comparing
+// the rendered MC name to previousRenderedMC) and then waits for all machines in the
+// pool to be ready with the new config (timeout: 20m, polling interval: 5s).
+// This avoids polling for transient status changes (UpdatedMachineCount != MachineCount)
+// which can be missed on SNO where NodeDisruptionPolicy completes in seconds.
+func WaitForMCPUpdate(cs *client.ClientSet, name, previousRenderedMC string) {
 	gomega.Eventually(func() (bool, error) {
-		mcp := &machineconfigurationv1.MachineConfigPool{}
-		err := cs.Get(context.TODO(), controllersClient.ObjectKey{Name: role}, mcp)
+		mcp, err := GetMachineConfigPool(cs, name)
 		if err != nil {
-			return false, fmt.Errorf("failed to get %s MachineConfigPool: %v", role, err)
+			return false, err
 		}
 
-		if mcp.Status.UpdatedMachineCount != mcp.Status.MachineCount {
-			log.Printf("MCP %s has started updating", mcp.Name)
+		currentRenderedMC := mcp.Status.Configuration.Name
+		if currentRenderedMC == previousRenderedMC {
+			log.Printf("MCP %s: rendered MC unchanged (%s), waiting for MCO to process", name, currentRenderedMC)
+			return false, nil
+		}
+
+		log.Printf("MCP %s: rendered MC changed from %q to %q", name, previousRenderedMC, currentRenderedMC)
+
+		if mcp.Status.ReadyMachineCount == mcp.Status.MachineCount &&
+			mcp.Status.UpdatedMachineCount == mcp.Status.MachineCount {
+			log.Printf("MCP %s: all machines ready and updated", name)
 			return true, nil
 		}
 
+		log.Printf("MCP %s: still updating (ready=%d, updated=%d, total=%d)",
+			name, mcp.Status.ReadyMachineCount, mcp.Status.UpdatedMachineCount, mcp.Status.MachineCount)
 		return false, nil
-	}, timeout, 30*time.Second).Should(gomega.BeTrue(), "Timed out waiting for MCP to start updating")
+	}, timeout, interval).Should(gomega.BeTrue(), "Timed out waiting for MCP %s to complete update", name)
 }
 
 func AddNFTSvcToNodeDisruptionPolicy(cs *client.ClientSet) error {
@@ -94,24 +118,6 @@ func ApplyMachineConfig(yamlInput []byte, c *client.ClientSet) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func WaitForMCPReadyState(c *client.ClientSet, role string) {
-	gomega.Eventually(func() (bool, error) {
-		mcp := &machineconfigurationv1.MachineConfigPool{}
-		err := c.Get(context.TODO(), controllersClient.ObjectKey{Name: role}, mcp)
-		if err != nil {
-			return false, fmt.Errorf("failed to get %s MachineConfigPool: %v", role, err)
-		}
-
-		if mcp.Status.ReadyMachineCount != mcp.Status.MachineCount {
-			log.Printf("MCP %s is still updating or degraded\n", mcp.Name)
-			return false, nil
-		}
-
-		log.Println("All MCPs are ready and updated")
-		return true, nil
-	}, timeout, 30*time.Second).Should(gomega.BeTrue(), "Timed out waiting for MCPs to reach the ready state")
 }
 
 func ValidateClusterVersionAndMachineConfiguration(cs *client.ClientSet) error {
