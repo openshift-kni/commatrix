@@ -100,7 +100,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	}
 
 	log.Debug("Getting static entries")
-	staticEntries, err := cm.GetStaticEntries()
+	staticEntries, err := cm.getStaticEntries()
 	if err != nil {
 		log.Errorf("Failed adding static entries: %s", err)
 		return nil, fmt.Errorf("failed adding static entries: %s", err)
@@ -168,54 +168,10 @@ func (cm *CommunicationMatrixCreator) GetComMatrixFromFile() (*types.ComMatrix, 
 	return res, nil
 }
 
-func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, error) {
-	log.Debug("Determining static entries based on environment and deployment")
-	comDetails := []types.ComDetails{}
-
-	switch cm.platformType {
-	case configv1.BareMetalPlatformType:
-		log.Debug("Adding Baremetal static entries")
-		comDetails = append(comDetails, types.BaremetalStaticEntriesMaster...)
-		if cm.controlPlaneTopology == configv1.SingleReplicaTopologyMode {
-			break
-		}
-		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
-	case configv1.NonePlatformType:
-		log.Debug("Adding None Platform Type static entries")
-		comDetails = append(comDetails, types.NoneStaticEntriesMaster...)
-		if cm.controlPlaneTopology == configv1.SingleReplicaTopologyMode {
-			break
-		}
-		comDetails = append(comDetails, types.NoneStaticEntriesWorker...)
-	case configv1.AWSPlatformType:
-		log.Debug("There are no Cloud static entries to be added")
-	default:
-		log.Errorf("Invalid value for cluster environment: %v", cm.platformType)
-		return nil, fmt.Errorf("invalid value for cluster environment")
-	}
-
-	log.Debug("Adding general static entries")
-	comDetails = append(comDetails, types.GeneralStaticEntriesMaster...)
-	if cm.ipv6Enabled {
-		comDetails = append(comDetails, types.GeneralIPv6StaticEntriesMaster...)
-	}
-	if cm.dhcpEnabled {
-		comDetails = append(comDetails, types.GeneralDHCPStaticEntriesMaster...)
-	}
-	if cm.controlPlaneTopology == configv1.SingleReplicaTopologyMode {
-		return comDetails, nil
-	}
-
-	comDetails = append(comDetails, types.StandardStaticEntries...)
-	comDetails = append(comDetails, types.GeneralStaticEntriesWorker...)
-	if cm.ipv6Enabled {
-		comDetails = append(comDetails, types.GeneralIPv6StaticEntriesWorker...)
-	}
-	if cm.dhcpEnabled {
-		comDetails = append(comDetails, types.GeneralDHCPStaticEntriesWorker...)
-	}
-	log.Debug("Successfully determined static entries")
-	return comDetails, nil
+// getStaticEntries is a convenience wrapper around types.GetStaticEntries
+// that forwards the creator's platform configuration.
+func (cm *CommunicationMatrixCreator) getStaticEntries() ([]types.ComDetails, error) {
+	return types.GetStaticEntries(cm.platformType, cm.controlPlaneTopology, cm.ipv6Enabled, cm.dhcpEnabled)
 }
 
 // expandStaticEntriesByPool uses MCP-derived role per pool.
