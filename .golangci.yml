@@ -29,6 +29,8 @@ linters-settings:
     disabled-checks:
       - captLocal
       - exitAfterDefer
+  unparam:
+    check-exported: true
   revive:
     rules:
     - name: receiver-naming

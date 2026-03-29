@@ -194,10 +194,9 @@ var _ = Describe("Validation", func() {
 		if dhcpEnabled {
 			opts = append(opts, commatrixcreator.WithDHCP())
 		}
-		cm, err := commatrixcreator.New(
+		cm := commatrixcreator.New(
 			platformType, controlPlaneTopology, opts...,
 		)
-		Expect(err).ToNot(HaveOccurred(), "Failed to create communication matrix creator")
 
 		By("Getting static entries suitable to the cluster")
 		staticEntries, err := cm.GetStaticEntries()
@@ -206,8 +205,7 @@ var _ = Describe("Validation", func() {
 		By("Expand static entries for all MCPs based on their roles")
 		nodes, err := utilsHelpers.ListNodes()
 		Expect(err).ToNot(HaveOccurred(), "Failed to list nodes")
-		PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(nodes, exporter.NodeToGroup())
-		Expect(err).ToNot(HaveOccurred(), "Failed to get pool roles for static entries expansion")
+		PoolRolesForStaticEntriesExpansion := mcp.GetPoolRolesForStaticEntriesExpansion(nodes, exporter.NodeToGroup())
 		staticEntries = commatrixcreator.ExpandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
 
 		By("Checking that all static entries are present in the ss (open ports) matrix")

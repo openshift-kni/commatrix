@@ -185,7 +185,7 @@ var _ = Describe("GenerateSS", func() {
 
 		mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
 
-		connectionCheck, err := NewCheck(clientset, mockUtils, "/some/dest/dir", nil)
+		connectionCheck, err := NewCheck(clientset, mockUtils, nil)
 		Expect(err).NotTo(HaveOccurred())
 
 		ssResult, err := connectionCheck.GenerateSS(consts.DefaultDebugNamespace)

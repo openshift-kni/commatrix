@@ -318,7 +318,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 		for _, format := range []string{types.FormatCSV, types.FormatJSON, types.FormatYAML} {
 			g.It(fmt.Sprintf("Should successfully extract ComDetails from a %s file", format), func() {
 				g.By(fmt.Sprintf("Creating new communication matrix with %s static entries format", format))
-				cm, err := New(
+				cm := New(
 					configv1.BareMetalPlatformType,
 					configv1.HighlyAvailableTopologyMode,
 					WithCustomEntries(
@@ -326,7 +326,6 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 						format,
 					),
 				)
-				o.Expect(err).ToNot(o.HaveOccurred())
 
 				g.By("Getting ComMatrix From File")
 				gotComMatrix, err := cm.GetComMatrixFromFile()
@@ -340,7 +339,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to non-matched customEntriesPath and customEntriesFormat types", func() {
 			g.By("Creating new communication matrix with non-matched customEntriesPath and customEntriesFormat")
-			cm, err := New(
+			cm := New(
 				configv1.BareMetalPlatformType,
 				configv1.HighlyAvailableTopologyMode,
 				WithCustomEntries(
@@ -348,7 +347,6 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					types.FormatJSON,
 				),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting ComMatrix From File")
 			gotComMatrix, err := cm.GetComMatrixFromFile()
@@ -360,7 +358,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to an invalid customEntriesFormat", func() {
 			g.By("Creating new communication matrix with invalid customEntriesFormat")
-			cm, err := New(
+			cm := New(
 				configv1.BareMetalPlatformType,
 				configv1.HighlyAvailableTopologyMode,
 				WithCustomEntries(
@@ -368,7 +366,6 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					types.FormatNFT,
 				),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting ComMatrix From File")
 			gotComMatrix, err := cm.GetComMatrixFromFile()
@@ -382,11 +379,10 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 	g.Context("Get static entries from file", func() {
 		g.It("Should successfully get static entries suitable to baremetal standard cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal standard cluster")
-			cm, err := New(
+			cm := New(
 				configv1.BareMetalPlatformType,
 				configv1.HighlyAvailableTopologyMode,
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.GetStaticEntries()
@@ -400,11 +396,10 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to baremetal SNO cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal SNO cluster")
-			cm, err := New(
+			cm := New(
 				configv1.BareMetalPlatformType,
 				configv1.SingleReplicaTopologyMode,
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.GetStaticEntries()
@@ -417,11 +412,10 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to None standard cluster", func() {
 			g.By("Creating new communication matrix suitable to None standard cluster")
-			cm, err := New(
+			cm := New(
 				configv1.NonePlatformType,
 				configv1.HighlyAvailableTopologyMode,
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.GetStaticEntries()
@@ -435,11 +429,10 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully get static entries suitable to None SNO cluster", func() {
 			g.By("Creating new communication matrix suitable to None SNO cluster")
-			cm, err := New(
+			cm := New(
 				configv1.NonePlatformType,
 				configv1.SingleReplicaTopologyMode,
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.GetStaticEntries()
@@ -452,12 +445,11 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should include DHCP static entries when dhcpEnabled is true on standard cluster", func() {
 			g.By("Creating new communication matrix with dhcpEnabled=true for standard cluster")
-			cm, err := New(
+			cm := New(
 				configv1.BareMetalPlatformType,
 				configv1.HighlyAvailableTopologyMode,
 				WithDHCP(),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.GetStaticEntries()
@@ -472,12 +464,11 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should include DHCP static entries when dhcpEnabled is true on SNO cluster", func() {
 			g.By("Creating new communication matrix with dhcpEnabled=true for SNO cluster")
-			cm, err := New(
+			cm := New(
 				configv1.BareMetalPlatformType,
 				configv1.SingleReplicaTopologyMode,
 				WithDHCP(),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.GetStaticEntries()
@@ -491,11 +482,10 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should return an error due to an invalid value for cluster environment", func() {
 			g.By("Creating new communication matrix with an invalid value for cluster environment")
-			cm, err := New(
+			cm := New(
 				"invalid",
 				configv1.SingleReplicaTopologyMode,
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Getting static entries comDetails of the created communication matrix")
 			gotComDetails, err := cm.GetStaticEntries()
@@ -570,7 +560,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix with custom entries", func() {
 			g.By("Creating new communication matrix with static entries")
-			commatrixCreator, err := New(
+			commatrixCreator := New(
 				configv1.AWSPlatformType,
 				configv1.SingleReplicaTopologyMode,
 				WithExporter(endpointSlices),
@@ -580,7 +570,6 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 					types.FormatCSV,
 				),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
@@ -603,13 +592,12 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should successfully create an endpoint matrix without custom entries", func() {
 			g.By("Creating new communication matrix without static entries")
-			commatrixCreator, err := New(
+			commatrixCreator := New(
 				configv1.AWSPlatformType,
 				configv1.SingleReplicaTopologyMode,
 				WithExporter(endpointSlices),
 				WithUtilsHelpers(mockUtils),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
@@ -628,14 +616,13 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 
 		g.It("Should include IPv6 static entries when ipv6Enabled is true on Standard", func() {
 			g.By("Creating communication matrix with ipv6Enabled=true for Standard")
-			commatrixCreator, err := New(
+			commatrixCreator := New(
 				configv1.AWSPlatformType,
 				configv1.HighlyAvailableTopologyMode,
 				WithExporter(endpointSlices),
 				WithUtilsHelpers(mockUtils),
 				WithIPv6(),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
@@ -683,13 +670,12 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Creating endpoint matrix")
-			commatrixCreator, err := New(
+			commatrixCreator := New(
 				configv1.AWSPlatformType,
 				configv1.SingleReplicaTopologyMode,
 				WithExporter(localhostEndpointSlices),
 				WithUtilsHelpers(mockUtils),
 			)
-			o.Expect(err).ToNot(o.HaveOccurred())
 			commatrix, err := commatrixCreator.CreateEndpointMatrix()
 			o.Expect(err).ToNot(o.HaveOccurred())
 

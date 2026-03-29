@@ -46,7 +46,7 @@ func poolNameFromRenderedConfig(currentConfig string) (string, bool) {
 
 // GetPoolRolesForStaticEntriesExpansion derives, per pool, which of [master, worker]
 // Are present on its nodes; used to expand role-scoped static entries across pools.
-func GetPoolRolesForStaticEntriesExpansion(nodes []corev1.Node, nodeToPool map[string]string) (map[string][]string, error) {
+func GetPoolRolesForStaticEntriesExpansion(nodes []corev1.Node, nodeToPool map[string]string) map[string][]string {
 	observedRoles := make(map[string][]string)
 	for _, node := range nodes {
 		_, hasmaster := node.Labels[consts.RoleLabel+"master"]
@@ -61,5 +61,5 @@ func GetPoolRolesForStaticEntriesExpansion(nodes []corev1.Node, nodeToPool map[s
 		}
 	}
 
-	return observedRoles, nil
+	return observedRoles
 }

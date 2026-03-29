@@ -97,8 +97,7 @@ var _ = Describe("GetPoolRolesForStaticEntriesExpansion", func() {
 
 		manualMap := map[string]string{"n1": "custom", "n2": "custom", "n3": "custom"}
 
-		roles, err := GetPoolRolesForStaticEntriesExpansion(nodes, manualMap)
-		Expect(err).NotTo(HaveOccurred())
+		roles := GetPoolRolesForStaticEntriesExpansion(nodes, manualMap)
 		Expect(roles["custom"]).To(ContainElements("master", "worker"))
 	})
 })

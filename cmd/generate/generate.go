@@ -413,12 +413,9 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 	if dhcpEnabled {
 		opts = append(opts, commatrixcreator.WithDHCP())
 	}
-	commMatrix, err := commatrixcreator.New(
+	commMatrix := commatrixcreator.New(
 		platformType, controlPlaneTopology, opts...,
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	matrix, err := commMatrix.CreateEndpointMatrix()
 	if err != nil {
@@ -434,7 +431,7 @@ func generateSS(o *GenerateOptions) (*listeningsockets.SSResult, error) {
 	}
 
 	log.Debug("Creating listening socket check")
-	listeningCheck, err := listeningsockets.NewCheck(o.cs, o.utilsHelpers, o.destDir, o.customNodeGroups)
+	listeningCheck, err := listeningsockets.NewCheck(o.cs, o.utilsHelpers, o.customNodeGroups)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating listening socket check: %v", err)
 	}

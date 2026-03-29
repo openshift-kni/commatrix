@@ -67,7 +67,7 @@ func New(
 	platformType configv1.PlatformType,
 	topology configv1.TopologyMode,
 	opts ...Option,
-) (*CommunicationMatrixCreator, error) {
+) *CommunicationMatrixCreator {
 	cm := &CommunicationMatrixCreator{
 		platformType:         platformType,
 		controlPlaneTopology: topology,
@@ -75,7 +75,7 @@ func New(
 	for _, o := range opts {
 		o(cm)
 	}
-	return cm, nil
+	return cm
 }
 
 // CreateEndpointMatrix initializes a ComMatrix using Kubernetes cluster data.
@@ -112,17 +112,13 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(nodes, cm.exporter.NodeToGroup())
-	if err != nil {
-		log.Errorf("Failed to extract pool to roles: %v", err)
-		return nil, err
-	}
+	PoolRolesForStaticEntriesExpansion := mcp.GetPoolRolesForStaticEntriesExpansion(nodes, cm.exporter.NodeToGroup())
 
 	// Expand static entries for all MCPs based on their roles
 	staticEntries = ExpandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
 	epSliceComDetails = append(epSliceComDetails, staticEntries...)
 
-	dynamicRanges, err := dynamicranges.GetDynamicRanges(cm.exporter, cm.utilsHelpers, cm.exporter.ClientSet)
+	dynamicRanges, err := dynamicranges.GetDynamicRanges(cm.exporter, cm.utilsHelpers)
 	if err != nil {
 		log.Errorf("Failed to get dynamic ranges: %v", err)
 		return nil, fmt.Errorf("failed to get dynamic ranges: %w", err)
