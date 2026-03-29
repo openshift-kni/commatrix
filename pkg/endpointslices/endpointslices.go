@@ -97,44 +97,46 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 			continue
 		}
 
-		pods := &corev1.PodList{}
-		exposedService := isExposedService(service)
 		if len(service.Spec.Selector) == 0 {
-			// If an internal service has no selector, ports can't be exposed, skip.
-			if !exposedService {
-				log.Debugf("no pods found for internal service, selector wasn't defined %q", service.Name)
-				continue
-			}
-		} else {
-			label = labels.SelectorFromSet(service.Spec.Selector)
-			err = ep.List(context.TODO(), pods, &rtclient.ListOptions{Namespace: service.Namespace, LabelSelector: label})
-			if err != nil {
-				return fmt.Errorf("failed to list pods, %v", err)
-			}
-
-			// If there are no pods found for the service, skip.
-			if len(pods.Items) == 0 {
-				log.Debugf("no pods found for service name %q", service.Name)
-				continue
-			}
-
-			ports := epl.Items[0].Ports
-			// 	Check if all pod ports are exposed, otherwise, keep only ports linked to an EndpointSlice and hostPort.
-			if !exposedService && !isHostNetworked(pods.Items[0]) {
-				epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], epl.Items[0].Ports)
-				ports = filterEndpointPortsByPodHostPort(epsPortsInfo)
-			}
-			if len(ports) == 0 {
-				continue
-			}
-			// Exclude ports explicitly bound to localhost (127.0.0.1 or ::1)
-			epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], ports)
-			portsNoLocalhost := filterOutLocalhostPorts(epsPortsInfo)
-			if len(portsNoLocalhost) == 0 {
-				continue
-			}
-			epl.Items[0].Ports = portsNoLocalhost
+			log.Debugf("no selector defined for service %q, skipping", service.Name)
+			continue
 		}
+
+		pods := &corev1.PodList{}
+		label = labels.SelectorFromSet(service.Spec.Selector)
+		err = ep.List(context.TODO(), pods, &rtclient.ListOptions{Namespace: service.Namespace, LabelSelector: label})
+		if err != nil {
+			return fmt.Errorf("failed to list pods, %v", err)
+		}
+
+		// If there are no pods found for the service, skip.
+		if len(pods.Items) == 0 {
+			log.Debugf("no pods found for service name %q", service.Name)
+			continue
+		}
+
+		ports := epl.Items[0].Ports
+		// For non-hostNetwork pods, the targetPort (containerPort) is inside the pod's
+		// network namespace and is not reachable on the host. Only ports with an
+		// explicit hostPort are on the host and need firewall entries.
+		// NodePort/LoadBalancer nodePorts are covered by the dynamic NodePort range.
+		// hostNetwork pods listen directly on the host, so all their
+		// containerPorts need firewall entries and are kept as-is.
+		if !isHostNetworked(pods.Items[0]) {
+			epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], epl.Items[0].Ports)
+			ports = filterEndpointPortsByPodHostPort(epsPortsInfo)
+		}
+		if len(ports) == 0 {
+			continue
+		}
+		// Exclude ports explicitly bound to localhost (127.0.0.1 or ::1)
+		epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], ports)
+		portsNoLocalhost := filterOutLocalhostPorts(epsPortsInfo)
+		if len(portsNoLocalhost) == 0 {
+			continue
+		}
+		epl.Items[0].Ports = portsNoLocalhost
+
 		epsliceInfo := createEPSliceInfo(service, epl.Items[0], pods.Items)
 		log.Debugf("epsliceInfo created %+v", epsliceInfo)
 		epsliceInfos = append(epsliceInfos, epsliceInfo)

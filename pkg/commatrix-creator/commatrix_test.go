@@ -134,6 +134,7 @@ var (
 			},
 		},
 		Spec: corev1.PodSpec{
+			HostNetwork: true,
 			Containers: []corev1.Container{
 				{
 					Name:  "test-container",
@@ -210,6 +211,7 @@ var (
 			},
 		},
 		Spec: corev1.PodSpec{
+			HostNetwork: true,
 			Containers: []corev1.Container{
 				{
 					Name:  "main-container",
@@ -298,6 +300,130 @@ var (
 			{
 				Name:     func(s string) *string { return &s }("port-3000"),
 				Port:     func(i int32) *int32 { return &i }(3000),
+				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+			},
+		},
+	}
+
+	// Test resources for non-hostNetwork pod behind NodePort service (no hostPort).
+	testPodNonHostNet = &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "non-hostnet-pod",
+			Namespace: "non-hostnet-ns",
+			Labels:    map[string]string{"app": "non-hostnet-app"},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "web",
+					Image: "test-image:latest",
+					Ports: []corev1.ContainerPort{
+						{ContainerPort: 8080},
+					},
+				},
+			},
+		},
+	}
+
+	testServiceNonHostNet = &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "non-hostnet-service",
+			Namespace: "non-hostnet-ns",
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{"app": "non-hostnet-app"},
+			Ports: []corev1.ServicePort{
+				{Port: 8080, Protocol: corev1.ProtocolTCP},
+			},
+			Type: corev1.ServiceTypeNodePort,
+		},
+	}
+
+	testEndpointSliceNonHostNet = &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "non-hostnet-service-eps",
+			Namespace: "non-hostnet-ns",
+			Labels:    map[string]string{"kubernetes.io/service-name": "non-hostnet-service"},
+			OwnerReferences: []metav1.OwnerReference{
+				{Kind: "Service", Name: "non-hostnet-service"},
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				NodeName:  &testNode.Name,
+				Addresses: []string{"10.0.0.1"},
+			},
+		},
+		Ports: []discoveryv1.EndpointPort{
+			{
+				Port:     func(i int32) *int32 { return &i }(8080),
+				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+			},
+		},
+	}
+
+	// Test resources for non-hostNetwork pod with explicit hostPort on one port.
+	testPodNonHostNetWithHostPort = &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "non-hostnet-hostport-pod",
+			Namespace: "non-hostnet-hp-ns",
+			Labels:    map[string]string{"app": "non-hostnet-hp-app"},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "web",
+					Image: "test-image:latest",
+					Ports: []corev1.ContainerPort{
+						{ContainerPort: 8080, HostPort: 8080},
+						{ContainerPort: 9090},
+					},
+				},
+			},
+		},
+	}
+
+	testServiceNonHostNetWithHostPort = &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "non-hostnet-hp-service",
+			Namespace: "non-hostnet-hp-ns",
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{"app": "non-hostnet-hp-app"},
+			Ports: []corev1.ServicePort{
+				{Name: "port-8080", Port: 8080, Protocol: corev1.ProtocolTCP},
+				{Name: "port-9090", Port: 9090, Protocol: corev1.ProtocolTCP},
+			},
+			Type: corev1.ServiceTypeNodePort,
+		},
+	}
+
+	testEndpointSliceNonHostNetWithHostPort = &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "non-hostnet-hp-service-eps",
+			Namespace: "non-hostnet-hp-ns",
+			Labels:    map[string]string{"kubernetes.io/service-name": "non-hostnet-hp-service"},
+			OwnerReferences: []metav1.OwnerReference{
+				{Kind: "Service", Name: "non-hostnet-hp-service"},
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				NodeName:  &testNode.Name,
+				Addresses: []string{"10.0.0.2"},
+			},
+		},
+		Ports: []discoveryv1.EndpointPort{
+			{
+				Name:     func(s string) *string { return &s }("port-8080"),
+				Port:     func(i int32) *int32 { return &i }(8080),
+				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+			},
+			{
+				Name:     func(s string) *string { return &s }("port-9090"),
+				Port:     func(i int32) *int32 { return &i }(9090),
 				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
 			},
 		},
@@ -695,6 +821,105 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				}
 			}
 			o.Expect(foundPort9090).To(o.BeTrue(), "Port 9090 bound to 0.0.0.0 should be present in the matrix")
+		})
+
+		g.It("Should not add targetPort for non-hostNetwork pod behind NodePort service", func() {
+			g.By("Setting up fake client with non-hostNetwork pod behind NodePort service (no hostPort)")
+			sch := runtime.NewScheme()
+			err := corev1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			err = discoveryv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			err = machineconfigurationv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			err = configv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+
+			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(
+				testNode, testNodeWorker,
+				testPodNonHostNet, testServiceNonHostNet, testEndpointSliceNonHostNet,
+				mcpWorker, mcpMaster, testNetwork,
+			).Build()
+			fakeClientset := fakek.NewSimpleClientset(testNode, testNodeWorker)
+
+			clientset := &client.ClientSet{
+				Client:          fakeClient,
+				CoreV1Interface: fakeClientset.CoreV1(),
+			}
+
+			nonHostNetEps, err := endpointslices.New(clientset, nil)
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Creating endpoint matrix")
+			commatrixCreator := New(
+				configv1.AWSPlatformType,
+				configv1.SingleReplicaTopologyMode,
+				WithExporter(nonHostNetEps),
+				WithUtilsHelpers(mockUtils),
+			)
+			commatrix, err := commatrixCreator.CreateEndpointMatrix()
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Verifying that targetPort 8080 is NOT present (no hostPort, non-hostNetwork)")
+			for _, entry := range commatrix.Ports {
+				o.Expect(entry.Service).ToNot(o.Equal("non-hostnet-service"),
+					"Non-hostNetwork pod without hostPort should not have any firewall entries")
+			}
+		})
+
+		g.It("Should only add hostPort entries for non-hostNetwork pod behind NodePort service", func() {
+			g.By("Setting up fake client with non-hostNetwork pod with hostPort on one port")
+			sch := runtime.NewScheme()
+			err := corev1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			err = discoveryv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			err = machineconfigurationv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+			err = configv1.AddToScheme(sch)
+			o.Expect(err).NotTo(o.HaveOccurred())
+
+			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(
+				testNode, testNodeWorker,
+				testPodNonHostNetWithHostPort, testServiceNonHostNetWithHostPort, testEndpointSliceNonHostNetWithHostPort,
+				mcpWorker, mcpMaster, testNetwork,
+			).Build()
+			fakeClientset := fakek.NewSimpleClientset(testNode, testNodeWorker)
+
+			clientset := &client.ClientSet{
+				Client:          fakeClient,
+				CoreV1Interface: fakeClientset.CoreV1(),
+			}
+
+			hostPortEps, err := endpointslices.New(clientset, nil)
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Creating endpoint matrix")
+			commatrixCreator := New(
+				configv1.AWSPlatformType,
+				configv1.SingleReplicaTopologyMode,
+				WithExporter(hostPortEps),
+				WithUtilsHelpers(mockUtils),
+			)
+			commatrix, err := commatrixCreator.CreateEndpointMatrix()
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Verifying that port 8080 (with hostPort) is present")
+			found8080 := false
+			for _, entry := range commatrix.Ports {
+				if entry.Service == "non-hostnet-hp-service" && entry.Port == 8080 {
+					found8080 = true
+				}
+			}
+			o.Expect(found8080).To(o.BeTrue(), "Port 8080 with explicit hostPort should be in the matrix")
+
+			g.By("Verifying that port 9090 (without hostPort) is NOT present")
+			for _, entry := range commatrix.Ports {
+				if entry.Service == "non-hostnet-hp-service" {
+					o.Expect(entry.Port).ToNot(o.Equal(9090),
+						"Port 9090 without hostPort should not be in the matrix for non-hostNetwork pods")
+				}
+			}
 		})
 	})
 
