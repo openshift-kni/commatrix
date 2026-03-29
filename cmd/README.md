@@ -49,6 +49,7 @@ Flags:
       --destDir string               Output files dir (default communication-matrix)
       --format string                Desired format (json,yaml,csv,nft,butane,mc) (default "csv")
       --host-open-ports              Generate communication matrix, host open port matrix, and their difference.
+      --custom-node-group stringArray    Assign nodes matching a label selector to a custom group for separate firewall CRs (format: groupName=labelSelector). Repeatable.
   ```
 
 
@@ -58,7 +59,8 @@ Once you run the `oc commatrix generate` command, the plugin will
 generate a communication matrix based on the ingress flows in your
 OpenShift cluster. The output will be saved to a file (destDir) in the chosen format,
 similar to the following. Note that `Node Group` resolves as:
-- If MCP API available: pool name from node annotation `machineconfiguration.openshift.io/currentConfig` (e.g., master, worker, custom-ws)
+- If `--custom-node-group` assigns the node to a custom group: that group name
+- Else if MCP API available: pool name from node annotation `machineconfiguration.openshift.io/currentConfig` (e.g., master, worker, custom-ws)
 - Else if `hypershift.openshift.io/nodePool` label is present: that label value
 - Else: node role (e.g., master, worker)
 
@@ -249,3 +251,37 @@ Ingress,TCP,53,openshift-dns,dns-default,dns-default,dns,master,false
 ingress,TCP,9050,example-namespace,example-service,example-pod,example-container,master,false
 ingress,UDP,9051,example-namespace2,example-service2,example-pod2,example-container2,worker,false
 ```
+
+`custom-node-group example`
+
+When a subset of worker nodes run additional services, use `--custom-node-group` to split them into a custom group with separate firewall rules. Nodes are selected using standard [Kubernetes label selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors):
+
+```sh
+$ oc commatrix generate --format butane \
+    --custom-node-group mc-ingress=node-role.kubernetes.io/ingress
+```
+
+This produces separate output per group:
+- `butane-master.yaml` — master firewall rules
+- `butane-worker.yaml` — standard worker firewall rules (workers without the ingress label)
+- `butane-mc-ingress.yaml` — worker rules **plus** ports 80/443 for the ingress nodes
+
+The flag is repeatable for multiple groups:
+```sh
+$ oc commatrix generate --format butane \
+    --custom-node-group mc-ingress=node-role.kubernetes.io/ingress \
+    --custom-node-group mc-storage=node-role.kubernetes.io/storage
+```
+
+**Label selector syntax** follows the standard Kubernetes conventions:
+| Selector type | Example |
+|---|---|
+| Existence | `mc-ingress=node-role.kubernetes.io/ingress` |
+| Equality | `mc-ingress=env=prod` |
+| Multiple requirements (AND) | `mc-ingress=node-role.kubernetes.io/ingress,env=prod` |
+| Inequality | `mc-ingress=env!=staging` |
+| Set-based | `"mc-ingress=env in (prod,staging)"` (quote for shell) |
+
+The `--custom-node-group` flag affects all output formats. In CSV/JSON/YAML, the `nodeGroup` field reflects the custom group name. In NFT/Butane/MC, a separate file is generated per group.
+
+**Important (Butane/MC formats):** The generated Butane/MachineConfig CRs for custom groups can only be applied if the nodes are already placed in a matching MachineConfigPool. You must create the custom MCP first, then apply the generated CR. For NFT/CSV/JSON/YAML formats, the output can be used directly without this prerequisite.

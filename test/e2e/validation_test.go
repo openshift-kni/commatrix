@@ -181,7 +181,7 @@ var _ = Describe("Validation", func() {
 		Expect(err).ToNot(HaveOccurred(), "Failed to get DHCP enabled status")
 
 		By("Creating communication matrix creator to get static entries")
-		exporter, err := endpointslices.New(cs)
+		exporter, err := endpointslices.New(cs, nil)
 		Expect(err).ToNot(HaveOccurred(), "Failed to create endpointslices exporter")
 
 		opts := []commatrixcreator.Option{
@@ -204,7 +204,9 @@ var _ = Describe("Validation", func() {
 		Expect(err).ToNot(HaveOccurred(), "Failed to get static entries")
 
 		By("Expand static entries for all MCPs based on their roles")
-		PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(exporter.ClientSet, exporter.NodeToGroup())
+		nodes, err := utilsHelpers.ListNodes()
+		Expect(err).ToNot(HaveOccurred(), "Failed to list nodes")
+		PoolRolesForStaticEntriesExpansion, err := mcp.GetPoolRolesForStaticEntriesExpansion(nodes, exporter.NodeToGroup())
 		Expect(err).ToNot(HaveOccurred(), "Failed to get pool roles for static entries expansion")
 		staticEntries = commatrixcreator.ExpandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
 

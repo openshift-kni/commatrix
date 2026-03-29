@@ -26,6 +26,7 @@ import (
 
 //go:generate ../../bin/mockgen -destination mock/mock_utils.go -source utils.go
 type UtilsInterface interface {
+	ListNodes() ([]corev1.Node, error)
 	CreateNamespace(namespace string) error
 	DeleteNamespace(namespace string) error
 	CreatePodOnNode(nodeName, namespace, image string, command []string) (pod *corev1.Pod, err error)
@@ -52,6 +53,14 @@ const (
 
 func New(c *client.ClientSet) UtilsInterface {
 	return &utils{c}
+}
+
+func (u *utils) ListNodes() ([]corev1.Node, error) {
+	nodeList := &corev1.NodeList{}
+	if err := u.List(context.TODO(), nodeList); err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	return nodeList.Items, nil
 }
 
 func (u *utils) WriteFile(path string, data []byte) error {

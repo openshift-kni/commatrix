@@ -35,6 +35,21 @@ func (m *MockUtilsInterface) EXPECT() *MockUtilsInterfaceMockRecorder {
 	return m.recorder
 }
 
+// ListNodes mocks base method.
+func (m *MockUtilsInterface) ListNodes() ([]v10.Node, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNodes")
+	ret0, _ := ret[0].([]v10.Node)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListNodes indicates an expected call of ListNodes.
+func (mr *MockUtilsInterfaceMockRecorder) ListNodes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodes", reflect.TypeOf((*MockUtilsInterface)(nil).ListNodes))
+}
+
 // CreateNamespace mocks base method.
 func (m *MockUtilsInterface) CreateNamespace(namespace string) error {
 	m.ctrl.T.Helper()

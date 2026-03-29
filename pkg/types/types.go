@@ -3,7 +3,6 @@ package types
 import (
 	"bytes"
 	"cmp"
-	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -18,8 +17,8 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
-	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	"github.com/openshift-kni/commatrix/pkg/consts"
@@ -491,16 +490,54 @@ func GetNodeRole(node *corev1.Node) (string, error) {
 	return "", fmt.Errorf("unable to determine role for node %s", node.Name)
 }
 
+// ApplyCustomNodeGroupOverrides reassigns nodes that match a label selector to a
+// custom group. Each key in customNodeGroups is a new group name, and the
+// corresponding value is an already-parsed Kubernetes label selector.
+// Nodes in nodeToGroup whose labels match the selector are moved to the new group.
+// Returns an error if a selector matches no nodes or if a node matches multiple selectors.
+func ApplyCustomNodeGroupOverrides(nodeToGroup map[string]string, customNodeGroups map[string]labels.Selector, nodes []corev1.Node) error {
+	if len(customNodeGroups) == 0 {
+		return nil
+	}
+
+	nodesByName := make(map[string]*corev1.Node, len(nodes))
+	for i := range nodes {
+		nodesByName[nodes[i].Name] = &nodes[i]
+	}
+
+	matchedBy := make(map[string]string)
+
+	for customGroup, selector := range customNodeGroups {
+		prevLen := len(matchedBy)
+		for nodeName := range nodeToGroup {
+			node, ok := nodesByName[nodeName]
+			if !ok {
+				continue
+			}
+			if !selector.Matches(labels.Set(node.Labels)) {
+				continue
+			}
+			if prev, alreadyMatched := matchedBy[nodeName]; alreadyMatched {
+				return fmt.Errorf("node %q matches selectors for multiple custom groups: %q and %q", nodeName, prev, customGroup)
+			}
+			matchedBy[nodeName] = customGroup
+			nodeToGroup[nodeName] = customGroup
+		}
+
+		if len(matchedBy) == prevLen {
+			return fmt.Errorf("custom node group %q with selector %q matched no nodes in the cluster", customGroup, selector)
+		}
+	}
+
+	return nil
+}
+
 // BuildNodeToGroupMap builds a node->group map for clusters without MCP:
 // - Prefer HyperShift NodePool label when present.
 // - Otherwise fall back to Kubernetes node role derived from labels.
-func BuildNodeToGroupMap(c rtclient.Client) (map[string]string, error) {
-	nodeList := &corev1.NodeList{}
-	if err := c.List(context.TODO(), nodeList); err != nil {
-		return nil, err
-	}
-	nodeToGroup := make(map[string]string, len(nodeList.Items))
-	for _, node := range nodeList.Items {
+func BuildNodeToGroupMap(nodes []corev1.Node) (map[string]string, error) {
+	nodeToGroup := make(map[string]string, len(nodes))
+	for _, node := range nodes {
 		if np, ok := node.Labels["hypershift.openshift.io/nodePool"]; ok && np != "" {
 			nodeToGroup[node.Name] = np
 			continue

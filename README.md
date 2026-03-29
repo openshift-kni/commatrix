@@ -38,6 +38,20 @@ CUSTOM_ENTRIES_PATH (path to the file containing custom entries to add to the ma
 CUSTOM_ENTRIES_FORMAT (the format of the custom entries file (json,yaml,csv))
 ```
 
+### Custom Node Groups
+
+In some clusters, a subset of worker nodes may run additional services (e.g., ingress controllers, storage agents) that require separate firewall configurations. By default, all nodes in the same MachineConfigPool share a single set of firewall rules. Custom node groups let you split selected nodes into a separate group so they get their own Butane/MachineConfig CR with the correct ports.
+
+Nodes are selected using standard [Kubernetes label selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors), consistent with how MachineConfigPools select nodes. The flag format is `groupName=labelSelector`, and it is repeatable for multiple groups.
+
+Custom node groups affect all output formats: in CSV/JSON/YAML the `nodeGroup` field reflects the custom group name; in NFT/Butane/MC a separate file is generated per group. Static entries (SSH, kubelet, node-exporter, etc.) are automatically included in the custom group based on the original node role.
+
+Each node can only match the selector of one custom group. If a node's labels match selectors from multiple groups, an error is returned. A selector that matches no nodes also returns an error, to catch typos early. When the flag is omitted, behavior is unchanged.
+
+**Important (Butane/MC formats):** The generated Butane/MachineConfig CRs for custom groups can only be applied if the nodes are already placed in a matching MachineConfigPool. You must create the custom MCP first, then apply the generated CR. For NFT/CSV/JSON/YAML formats, the output can be used directly without this prerequisite.
+
+For CLI usage examples, see the [oc commatrix plugin documentation](cmd/README.md).
+
 The generated artifcats are:
 ```
 communication-matrix - The generated communication matrix.
@@ -57,7 +71,8 @@ service        EndpointSlice owner Service name
 pod            EndpointSlice target Pod name
 container      Port owner Container name
 nodeGroup      Resolved node group. Resolution logic:
-               - If MCP API available: nodeGroup = pool name parsed from node annotation
+               - If --custom-node-group label selector matches the node: nodeGroup = that group name
+               - Else if MCP API available: nodeGroup = pool name parsed from node annotation
                  machineconfiguration.openshift.io/currentConfig (e.g., master, worker, custom-ws)
                - Else if label hypershift.openshift.io/nodePool present: nodeGroup = that label value
                - Else: nodeGroup = node role (e.g., master, worker)

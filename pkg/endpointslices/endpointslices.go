@@ -48,18 +48,26 @@ func (e *NoOwnerRefErr) Error() string {
 	return fmt.Sprintf("empty OwnerReferences in EndpointSlice %s/%s. skipping", e.namespace, e.name)
 }
 
-func New(cs *client.ClientSet) (*EndpointSlicesExporter, error) {
-	// Try MCP-based resolution first
-	if nodeToPool, err := mcp.ResolveNodeToPool(cs); err == nil {
-		return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToPool, sliceInfo: []EndpointSlicesInfo{}}, nil
+func New(cs *client.ClientSet, customNodeGroups map[string]labels.Selector) (*EndpointSlicesExporter, error) {
+	nodeList := &corev1.NodeList{}
+	if err := cs.List(context.TODO(), nodeList); err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	nodes := nodeList.Items
+
+	nodeToPool, err := mcp.ResolveNodeToPool(nodes)
+	if err != nil {
+		// Fallback: build node->group map (HyperShift or clusters without MCP): prefer NodePool label, else role
+		if nodeToPool, err = types.BuildNodeToGroupMap(nodes); err != nil {
+			return nil, err
+		}
 	}
 
-	// Fallback: build node->group map (HyperShift or clusters without MCP): prefer NodePool label, else role
-	nodeToGroup, err := types.BuildNodeToGroupMap(cs)
-	if err != nil {
+	if err := types.ApplyCustomNodeGroupOverrides(nodeToPool, customNodeGroups, nodes); err != nil {
 		return nil, err
 	}
-	return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToGroup, sliceInfo: []EndpointSlicesInfo{}}, nil
+
+	return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToPool, sliceInfo: []EndpointSlicesInfo{}}, nil
 }
 
 // load endpoint slices for services from type loadbalancer and node port,

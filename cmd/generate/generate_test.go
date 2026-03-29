@@ -20,14 +20,24 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 
 	configv1 "github.com/openshift/api/config/v1"
 	fakek "k8s.io/client-go/kubernetes/fake"
 
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func mustParseLabels(s string) labels.Selector {
+	l, err := labels.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return l
+}
 
 var (
 	destDir = "communication-matrix-test"
@@ -163,8 +173,8 @@ var (
 		Ports: []discoveryv1.EndpointPort{
 			{
 				Name:     nil,
-				Port:     func(i int32) *int32 { return &i }(80),
-				Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+				Port:     ptr.To(int32(80)),
+				Protocol: ptr.To(corev1.ProtocolTCP),
 			},
 		},
 	}
@@ -303,6 +313,281 @@ func TestCommatrixGeneration(t *testing.T) {
 	ctrlTest.Finish()
 }
 
+func TestParseCustomNodeGroups(t *testing.T) {
+	testCases := []struct {
+		name     string
+		raw      []string
+		expected map[string]labels.Selector
+		wantErr  string
+	}{
+		{
+			name:     "nil input returns nil",
+			raw:      nil,
+			expected: nil,
+		},
+		{
+			name:     "empty input returns nil",
+			raw:      []string{},
+			expected: nil,
+		},
+		{
+			name: "single group with label existence selector",
+			raw:  []string{"mc-special=node-role.kubernetes.io/special"},
+			expected: map[string]labels.Selector{
+				"mc-special": mustParseLabels("node-role.kubernetes.io/special"),
+			},
+		},
+		{
+			name: "single group with equality selector",
+			raw:  []string{"mc-ingress=node-role.kubernetes.io/ingress=true"},
+			expected: map[string]labels.Selector{
+				"mc-ingress": mustParseLabels("node-role.kubernetes.io/ingress=true"),
+			},
+		},
+		{
+			name: "multiple groups via repeated flag",
+			raw:  []string{"mc-ingress=node-role.kubernetes.io/ingress", "mc-storage=node-role.kubernetes.io/storage"},
+			expected: map[string]labels.Selector{
+				"mc-ingress": mustParseLabels("node-role.kubernetes.io/ingress"),
+				"mc-storage": mustParseLabels("node-role.kubernetes.io/storage"),
+			},
+		},
+		{
+			name:    "missing equals sign",
+			raw:     []string{"mc-special"},
+			wantErr: "expected format groupName=labelSelector",
+		},
+		{
+			name:    "empty group name",
+			raw:     []string{"=node-role.kubernetes.io/ingress"},
+			wantErr: "expected format groupName=labelSelector",
+		},
+		{
+			name:    "empty selector",
+			raw:     []string{"mc-special="},
+			wantErr: "expected format groupName=labelSelector",
+		},
+		{
+			name:    "duplicate group name",
+			raw:     []string{"mc-ingress=node-role.kubernetes.io/ingress", "mc-ingress=node-role.kubernetes.io/storage"},
+			wantErr: "duplicate --custom-node-group group name",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseCustomNodeGroups(tt.raw)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErr)
+			} else {
+				require.NoError(t, err)
+				if tt.expected == nil {
+					assert.Nil(t, result)
+				} else {
+					require.Equal(t, len(tt.expected), len(result))
+					for k, expectedSel := range tt.expected {
+						assert.Equal(t, expectedSel.String(), result[k].String())
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestSpecialNodesButaneOutput(t *testing.T) {
+	sch := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(sch))
+	require.NoError(t, discoveryv1.AddToScheme(sch))
+	require.NoError(t, configv1.AddToScheme(sch))
+	require.NoError(t, machineconfigurationv1.AddToScheme(sch))
+
+	masterNode := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "master-1",
+			Annotations: map[string]string{"machineconfiguration.openshift.io/currentConfig": "rendered-master-abc"},
+			Labels:      map[string]string{"node-role.kubernetes.io/master": ""},
+		},
+	}
+	workerNode1 := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "worker-1",
+			Annotations: map[string]string{"machineconfiguration.openshift.io/currentConfig": "rendered-worker-def"},
+			Labels:      map[string]string{"node-role.kubernetes.io/worker": ""},
+		},
+	}
+	workerNode2 := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "worker-2",
+			Annotations: map[string]string{"machineconfiguration.openshift.io/currentConfig": "rendered-worker-ghi"},
+			Labels: map[string]string{
+				"node-role.kubernetes.io/worker": "",
+				"custom-group":                   "mc-special",
+			},
+		},
+	}
+
+	// Service running on BOTH workers (port 8080)
+	commonPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "common-pod", Namespace: "ns1",
+			Labels:          map[string]string{"app": "common"},
+			OwnerReferences: []metav1.OwnerReference{{Kind: "DaemonSet", Name: "common-ds"}},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name: "common-ctr", Image: "img",
+				Ports: []corev1.ContainerPort{{ContainerPort: 8080}},
+			}},
+		},
+	}
+	commonSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "common-svc", Namespace: "ns1"},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{"app": "common"},
+			Ports:    []corev1.ServicePort{{Port: 8080, Protocol: corev1.ProtocolTCP}},
+			Type:     corev1.ServiceTypeNodePort,
+		},
+	}
+	commonEPS := &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "common-svc-eps", Namespace: "ns1",
+			Labels:          map[string]string{"kubernetes.io/service-name": "common-svc"},
+			OwnerReferences: []metav1.OwnerReference{{Kind: "Service", Name: "common-svc"}},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{NodeName: &workerNode1.Name, Addresses: []string{"10.0.0.1"}},
+			{NodeName: &workerNode2.Name, Addresses: []string{"10.0.0.2"}},
+		},
+		Ports: []discoveryv1.EndpointPort{{
+			Port:     ptr.To(int32(8080)),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}},
+	}
+
+	// Service running ONLY on worker-2 (port 443)
+	specialPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ingress-pod", Namespace: "ns2",
+			Labels:          map[string]string{"app": "ingress"},
+			OwnerReferences: []metav1.OwnerReference{{Kind: "DaemonSet", Name: "ingress-ds"}},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{
+				Name: "ingress-ctr", Image: "img",
+				Ports: []corev1.ContainerPort{{ContainerPort: 443}},
+			}},
+		},
+	}
+	specialSvc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "ingress-svc", Namespace: "ns2"},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{"app": "ingress"},
+			Ports:    []corev1.ServicePort{{Port: 443, Protocol: corev1.ProtocolTCP}},
+			Type:     corev1.ServiceTypeNodePort,
+		},
+	}
+	specialEPS := &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "ingress-svc-eps", Namespace: "ns2",
+			Labels:          map[string]string{"kubernetes.io/service-name": "ingress-svc"},
+			OwnerReferences: []metav1.OwnerReference{{Kind: "Service", Name: "ingress-svc"}},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{NodeName: &workerNode2.Name, Addresses: []string{"10.0.0.2"}},
+		},
+		Ports: []discoveryv1.EndpointPort{{
+			Port:     ptr.To(int32(443)),
+			Protocol: ptr.To(corev1.ProtocolTCP),
+		}},
+	}
+
+	fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(
+		infra, network, mcpMaster, mcpWorker,
+		masterNode, workerNode1, workerNode2,
+		commonPod, commonSvc, commonEPS,
+		specialPod, specialSvc, specialEPS,
+	).Build()
+	fakeClientset := fakek.NewSimpleClientset(masterNode, workerNode1, workerNode2)
+
+	cs := &client.ClientSet{Client: fakeClient, CoreV1Interface: fakeClientset.CoreV1()}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
+	mockUtils.EXPECT().ListNodes().Return([]corev1.Node{*masterNode, *workerNode1, *workerNode2}, nil).AnyTimes()
+	mockUtils.EXPECT().GetControlPlaneTopology().Return(configv1.HighlyAvailableTopologyMode, nil).AnyTimes()
+	mockUtils.EXPECT().GetPlatformType().Return(configv1.AWSPlatformType, nil).AnyTimes()
+	mockUtils.EXPECT().IsIPv6Enabled().Return(false, nil).AnyTimes()
+	mockUtils.EXPECT().GetClusterVersion().Return("4.17", nil).AnyTimes()
+
+	mockPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "debug-pod", Namespace: consts.DefaultDebugNamespace},
+		Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+	}
+	mockUtils.EXPECT().CreateNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
+	mockUtils.EXPECT().DeleteNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
+	mockUtils.EXPECT().CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, gomock.Any(), gomock.Any()).Return(mockPod, nil).AnyTimes()
+	mockUtils.EXPECT().DeletePod(mockPod).Return(nil).AnyTimes()
+	mockUtils.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, mockPod, corev1.PodRunning).Return(nil).AnyTimes()
+	mockUtils.EXPECT().RunCommandOnPod(mockPod, gomock.Any()).Return([]byte("32768 60999\n"), nil).AnyTimes()
+
+	writtenFiles := map[string][]byte{}
+	mockUtils.EXPECT().WriteFile(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(path string, data []byte) error {
+			writtenFiles[filepath.Base(path)] = data
+			return nil
+		},
+	).AnyTimes()
+
+	dir := t.TempDir()
+	opts := &GenerateOptions{
+		destDir:          dir,
+		format:           "butane",
+		cs:               cs,
+		utilsHelpers:     mockUtils,
+		customNodeGroups: map[string]labels.Selector{"mc-special": mustParseLabels("custom-group=mc-special")},
+	}
+
+	err := Run(opts)
+	require.NoError(t, err)
+
+	// Should produce 3 butane files + node disruption policy
+	_, hasMaster := writtenFiles["butane-master.yaml"]
+	assert.True(t, hasMaster, "expected butane-master.yaml to be written")
+
+	// worker group (worker-1 only): has port 8080, does NOT have 443
+	workerContent, ok := writtenFiles["butane-worker.yaml"]
+	require.True(t, ok, "expected butane-worker.yaml to be written")
+	assert.Contains(t, string(workerContent), "8080",
+		"worker butane should contain port 8080 (common service)")
+	assert.NotContains(t, string(workerContent), "443",
+		"worker butane should NOT contain port 443 (only on special node)")
+	assert.Contains(t, string(workerContent), "machineconfiguration.openshift.io/role: worker")
+	// Static entries should be present
+	assert.Contains(t, string(workerContent), "22",
+		"worker butane should contain static SSH port 22")
+
+	// mc-special group (worker-2 only): has BOTH 8080 and 443
+	specialContent, ok := writtenFiles["butane-mc-special.yaml"]
+	require.True(t, ok, "expected butane-mc-special.yaml to be written")
+	assert.Contains(t, string(specialContent), "8080",
+		"mc-special butane should contain port 8080 (common service)")
+	assert.Contains(t, string(specialContent), "443",
+		"mc-special butane should contain port 443 (special service)")
+	assert.Contains(t, string(specialContent), "machineconfiguration.openshift.io/role: mc-special")
+	// Static entries should be present
+	assert.Contains(t, string(specialContent), "22",
+		"mc-special butane should contain static SSH port 22")
+
+	// Node disruption policy
+	_, ok = writtenFiles["node-disruption-policy.yaml"]
+	assert.True(t, ok, "expected node-disruption-policy.yaml to be written")
+}
+
 func TestValidateAcceptsButaneAndMCFormats(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -351,6 +636,7 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
+	mockUtils.EXPECT().ListNodes().Return([]corev1.Node{*testNode, *testNodeWorker}, nil).AnyTimes()
 	mockUtils.EXPECT().GetControlPlaneTopology().Return(configv1.HighlyAvailableTopologyMode, nil).AnyTimes()
 	mockUtils.EXPECT().GetPlatformType().Return(configv1.AWSPlatformType, nil).AnyTimes()
 	mockUtils.EXPECT().IsIPv6Enabled().Return(false, nil).AnyTimes()

@@ -1,16 +1,13 @@
 package mcp
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/openshift-kni/commatrix/pkg/client"
 	"github.com/openshift-kni/commatrix/pkg/consts"
-	rtclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ResolveNodeToPool builds a mapping from node name to its MachineConfigPool.
@@ -18,15 +15,9 @@ import (
 // expected in the form: "rendered-<pool>-<hash>". The pool name is obtained by removing the
 // "rendered-" prefix and trimming the trailing "-<hash>".
 // Returns an error if the annotation is missing or malformed.
-func ResolveNodeToPool(cs *client.ClientSet) (map[string]string, error) {
-	// List nodes
-	nodes := &corev1.NodeList{}
-	if err := cs.List(context.TODO(), nodes, &rtclient.ListOptions{}); err != nil {
-		return nil, err
-	}
-
-	nodeToPool := make(map[string]string, len(nodes.Items))
-	for _, node := range nodes.Items {
+func ResolveNodeToPool(nodes []corev1.Node) (map[string]string, error) {
+	nodeToPool := make(map[string]string, len(nodes))
+	for _, node := range nodes {
 		current, exist := node.GetAnnotations()["machineconfiguration.openshift.io/currentConfig"]
 		if !exist {
 			return nil, fmt.Errorf("node %s missing annotation machineconfiguration.openshift.io/currentConfig", node.Name)
@@ -55,15 +46,9 @@ func poolNameFromRenderedConfig(currentConfig string) (string, bool) {
 
 // GetPoolRolesForStaticEntriesExpansion derives, per pool, which of [master, worker]
 // Are present on its nodes; used to expand role-scoped static entries across pools.
-func GetPoolRolesForStaticEntriesExpansion(cs *client.ClientSet, nodeToPool map[string]string) (map[string][]string, error) {
-	// List nodes to inspect their labels
-	nodes := &corev1.NodeList{}
-	if err := cs.List(context.TODO(), nodes, &rtclient.ListOptions{}); err != nil {
-		return nil, err
-	}
-
+func GetPoolRolesForStaticEntriesExpansion(nodes []corev1.Node, nodeToPool map[string]string) (map[string][]string, error) {
 	observedRoles := make(map[string][]string)
-	for _, node := range nodes.Items {
+	for _, node := range nodes {
 		_, hasmaster := node.Labels[consts.RoleLabel+"master"]
 		_, hascontrolplane := node.Labels[consts.RoleLabel+"control-plane"]
 		_, hasworker := node.Labels[consts.RoleLabel+"worker"]
