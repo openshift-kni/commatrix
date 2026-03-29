@@ -214,7 +214,19 @@ func Run(o *GenerateOptions) (err error) {
 		return fmt.Errorf("failed to detect IPv6: %v", err)
 	}
 
-	matrix, err := generateMatrix(o, controlPlaneTopology, platformType, ipv6Enabled)
+	// DHCP is only supported on BareMetal and None platforms
+	var dhcpEnabled bool
+	if platformType == configv1.BareMetalPlatformType || platformType == configv1.NonePlatformType {
+		dhcpEnabled, err = o.utilsHelpers.IsDHCPEnabled()
+		if err != nil {
+			return fmt.Errorf("failed to detect DHCP: %v", err)
+		}
+		if dhcpEnabled {
+			log.Debug("DHCP enabled")
+		}
+	}
+
+	matrix, err := generateMatrix(o, controlPlaneTopology, platformType, ipv6Enabled, dhcpEnabled)
 	if err != nil {
 		return fmt.Errorf("failed to generate endpoint slice matrix: %v", err)
 	}
@@ -243,7 +255,7 @@ func Run(o *GenerateOptions) (err error) {
 	return nil
 }
 
-func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMode, platformType configv1.PlatformType, ipv6Enabled bool) (*types.ComMatrix, error) {
+func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMode, platformType configv1.PlatformType, ipv6Enabled bool, dhcpEnabled bool) (*types.ComMatrix, error) {
 	if o.debug {
 		log.SetLevel(log.DebugLevel)
 	}
@@ -254,7 +266,26 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 	}
 
 	log.Debug("Creating communication matrix")
-	commMatrix, err := commatrixcreator.New(epExporter, o.customEntriesPath, o.customEntriesFormat, platformType, controlPlaneTopology, ipv6Enabled, o.utilsHelpers)
+	opts := []commatrixcreator.Option{
+		commatrixcreator.WithExporter(epExporter),
+		commatrixcreator.WithUtilsHelpers(o.utilsHelpers),
+	}
+	if o.customEntriesPath != "" {
+		opts = append(opts,
+			commatrixcreator.WithCustomEntries(
+				o.customEntriesPath, o.customEntriesFormat,
+			),
+		)
+	}
+	if ipv6Enabled {
+		opts = append(opts, commatrixcreator.WithIPv6())
+	}
+	if dhcpEnabled {
+		opts = append(opts, commatrixcreator.WithDHCP())
+	}
+	commMatrix, err := commatrixcreator.New(
+		platformType, controlPlaneTopology, opts...,
+	)
 	if err != nil {
 		return nil, err
 	}

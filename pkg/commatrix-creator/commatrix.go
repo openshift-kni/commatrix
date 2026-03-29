@@ -24,19 +24,58 @@ type CommunicationMatrixCreator struct {
 	platformType         configv1.PlatformType
 	controlPlaneTopology configv1.TopologyMode
 	ipv6Enabled          bool
+	dhcpEnabled          bool
 	utilsHelpers         utils.UtilsInterface
 }
 
-func New(exporter *endpointslices.EndpointSlicesExporter, customEntriesPath string, customEntriesFormat string, platformType configv1.PlatformType, controlPlaneTopology configv1.TopologyMode, ipv6Enabled bool, utilsHelpers utils.UtilsInterface) (*CommunicationMatrixCreator, error) {
-	return &CommunicationMatrixCreator{
-		exporter:             exporter,
-		customEntriesPath:    customEntriesPath,
-		customEntriesFormat:  customEntriesFormat,
+type Option func(*CommunicationMatrixCreator)
+
+func WithExporter(
+	e *endpointslices.EndpointSlicesExporter,
+) Option {
+	return func(c *CommunicationMatrixCreator) {
+		c.exporter = e
+	}
+}
+
+func WithCustomEntries(path, format string) Option {
+	return func(c *CommunicationMatrixCreator) {
+		c.customEntriesPath = path
+		c.customEntriesFormat = format
+	}
+}
+
+func WithIPv6() Option {
+	return func(c *CommunicationMatrixCreator) {
+		c.ipv6Enabled = true
+	}
+}
+
+func WithDHCP() Option {
+	return func(c *CommunicationMatrixCreator) {
+		c.dhcpEnabled = true
+	}
+}
+
+func WithUtilsHelpers(u utils.UtilsInterface) Option {
+	return func(c *CommunicationMatrixCreator) {
+		c.utilsHelpers = u
+	}
+}
+
+func New(
+	platformType configv1.PlatformType,
+	topology configv1.TopologyMode,
+	opts ...Option,
+) (*CommunicationMatrixCreator, error) {
+	cm := &CommunicationMatrixCreator{
 		platformType:         platformType,
-		controlPlaneTopology: controlPlaneTopology,
-		ipv6Enabled:          ipv6Enabled,
-		utilsHelpers:         utilsHelpers,
-	}, nil
+		controlPlaneTopology: topology,
+	}
+	for _, o := range opts {
+		o(cm)
+	}
+	return cm, nil
 }
 
 // CreateEndpointMatrix initializes a ComMatrix using Kubernetes cluster data.
@@ -140,10 +179,15 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 			break
 		}
 		comDetails = append(comDetails, types.BaremetalStaticEntriesWorker...)
+	case configv1.NonePlatformType:
+		log.Debug("Adding None Platform Type static entries")
+		comDetails = append(comDetails, types.NoneStaticEntriesMaster...)
+		if cm.controlPlaneTopology == configv1.SingleReplicaTopologyMode {
+			break
+		}
+		comDetails = append(comDetails, types.NoneStaticEntriesWorker...)
 	case configv1.AWSPlatformType:
 		log.Debug("There are no Cloud static entries to be added")
-	case configv1.NonePlatformType:
-		break
 	default:
 		log.Errorf("Invalid value for cluster environment: %v", cm.platformType)
 		return nil, fmt.Errorf("invalid value for cluster environment")
@@ -154,6 +198,9 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 	if cm.ipv6Enabled {
 		comDetails = append(comDetails, types.GeneralIPv6StaticEntriesMaster...)
 	}
+	if cm.dhcpEnabled {
+		comDetails = append(comDetails, types.GeneralDHCPStaticEntriesMaster...)
+	}
 	if cm.controlPlaneTopology == configv1.SingleReplicaTopologyMode {
 		return comDetails, nil
 	}
@@ -162,6 +209,9 @@ func (cm *CommunicationMatrixCreator) GetStaticEntries() ([]types.ComDetails, er
 	comDetails = append(comDetails, types.GeneralStaticEntriesWorker...)
 	if cm.ipv6Enabled {
 		comDetails = append(comDetails, types.GeneralIPv6StaticEntriesWorker...)
+	}
+	if cm.dhcpEnabled {
+		comDetails = append(comDetails, types.GeneralDHCPStaticEntriesWorker...)
 	}
 	log.Debug("Successfully determined static entries")
 	return comDetails, nil

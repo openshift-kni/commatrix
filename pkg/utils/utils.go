@@ -37,6 +37,7 @@ type UtilsInterface interface {
 	GetControlPlaneTopology() (configv1.TopologyMode, error)
 	WaitForPodStatus(namespace string, pod *corev1.Pod, PodPhase corev1.PodPhase) error
 	IsIPv6Enabled() (bool, error)
+	IsDHCPEnabled() (bool, error)
 }
 
 type utils struct {
@@ -344,6 +345,69 @@ func (u *utils) IsIPv6Enabled() (bool, error) {
 	// Check ClusterNetwork CIDRs
 	for _, entry := range network.Spec.ClusterNetwork {
 		if strings.Contains(entry.CIDR, ":") {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// IsDHCPEnabled detects whether any active network connection on any node
+// uses DHCP (ipv4.method=auto) by running nmcli via debug pods.
+func (u *utils) IsDHCPEnabled() (bool, error) {
+	nodes, err := u.CoreV1Interface.Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return false, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	if len(nodes.Items) == 0 {
+		return false, fmt.Errorf("no nodes found in the cluster")
+	}
+
+	if err := u.CreateNamespace(consts.DefaultDebugNamespace); err != nil {
+		return false, fmt.Errorf("failed to create debug namespace: %w", err)
+	}
+	defer func() {
+		if delErr := u.DeleteNamespace(consts.DefaultDebugNamespace); delErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to delete namespace %s: %v\n", consts.DefaultDebugNamespace, delErr)
+		}
+	}()
+
+	for _, node := range nodes.Items {
+		dhcp, err := u.isDHCPEnabledOnNode(node.Name)
+		if err != nil {
+			return false, fmt.Errorf("failed to check DHCP on node %s: %w", node.Name, err)
+		}
+		if dhcp {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (u *utils) isDHCPEnabledOnNode(nodeName string) (bool, error) {
+	pod, err := u.CreatePodOnNode(nodeName, consts.DefaultDebugNamespace, consts.DefaultDebugPodImage, []string{})
+	if err != nil {
+		return false, fmt.Errorf("failed to create debug pod: %w", err)
+	}
+	defer func() {
+		if delErr := u.DeletePod(pod); delErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to delete debug pod %s: %v\n", pod.Name, delErr)
+		}
+	}()
+
+	if err := u.WaitForPodStatus(consts.DefaultDebugNamespace, pod, corev1.PodRunning); err != nil {
+		return false, fmt.Errorf("debug pod did not reach Running state: %w", err)
+	}
+
+	out, err := u.RunCommandOnPod(pod, []string{"/bin/sh", "-c",
+		"chroot /host nmcli -t -f NAME connection show --active | while IFS= read -r conn; do chroot /host nmcli -g ipv4.method connection show \"$conn\"; done"})
+	if err != nil {
+		return false, fmt.Errorf("failed to query nmcli for DHCP status: %w", err)
+	}
+
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if strings.TrimSpace(line) == "auto" {
 			return true, nil
 		}
 	}
