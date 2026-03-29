@@ -195,7 +195,9 @@ var (
 )
 
 func TestCommatrixGeneration(t *testing.T) {
-	expectedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster, types.GeneralStaticEntriesWorker, types.StandardStaticEntries)
+	staticEntries, err := types.GetStaticEntries(configv1.AWSPlatformType, configv1.HighlyAvailableTopologyMode, false, false)
+	require.NoError(t, err)
+	expectedComDetails := slices.Concat(testEpsComDetails, staticEntries)
 
 	expectedComMatrix := types.ComMatrix{Ports: expectedComDetails}
 	expectedComMatrix.SortAndRemoveDuplicates()
@@ -242,7 +244,7 @@ func TestCommatrixGeneration(t *testing.T) {
 	sch := runtime.NewScheme()
 	t.Helper()
 
-	err := corev1.AddToScheme(sch)
+	err = corev1.AddToScheme(sch)
 	require.NoError(t, err)
 
 	err = discoveryv1.AddToScheme(sch)

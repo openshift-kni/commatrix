@@ -1,5 +1,11 @@
 package types
 
+import (
+	"fmt"
+
+	configv1 "github.com/openshift/api/config/v1"
+)
+
 var GeneralStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
@@ -392,4 +398,49 @@ var LinuxDynamicPrivateDefaultDynamicRange = DynamicRangeList{
 		Description: "Linux dynamic/private ports",
 		Optional:    true,
 	},
+}
+
+// GetStaticEntries returns the static entries for the given platform, topology,
+// IPv6 and DHCP configuration.
+func GetStaticEntries(platformType configv1.PlatformType, topology configv1.TopologyMode, ipv6Enabled, dhcpEnabled bool) ([]ComDetails, error) {
+	var comDetails []ComDetails
+
+	switch platformType {
+	case configv1.BareMetalPlatformType:
+		comDetails = append(comDetails, BaremetalStaticEntriesMaster...)
+		if topology != configv1.SingleReplicaTopologyMode {
+			comDetails = append(comDetails, BaremetalStaticEntriesWorker...)
+		}
+	case configv1.NonePlatformType:
+		comDetails = append(comDetails, NoneStaticEntriesMaster...)
+		if topology != configv1.SingleReplicaTopologyMode {
+			comDetails = append(comDetails, NoneStaticEntriesWorker...)
+		}
+	case configv1.AWSPlatformType:
+		// No cloud-specific static entries
+	default:
+		return nil, fmt.Errorf("invalid value for cluster environment: %v", platformType)
+	}
+
+	comDetails = append(comDetails, GeneralStaticEntriesMaster...)
+	if ipv6Enabled {
+		comDetails = append(comDetails, GeneralIPv6StaticEntriesMaster...)
+	}
+	if dhcpEnabled {
+		comDetails = append(comDetails, GeneralDHCPStaticEntriesMaster...)
+	}
+	if topology == configv1.SingleReplicaTopologyMode {
+		return comDetails, nil
+	}
+
+	comDetails = append(comDetails, StandardStaticEntries...)
+	comDetails = append(comDetails, GeneralStaticEntriesWorker...)
+	if ipv6Enabled {
+		comDetails = append(comDetails, GeneralIPv6StaticEntriesWorker...)
+	}
+	if dhcpEnabled {
+		comDetails = append(comDetails, GeneralDHCPStaticEntriesWorker...)
+	}
+
+	return comDetails, nil
 }

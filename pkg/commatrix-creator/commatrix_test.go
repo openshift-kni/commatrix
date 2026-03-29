@@ -376,7 +376,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 		})
 	})
 
-	g.Context("Get static entries from file", func() {
+	g.Context("Get static entries", func() {
 		g.It("Should successfully get static entries suitable to baremetal standard cluster", func() {
 			g.By("Creating new communication matrix suitable to baremetal standard cluster")
 			cm := New(
@@ -385,7 +385,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			)
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.GetStaticEntries()
+			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -402,7 +402,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			)
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.GetStaticEntries()
+			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -418,7 +418,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			)
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.GetStaticEntries()
+			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -435,7 +435,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			)
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.GetStaticEntries()
+			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -452,7 +452,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			)
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.GetStaticEntries()
+			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -471,7 +471,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			)
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.GetStaticEntries()
+			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to wanted comDetails")
@@ -488,13 +488,12 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			)
 
 			g.By("Getting static entries comDetails of the created communication matrix")
-			gotComDetails, err := cm.GetStaticEntries()
+			gotComDetails, err := cm.getStaticEntries()
 			o.Expect(err).To(o.HaveOccurred())
 
 			g.By("Comparing gotten static entries to empty comDetails")
 			o.Expect(gotComDetails).To(o.Equal(nilComDetailsList))
 		})
-
 	})
 
 	g.Context("Create EndpointSlice Matrix", func() {
@@ -574,7 +573,9 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Generating wanted comDetails based on cluster features")
-			wantedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster)
+			staticEntries, err := types.GetStaticEntries(configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false, false)
+			o.Expect(err).ToNot(o.HaveOccurred())
+			wantedComDetails := slices.Concat(testEpsComDetails, staticEntries)
 
 			g.By("Add to wanted comDetails the example static entries")
 			wantedComDetails = slices.Concat(wantedComDetails, exampleComDetailsList)
@@ -602,7 +603,9 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Generating wanted comDetails")
-			wantedComDetails := slices.Concat(testEpsComDetails, types.GeneralStaticEntriesMaster)
+			staticEntries, err := types.GetStaticEntries(configv1.AWSPlatformType, configv1.SingleReplicaTopologyMode, false, false)
+			o.Expect(err).ToNot(o.HaveOccurred())
+			wantedComDetails := slices.Concat(testEpsComDetails, staticEntries)
 			wantedComMatrix := types.ComMatrix{Ports: wantedComDetails}
 			wantedComMatrix.SortAndRemoveDuplicates()
 
@@ -627,13 +630,9 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			o.Expect(err).ToNot(o.HaveOccurred())
 
 			g.By("Building expected details: eps + general master/worker + standard + ipv6 master/worker")
-			wanted := slices.Concat(testEpsComDetails,
-				types.StandardStaticEntries,
-				types.GeneralStaticEntriesMaster,
-				types.GeneralStaticEntriesWorker,
-				types.GeneralIPv6StaticEntriesMaster,
-				types.GeneralIPv6StaticEntriesWorker,
-			)
+			staticEntries, err := types.GetStaticEntries(configv1.AWSPlatformType, configv1.HighlyAvailableTopologyMode, true, false)
+			o.Expect(err).ToNot(o.HaveOccurred())
+			wanted := slices.Concat(testEpsComDetails, staticEntries)
 			wantedMatrix := types.ComMatrix{Ports: wanted}
 			wantedMatrix.SortAndRemoveDuplicates()
 

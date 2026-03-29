@@ -180,26 +180,12 @@ var _ = Describe("Validation", func() {
 		dhcpEnabled, err := utilsHelpers.IsDHCPEnabled()
 		Expect(err).ToNot(HaveOccurred(), "Failed to get DHCP enabled status")
 
-		By("Creating communication matrix creator to get static entries")
+		By("Creating exporter for pool roles expansion")
 		exporter, err := endpointslices.New(cs, nil)
 		Expect(err).ToNot(HaveOccurred(), "Failed to create endpointslices exporter")
 
-		opts := []commatrixcreator.Option{
-			commatrixcreator.WithExporter(exporter),
-			commatrixcreator.WithUtilsHelpers(utilsHelpers),
-		}
-		if ipv6Enabled {
-			opts = append(opts, commatrixcreator.WithIPv6())
-		}
-		if dhcpEnabled {
-			opts = append(opts, commatrixcreator.WithDHCP())
-		}
-		cm := commatrixcreator.New(
-			platformType, controlPlaneTopology, opts...,
-		)
-
 		By("Getting static entries suitable to the cluster")
-		staticEntries, err := cm.GetStaticEntries()
+		staticEntries, err := types.GetStaticEntries(platformType, controlPlaneTopology, ipv6Enabled, dhcpEnabled)
 		Expect(err).ToNot(HaveOccurred(), "Failed to get static entries")
 
 		By("Expand static entries for all MCPs based on their roles")
