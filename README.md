@@ -61,6 +61,8 @@ raw-ss-tcp - The raw `ss` output for TCP.
 raw-ss-udp - The raw `ss` output for UDP.
 ```
 
+**Note:** The `ss-generated-matrix`, `matrix-diff-ss`, `raw-ss-tcp`, and `raw-ss-udp` artifacts are only generated for CSV, JSON, and YAML formats. For NFT, Butane, and MachineConfig formats, the ss results are merged into the communication matrix.
+
 Each record describes a flow with the following information:
 ```
 direction      Data flow direction (currently ingress only)
