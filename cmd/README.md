@@ -175,12 +175,12 @@ spec:
               serviceName: nftables.service
 ```
 
-`host-open-ports example command`
+`host-open-ports example command (csv/json/yaml)`
 ```sh
 $ oc commatrix generate --host-open-ports --format csv
 ```
 
-the command will generate the follwing paths:
+For CSV, JSON, and YAML formats, the command generates separate files:
 
 `communication-matrix path`
 
@@ -227,6 +227,16 @@ UNCONN 0      0      0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=3919,fd=5),("
 UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=2805,fd=5))
 UNCONN 0      0      127.0.0.1:708   0.0.0.0:* users:(("rpc.statd",pid=3922,fd=8))
 ```
+
+`host-open-ports with nft/butane/mc formats`
+
+For NFT, Butane, and MachineConfig formats, `--host-open-ports` merges both the EndpointSlice-based matrix and the listening-sockets (ss) matrix into a single output file, rather than generating separate diff and ss-matrix files. Overlapping or adjacent port ranges are squashed together. This produces a complete set of firewall rules covering all known ports.
+
+```sh
+$ oc commatrix generate --host-open-ports --format butane
+```
+
+Some ports on the node may be open without a corresponding Service or EndpointSlice. Using `--host-open-ports` with these formats merges the `ss`-discovered ports into the output, giving a complete picture of all ports open on the nodes at that moment. The same merged behavior applies to `--format nft` and `--format mc`.
 
 `customEntriesFormat and customEntriesPath example command`
 ```sh
