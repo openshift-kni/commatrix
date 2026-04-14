@@ -89,6 +89,10 @@ var _ = Describe("Nftables", func() {
 		for pool, nftablesConfig := range poolToNFTables {
 			By(fmt.Sprintf("Applying firewall on pool %s", pool))
 
+			mcp, err := cluster.GetMachineConfigPool(cs, pool)
+			Expect(err).ToNot(HaveOccurred())
+			previousRenderedMC := mcp.Status.Configuration.Name
+
 			machineConfig, err := firewall.CreateMachineConfig(cs, nftablesConfig, artifactsDir,
 				pool, utilsHelpers)
 			Expect(err).ToNot(HaveOccurred())
@@ -97,12 +101,7 @@ var _ = Describe("Nftables", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			if updated {
-				// wait to MCP to start the update.
-				cluster.WaitForMCPUpdateToStart(cs, pool)
-
-				// Wait for MCP update to be ready.
-				cluster.WaitForMCPReadyState(cs, pool)
-
+				cluster.WaitForMCPUpdate(cs, pool, previousRenderedMC)
 				log.Println("MCP update completed successfully.")
 			} else {
 				log.Println("No update needed. MCP update skipped.")
