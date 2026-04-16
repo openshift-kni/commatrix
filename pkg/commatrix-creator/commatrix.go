@@ -118,7 +118,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	staticEntries = ExpandStaticEntriesByPool(staticEntries, PoolRolesForStaticEntriesExpansion)
 	epSliceComDetails = append(epSliceComDetails, staticEntries...)
 
-	dynamicRanges, err := dynamicranges.GetDynamicRanges(cm.exporter, cm.utilsHelpers)
+	dynamicRanges, err := dynamicranges.GetDynamicRanges(cm.exporter)
 	if err != nil {
 		log.Errorf("Failed to get dynamic ranges: %v", err)
 		return nil, fmt.Errorf("failed to get dynamic ranges: %w", err)
