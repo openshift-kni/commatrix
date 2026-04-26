@@ -373,7 +373,7 @@ table inet openshift_filter {
         udp dport { %s } accept
 
         # Drop broadcast traffic with rate-limited logging
-        ip daddr 255.255.255.255 jump { limit rate 1/minute log prefix "firewall"; drop; }
+        ip daddr 255.255.255.255 jump { limit rate 1/minute log prefix "firewall "; drop; }
 
         # Rate-limited logging and default drop
         jump { limit rate 1/minute log prefix "firewall "; drop; }
