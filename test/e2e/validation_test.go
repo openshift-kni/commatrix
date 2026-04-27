@@ -151,6 +151,7 @@ var _ = Describe("Validation", func() {
 			logrus.Warningf("the following ports are not used: \n %s", notUsedEPSMat)
 		}
 
+		missingEPSMat = filterOutPortsOfKnownServices(missingEPSMat)
 		// Don't include in the missing EPS matrix ports that are in dynamic ranges of the generated commatrix.
 		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, commatrix.DynamicRanges)
 		if len(missingEPSMat.Ports) > 0 {
@@ -159,6 +160,26 @@ var _ = Describe("Validation", func() {
 		}
 	})
 })
+
+func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
+	res := []types.ComDetails{}
+	for _, cd := range mat.Ports {
+		// Skip "rpc.statd" ports, these are randomly open ports on the node
+		// no need to mention them in the matrix diff
+		if cd.Service == "rpc.statd" {
+			continue
+		}
+
+		// Skip dns ports used during provisioning for dhcp and tftp,
+		// not used for external traffic
+		if cd.Service == "dnsmasq" || cd.Service == "dig" {
+			continue
+		}
+
+		res = append(res, cd)
+	}
+	return &types.ComMatrix{Ports: res}
+}
 
 func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges []types.DynamicRange) *types.ComMatrix {
 	res := []types.ComDetails{}
