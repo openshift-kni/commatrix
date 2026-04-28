@@ -35,7 +35,7 @@ func NFTablesToMachineConfig(nftRules []byte, nodePool string, utilsHelpers util
 
 	machineConfig, _, err := butaneConfig.TranslateBytes(butaneCfg, common.TranslateBytesOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert Butane config to MachineConfig YAML: %v", err)
+		return nil, fmt.Errorf("failed to convert Butane config to MachineConfig YAML: %w", err)
 	}
 
 	return machineConfig, nil
@@ -50,7 +50,7 @@ func NFTablesToMachineConfig(nftRules []byte, nodePool string, utilsHelpers util
 func buildButaneConfig(nftablesRules, nodePool string, utilsHelpers utils.UtilsInterface) ([]byte, error) {
 	clusterVersion, err := utilsHelpers.GetClusterVersion()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cluster version for Butane spec: %v", err)
+		return nil, fmt.Errorf("failed to get cluster version for Butane spec: %w", err)
 	}
 	butaneVersion, err := resolveButaneVersion(clusterVersion)
 	if err != nil {
@@ -110,7 +110,7 @@ storage:
 func resolveButaneVersion(clusterVersion string) (string, error) {
 	cv, err := semver.NewVersion(clusterVersion)
 	if err != nil {
-		return "", fmt.Errorf("invalid cluster version %q: %v", clusterVersion, err)
+		return "", fmt.Errorf("invalid cluster version %q: %w", clusterVersion, err)
 	}
 	max, _ := semver.NewVersion(maxButaneVersion)
 	if cv.GreaterThan(max) {
