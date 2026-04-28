@@ -314,7 +314,7 @@ func (m *ComMatrix) writeMatrixToFile(utilsHelpers utils.UtilsInterface, fileNam
 func writeNodeDisruptionPolicyFile(utilsHelpers utils.UtilsInterface, destDir string) error {
 	patchPath := filepath.Join(destDir, consts.NodeDisruptionPolicyFileName)
 	if err := utilsHelpers.WriteFile(patchPath, []byte(firewall.NodeDisruptionPolicyPatch)); err != nil {
-		return fmt.Errorf("failed to write NodeDisruptionPolicy patch file: %v", err)
+		return fmt.Errorf("failed to write NodeDisruptionPolicy patch file: %w", err)
 	}
 	return nil
 }

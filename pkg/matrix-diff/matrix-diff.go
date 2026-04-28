@@ -55,7 +55,7 @@ func Generate(primary *types.ComMatrix, secondary *types.ComMatrix) MatrixDiff {
 func (m *MatrixDiff) String() (string, error) {
 	colNames, err := types.GetComMatrixHeadersByFormat(types.FormatCSV)
 	if err != nil {
-		return "", fmt.Errorf("error getting commatrix CSV tags: %v", err)
+		return "", fmt.Errorf("error getting commatrix CSV tags: %w", err)
 	}
 	diff := colNames + "\n"
 

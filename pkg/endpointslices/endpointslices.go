@@ -85,11 +85,11 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 		epl := &discoveryv1.EndpointSliceList{}
 		label, err := labels.Parse(fmt.Sprintf("kubernetes.io/service-name=%s", service.Name))
 		if err != nil {
-			return fmt.Errorf("failed to create selector for endpoint slice, %v", err)
+			return fmt.Errorf("failed to create selector for endpoint slice: %w", err)
 		}
 		err = ep.List(context.TODO(), epl, &rtclient.ListOptions{Namespace: service.Namespace, LabelSelector: label})
 		if err != nil {
-			return fmt.Errorf("failed to list endpoint slice, %v", err)
+			return fmt.Errorf("failed to list endpoint slice: %w", err)
 		}
 
 		if len(epl.Items) == 0 {
@@ -106,7 +106,7 @@ func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 		label = labels.SelectorFromSet(service.Spec.Selector)
 		err = ep.List(context.TODO(), pods, &rtclient.ListOptions{Namespace: service.Namespace, LabelSelector: label})
 		if err != nil {
-			return fmt.Errorf("failed to list pods, %v", err)
+			return fmt.Errorf("failed to list pods: %w", err)
 		}
 
 		// If there are no pods found for the service, skip.

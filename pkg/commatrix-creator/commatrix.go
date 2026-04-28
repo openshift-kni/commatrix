@@ -103,7 +103,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 	staticEntries, err := cm.getStaticEntries()
 	if err != nil {
 		log.Errorf("Failed adding static entries: %s", err)
-		return nil, fmt.Errorf("failed adding static entries: %s", err)
+		return nil, fmt.Errorf("failed adding static entries: %w", err)
 	}
 
 	// List of [master, worker] roles per pool for static entries expansion
@@ -129,7 +129,7 @@ func (cm *CommunicationMatrixCreator) CreateEndpointMatrix() (*types.ComMatrix, 
 		customMatrix, err := cm.GetComMatrixFromFile()
 		if err != nil {
 			log.Errorf("Failed adding custom entries: %s", err)
-			return nil, fmt.Errorf("failed adding custom entries: %s", err)
+			return nil, fmt.Errorf("failed adding custom entries: %w", err)
 		}
 		epSliceComDetails = append(epSliceComDetails, customMatrix.Ports...)
 		dynamicRanges = append(dynamicRanges, customMatrix.DynamicRanges...)
@@ -146,7 +146,7 @@ func (cm *CommunicationMatrixCreator) GetComMatrixFromFile() (*types.ComMatrix, 
 	f, err := os.Open(filepath.Clean(cm.customEntriesPath))
 	if err != nil {
 		log.Errorf("Failed to open file %s: %v", cm.customEntriesPath, err)
-		return nil, fmt.Errorf("failed to open file %s: %v", cm.customEntriesPath, err)
+		return nil, fmt.Errorf("failed to open file %s: %w", cm.customEntriesPath, err)
 	}
 	defer f.Close()
 
@@ -154,14 +154,14 @@ func (cm *CommunicationMatrixCreator) GetComMatrixFromFile() (*types.ComMatrix, 
 	raw, err := io.ReadAll(f)
 	if err != nil {
 		log.Errorf("Failed to read file %s: %v", cm.customEntriesPath, err)
-		return nil, fmt.Errorf("failed to read file %s: %v", cm.customEntriesPath, err)
+		return nil, fmt.Errorf("failed to read file %s: %w", cm.customEntriesPath, err)
 	}
 
 	log.Debugf("Unmarshalling file content with format %s", cm.customEntriesFormat)
 	res, err := types.ParseToComMatrix(raw, cm.customEntriesFormat)
 	if err != nil {
 		log.Errorf("Failed to unmarshal %s file: %v", cm.customEntriesFormat, err)
-		return nil, fmt.Errorf("failed to unmarshal custom entries file: %v", err)
+		return nil, fmt.Errorf("failed to unmarshal custom entries file: %w", err)
 	}
 
 	log.Debug("Successfully unmarshalled custom entries")

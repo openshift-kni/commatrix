@@ -135,7 +135,7 @@ func NewCmdCommatrixGenerate(cs *client.ClientSet, streams genericiooptions.IOSt
 			}
 
 			if err := Run(o); err != nil {
-				return fmt.Errorf("failed to generate matrix: %v", err)
+				return fmt.Errorf("failed to generate matrix: %w", err)
 			}
 			return nil
 		},
@@ -237,7 +237,7 @@ func Complete(o *GenerateOptions) error {
 		o.destDir = consts.CommatrixDefaultDir
 		log.Debugf("Creating communication-matrix default path: %s", o.destDir)
 		if err := os.MkdirAll(o.destDir, 0755); err != nil {
-			return fmt.Errorf("failed to create destination directory '%s': %v", o.destDir, err)
+			return fmt.Errorf("failed to create destination directory '%s': %w", o.destDir, err)
 		}
 	}
 
@@ -252,12 +252,12 @@ func Run(o *GenerateOptions) (err error) {
 	log.Debug("Detecting deployment and infra types")
 	controlPlaneTopology, err := o.utilsHelpers.GetControlPlaneTopology()
 	if err != nil {
-		return fmt.Errorf("failed to get control plane topology %s", err)
+		return fmt.Errorf("failed to get control plane topology: %w", err)
 	}
 
 	platformType, err := o.utilsHelpers.GetPlatformType()
 	if err != nil {
-		return fmt.Errorf("failed to get platform type %s", err)
+		return fmt.Errorf("failed to get platform type: %w", err)
 	}
 
 	if !slices.Contains(types.SupportedPlatforms, platformType) {
@@ -271,7 +271,7 @@ func Run(o *GenerateOptions) (err error) {
 
 	ipv6Enabled, err := o.utilsHelpers.IsIPv6Enabled()
 	if err != nil {
-		return fmt.Errorf("failed to detect IPv6: %v", err)
+		return fmt.Errorf("failed to detect IPv6: %w", err)
 	}
 
 	// DHCP is only supported on BareMetal and None platforms
@@ -279,7 +279,7 @@ func Run(o *GenerateOptions) (err error) {
 	if platformType == configv1.BareMetalPlatformType || platformType == configv1.NonePlatformType {
 		dhcpEnabled, err = o.utilsHelpers.IsDHCPEnabled()
 		if err != nil {
-			return fmt.Errorf("failed to detect DHCP: %v", err)
+			return fmt.Errorf("failed to detect DHCP: %w", err)
 		}
 		if dhcpEnabled {
 			log.Debug("DHCP enabled")
@@ -392,7 +392,7 @@ func generateMatrix(o *GenerateOptions, controlPlaneTopology configv1.TopologyMo
 
 	epExporter, err := endpointslices.New(o.cs, o.customNodeGroups)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating the endpointslices exporter %s", err)
+		return nil, fmt.Errorf("failed creating the endpointslices exporter: %w", err)
 	}
 
 	log.Debug("Creating communication matrix")
@@ -433,13 +433,13 @@ func generateSS(o *GenerateOptions) (*listeningsockets.SSResult, error) {
 	log.Debug("Creating listening socket check")
 	listeningCheck, err := listeningsockets.NewCheck(o.cs, o.utilsHelpers, o.customNodeGroups)
 	if err != nil {
-		return nil, fmt.Errorf("failed creating listening socket check: %v", err)
+		return nil, fmt.Errorf("failed creating listening socket check: %w", err)
 	}
 
 	log.Debug("Creating namespace")
 	err = o.utilsHelpers.CreateNamespace(consts.DefaultDebugNamespace)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create namespace: %v", err)
+		return nil, fmt.Errorf("failed to create namespace: %w", err)
 	}
 	// Always delete namespace and wait for full removal to avoid Terminating races on reruns
 	defer func() {
@@ -451,7 +451,7 @@ func generateSS(o *GenerateOptions) (*listeningsockets.SSResult, error) {
 	log.Debug("Generating SS matrix and raw files")
 	result, err := listeningCheck.GenerateSS(consts.DefaultDebugNamespace)
 	if err != nil {
-		return nil, fmt.Errorf("error while generating the listening check matrix and ss raws: %v", err)
+		return nil, fmt.Errorf("error while generating the listening check matrix and ss raws: %w", err)
 	}
 	return result, nil
 }
