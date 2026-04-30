@@ -331,7 +331,7 @@ func (u *utils) GetPodLogs(namespace string, pod *corev1.Pod) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get log stream: %w", err)
 	}
-	defer logStream.Close()
+	defer func() { _ = logStream.Close() }()
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, logStream)
