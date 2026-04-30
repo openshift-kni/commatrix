@@ -270,7 +270,11 @@ func TestCommatrixGeneration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Clean up after test
-	defer os.RemoveAll(destDir)
+	defer func() {
+		if err := os.RemoveAll(destDir); err != nil {
+			t.Logf("failed to clean up test directory %s: %v", destDir, err)
+		}
+	}()
 
 	ctrlTest := gomock.NewController(t)
 

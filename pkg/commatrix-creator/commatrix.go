@@ -148,7 +148,11 @@ func (cm *CommunicationMatrixCreator) GetComMatrixFromFile() (*types.ComMatrix, 
 		log.Errorf("Failed to open file %s: %v", cm.customEntriesPath, err)
 		return nil, fmt.Errorf("failed to open file %s: %w", cm.customEntriesPath, err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Errorf("failed to close file %s: %v", cm.customEntriesPath, err)
+		}
+	}()
 
 	log.Debugf("Reading file %s", cm.customEntriesPath)
 	raw, err := io.ReadAll(f)
