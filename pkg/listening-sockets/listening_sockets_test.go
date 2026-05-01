@@ -73,7 +73,7 @@ var (
 	expectedSSMat = []types.ComDetails{
 		{
 			Direction: "Ingress",
-			Protocol:  "UDP",
+			Protocol:  consts.ProtocolUDP,
 			Port:      111,
 			NodeGroup: "master",
 			Service:   "rpcbind",
@@ -84,7 +84,7 @@ var (
 		},
 		{
 			Direction: "Ingress",
-			Protocol:  "UDP",
+			Protocol:  consts.ProtocolUDP,
 			Port:      500,
 			NodeGroup: "master",
 			Service:   "pluto",

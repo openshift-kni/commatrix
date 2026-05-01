@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
 	configv1 "github.com/openshift/api/config/v1"
@@ -38,7 +39,7 @@ func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter) (types.Dy
 	return types.DynamicRangeList{
 		{
 			Direction:   "Ingress",
-			Protocol:    "TCP",
+			Protocol:    consts.ProtocolTCP,
 			MinPort:     minPort,
 			MaxPort:     maxPort,
 			Description: "Kubelet node ports",
@@ -46,7 +47,7 @@ func GetDynamicRanges(exporter *endpointslices.EndpointSlicesExporter) (types.Dy
 		},
 		{
 			Direction:   "Ingress",
-			Protocol:    "UDP",
+			Protocol:    consts.ProtocolUDP,
 			MinPort:     minPort,
 			MaxPort:     maxPort,
 			Description: "Kubelet node ports",

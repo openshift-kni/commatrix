@@ -1,6 +1,9 @@
 package consts
 
 const (
+	ProtocolTCP = "TCP"
+	ProtocolUDP = "UDP"
+
 	DefaultAddressType      = "IPv4"
 	IngressLabel            = "Ingress"
 	OptionalLabel           = "optional"
