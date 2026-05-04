@@ -149,6 +149,9 @@ func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string,
 
 	for _, ssEntry := range ssOutput {
 		cd := parseComDetail(ssEntry)
+		if cd == nil {
+			continue
+		}
 
 		containerName, nameSpace, podName := "", "", ""
 		containerInfo, err := cc.getContainerInfo(debugPod, ssEntry)
