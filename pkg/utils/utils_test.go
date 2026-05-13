@@ -18,15 +18,11 @@ import (
 
 var testScheme *runtime.Scheme
 
-func init() {
+var _ = BeforeSuite(func() {
 	testScheme = runtime.NewScheme()
-	if err := corev1.AddToScheme(testScheme); err != nil {
-		panic(err)
-	}
-	if err := configv1.AddToScheme(testScheme); err != nil {
-		panic(err)
-	}
-}
+	Expect(corev1.AddToScheme(testScheme)).To(Succeed())
+	Expect(configv1.AddToScheme(testScheme)).To(Succeed())
+})
 
 func newFakeUtils(objs ...runtime.Object) *utils {
 	fakeClient := fake.NewClientBuilder().
@@ -37,42 +33,19 @@ func newFakeUtils(objs ...runtime.Object) *utils {
 	return &utils{&client.ClientSet{Client: fakeClient}}
 }
 
-var _ = Describe("parseImageStreamTagString", func() {
-	It("parses a fully qualified namespace/name:tag", func() {
-		ns, name, tag := parseImageStreamTagString("openshift/cli:latest")
-		Expect(ns).To(Equal("openshift"))
-		Expect(name).To(Equal("cli"))
-		Expect(tag).To(Equal("latest"))
-	})
-
-	It("returns empty namespace when no slash is present", func() {
-		ns, name, tag := parseImageStreamTagString("cli:latest")
-		Expect(ns).To(BeEmpty())
-		Expect(name).To(Equal("cli"))
-		Expect(tag).To(Equal("latest"))
-	})
-
-	It("defaults tag to 'latest' when no tag is present", func() {
-		ns, name, tag := parseImageStreamTagString("openshift/cli")
-		Expect(ns).To(Equal("openshift"))
-		Expect(name).To(Equal("cli"))
-		Expect(tag).To(Equal("latest"))
-	})
-
-	It("defaults tag to 'latest' for empty string", func() {
-		ns, name, tag := parseImageStreamTagString("")
-		Expect(ns).To(BeEmpty())
-		Expect(name).To(BeEmpty())
-		Expect(tag).To(Equal("latest"))
-	})
-
-	It("treats everything after the first slash as name:tag", func() {
-		ns, name, tag := parseImageStreamTagString("openshift/tools/cli:v1")
-		Expect(ns).To(Equal("openshift"))
-		Expect(name).To(Equal("tools/cli"))
-		Expect(tag).To(Equal("v1"))
-	})
-})
+var _ = DescribeTable("parseImageStreamTagString",
+	func(input, expectedNs, expectedName, expectedTag string) {
+		ns, name, tag := parseImageStreamTagString(input)
+		Expect(ns).To(Equal(expectedNs))
+		Expect(name).To(Equal(expectedName))
+		Expect(tag).To(Equal(expectedTag))
+	},
+	Entry("parses a fully qualified namespace/name:tag", "openshift/cli:latest", "openshift", "cli", "latest"),
+	Entry("returns empty namespace when no slash is present", "cli:latest", "", "cli", "latest"),
+	Entry("defaults tag to 'latest' when no tag is present", "openshift/cli", "openshift", "cli", "latest"),
+	Entry("defaults tag to 'latest' for empty string", "", "", "", "latest"),
+	Entry("treats everything after the first slash as name:tag", "openshift/tools/cli:v1", "openshift", "tools/cli", "v1"),
+)
 
 var _ = Describe("getPodDefinition", func() {
 	It("creates a pod with the correct spec fields", func() {
@@ -245,76 +218,40 @@ var _ = Describe("GetClusterVersion", func() {
 	})
 })
 
-var _ = Describe("IsIPv6Enabled", func() {
-	It("returns false for IPv4-only cluster", func() {
-		network := &configv1.Network{
-			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-			Spec: configv1.NetworkSpec{
-				ClusterNetwork: []configv1.ClusterNetworkEntry{
-					{CIDR: "10.128.0.0/14"},
+var _ = DescribeTable("IsIPv6Enabled",
+	func(cidrs []string, expectedIPv6 bool, expectErr bool) {
+		var u *utils
+		if cidrs == nil {
+			// No Network CR at all
+			u = newFakeUtils()
+		} else {
+			entries := make([]configv1.ClusterNetworkEntry, len(cidrs))
+			for i, cidr := range cidrs {
+				entries[i] = configv1.ClusterNetworkEntry{CIDR: cidr}
+			}
+			network := &configv1.Network{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: configv1.NetworkSpec{
+					ClusterNetwork: entries,
 				},
-			},
+			}
+			u = newFakeUtils(network)
 		}
-		u := newFakeUtils(network)
 
 		ipv6, err := u.IsIPv6Enabled()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(ipv6).To(BeFalse())
-	})
-
-	It("returns true for dual-stack cluster with IPv6", func() {
-		network := &configv1.Network{
-			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-			Spec: configv1.NetworkSpec{
-				ClusterNetwork: []configv1.ClusterNetworkEntry{
-					{CIDR: "10.128.0.0/14"},
-					{CIDR: "fd01::/48"},
-				},
-			},
+		if expectErr {
+			Expect(err).To(HaveOccurred())
+		} else {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ipv6).To(Equal(expectedIPv6))
 		}
-		u := newFakeUtils(network)
-
-		ipv6, err := u.IsIPv6Enabled()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(ipv6).To(BeTrue())
-	})
-
-	It("returns true for IPv6-only cluster", func() {
-		network := &configv1.Network{
-			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-			Spec: configv1.NetworkSpec{
-				ClusterNetwork: []configv1.ClusterNetworkEntry{
-					{CIDR: "fd01::/48"},
-				},
-			},
-		}
-		u := newFakeUtils(network)
-
-		ipv6, err := u.IsIPv6Enabled()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(ipv6).To(BeTrue())
-	})
-
-	It("returns false when no cluster networks are configured", func() {
-		network := &configv1.Network{
-			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-			Spec: configv1.NetworkSpec{
-				ClusterNetwork: []configv1.ClusterNetworkEntry{},
-			},
-		}
-		u := newFakeUtils(network)
-
-		ipv6, err := u.IsIPv6Enabled()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(ipv6).To(BeFalse())
-	})
-
-	It("returns an error when Network CR is missing", func() {
-		u := newFakeUtils()
-		_, err := u.IsIPv6Enabled()
-		Expect(err).To(HaveOccurred())
-	})
-})
+	},
+	Entry("returns false for IPv4-only cluster", []string{"10.128.0.0/14"}, false, false),
+	Entry("returns true for dual-stack cluster with IPv6", []string{"10.128.0.0/14", "fd01::/48"}, true, false),
+	Entry("returns true for IPv6-only cluster", []string{"fd01::/48"}, true, false),
+	Entry("returns false when no cluster networks are configured", []string{}, false, false),
+	Entry("returns an error when Network CR is missing", nil, false, true),
+)
 
 var _ = Describe("DeletePod", func() {
 	It("deletes an existing pod", func() {
