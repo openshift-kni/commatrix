@@ -26,6 +26,23 @@ type ClientSet struct {
 	ImageClient imagev1client.ImageV1Interface
 }
 
+// NewScheme creates a runtime.Scheme with all API groups required by commatrix.
+func NewScheme() (*runtime.Scheme, error) {
+	s := runtime.NewScheme()
+	for _, add := range []func(*runtime.Scheme) error{
+		corev1.AddToScheme,
+		discoveryv1.AddToScheme,
+		ocpoperatorv1.AddToScheme,
+		machineconfigurationv1.AddToScheme,
+		ocpconfigv1.Install,
+	} {
+		if err := add(s); err != nil {
+			return nil, fmt.Errorf("failed to register scheme: %w", err)
+		}
+	}
+	return s, nil
+}
+
 func New() (*ClientSet, error) {
 	var err error
 
@@ -63,29 +80,7 @@ func New() (*ClientSet, error) {
 
 	clientSet.Config = restConfig
 
-	myScheme := runtime.NewScheme()
-
-	err = corev1.AddToScheme(myScheme)
-	if err != nil {
-		return nil, err
-	}
-
-	err = discoveryv1.AddToScheme(myScheme)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ocpoperatorv1.AddToScheme(myScheme)
-	if err != nil {
-		return nil, err
-	}
-
-	err = machineconfigurationv1.AddToScheme(myScheme)
-	if err != nil {
-		return nil, err
-	}
-
-	err = ocpconfigv1.Install(myScheme)
+	myScheme, err := NewScheme()
 	if err != nil {
 		return nil, err
 	}
