@@ -4,6 +4,7 @@ Ingress,TCP,53,openshift-dns,dns-default,dns-default,dns,master,FALSE
 Ingress,TCP,111,Host system service,rpcbind,,,master,TRUE
 Ingress,TCP,2379,openshift-etcd,etcd,etcd,etcdctl,master,FALSE
 Ingress,TCP,2380,openshift-etcd,healthz,etcd,etcd,master,FALSE
+Ingress,TCP,2381,openshift-etcd,etcd,etcd,etcd,master,FALSE
 Ingress,TCP,6080,openshift-kube-apiserver,,kube-apiserver,kube-apiserver-insecure-readyz,master,FALSE
 Ingress,TCP,6180,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
 Ingress,TCP,6183,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
