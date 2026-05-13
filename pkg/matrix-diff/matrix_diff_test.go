@@ -31,89 +31,60 @@ var (
 )
 
 var _ = Describe("Generate", func() {
-	It("returns an empty diff when both matrices are empty", func() {
-		primary := &types.ComMatrix{}
-		secondary := &types.ComMatrix{}
+	DescribeTable("categorizes entries correctly",
+		func(primary, secondary *types.ComMatrix,
+			expectedPorts, expectedUniquePrimary, expectedUniqueSecondary, expectedShared []types.ComDetails,
+		) {
+			diff := Generate(primary, secondary)
 
-		diff := Generate(primary, secondary)
-
-		Expect(diff.Ports).To(BeEmpty())
-		Expect(diff.GetUniquePrimary().Ports).To(BeEmpty())
-		Expect(diff.GetUniqueSecondary().Ports).To(BeEmpty())
-		Expect(diff.GetSharedEntries().Ports).To(BeEmpty())
-	})
-
-	It("marks all entries as uniquePrimary when secondary is empty", func() {
-		primary := &types.ComMatrix{
-			Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
-		}
-		secondary := &types.ComMatrix{}
-
-		diff := Generate(primary, secondary)
-
-		Expect(diff.GetUniquePrimary().Ports).To(HaveLen(2))
-		Expect(diff.GetUniqueSecondary().Ports).To(BeEmpty())
-		Expect(diff.GetSharedEntries().Ports).To(BeEmpty())
-	})
-
-	It("marks all entries as uniqueSecondary when primary is empty", func() {
-		primary := &types.ComMatrix{}
-		secondary := &types.ComMatrix{
-			Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
-		}
-
-		diff := Generate(primary, secondary)
-
-		Expect(diff.GetUniquePrimary().Ports).To(BeEmpty())
-		Expect(diff.GetUniqueSecondary().Ports).To(HaveLen(2))
-		Expect(diff.GetSharedEntries().Ports).To(BeEmpty())
-	})
-
-	It("correctly categorizes shared and unique entries", func() {
-		primary := &types.ComMatrix{
-			Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
-		}
-		secondary := &types.ComMatrix{
-			Ports: []types.ComDetails{cdEgressUDP53Worker, cdIngressTCP8080Worker},
-		}
-
-		diff := Generate(primary, secondary)
-
-		Expect(diff.GetSharedEntries().Ports).To(HaveLen(1))
-		Expect(diff.GetSharedEntries().Ports[0].Port).To(Equal(53))
-
-		Expect(diff.GetUniquePrimary().Ports).To(HaveLen(1))
-		Expect(diff.GetUniquePrimary().Ports[0].Port).To(Equal(443))
-
-		Expect(diff.GetUniqueSecondary().Ports).To(HaveLen(1))
-		Expect(diff.GetUniqueSecondary().Ports[0].Port).To(Equal(8080))
-	})
-
-	It("marks all entries as shared when matrices are identical", func() {
-		ports := []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker}
-		primary := &types.ComMatrix{Ports: ports}
-		secondary := &types.ComMatrix{Ports: ports}
-
-		diff := Generate(primary, secondary)
-
-		Expect(diff.GetSharedEntries().Ports).To(HaveLen(2))
-		Expect(diff.GetUniquePrimary().Ports).To(BeEmpty())
-		Expect(diff.GetUniqueSecondary().Ports).To(BeEmpty())
-	})
-
-	It("deduplicates entries in the combined matrix", func() {
-		primary := &types.ComMatrix{
-			Ports: []types.ComDetails{cdIngressTCP443Master, cdIngressTCP443Master},
-		}
-		secondary := &types.ComMatrix{
-			Ports: []types.ComDetails{cdIngressTCP443Master},
-		}
-
-		diff := Generate(primary, secondary)
-
-		Expect(diff.Ports).To(HaveLen(1))
-		Expect(diff.GetSharedEntries().Ports).To(HaveLen(1))
-	})
+			Expect(diff.Ports).To(ConsistOf(expectedPorts))
+			Expect(diff.GetUniquePrimary().Ports).To(ConsistOf(expectedUniquePrimary))
+			Expect(diff.GetUniqueSecondary().Ports).To(ConsistOf(expectedUniqueSecondary))
+			Expect(diff.GetSharedEntries().Ports).To(ConsistOf(expectedShared))
+		},
+		Entry("both matrices are empty",
+			&types.ComMatrix{},
+			&types.ComMatrix{},
+			nil, nil, nil, nil,
+		),
+		Entry("all entries unique to primary when secondary is empty",
+			&types.ComMatrix{Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker}},
+			&types.ComMatrix{},
+			[]types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
+			[]types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
+			nil, nil,
+		),
+		Entry("all entries unique to secondary when primary is empty",
+			&types.ComMatrix{},
+			&types.ComMatrix{Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker}},
+			[]types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
+			nil,
+			[]types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
+			nil,
+		),
+		Entry("shared and unique entries are correctly categorized",
+			&types.ComMatrix{Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker}},
+			&types.ComMatrix{Ports: []types.ComDetails{cdEgressUDP53Worker, cdIngressTCP8080Worker}},
+			[]types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker, cdIngressTCP8080Worker},
+			[]types.ComDetails{cdIngressTCP443Master},
+			[]types.ComDetails{cdIngressTCP8080Worker},
+			[]types.ComDetails{cdEgressUDP53Worker},
+		),
+		Entry("all entries shared when matrices are identical",
+			&types.ComMatrix{Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker}},
+			&types.ComMatrix{Ports: []types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker}},
+			[]types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
+			nil, nil,
+			[]types.ComDetails{cdIngressTCP443Master, cdEgressUDP53Worker},
+		),
+		Entry("duplicates in primary are deduplicated",
+			&types.ComMatrix{Ports: []types.ComDetails{cdIngressTCP443Master, cdIngressTCP443Master}},
+			&types.ComMatrix{Ports: []types.ComDetails{cdIngressTCP443Master}},
+			[]types.ComDetails{cdIngressTCP443Master},
+			nil, nil,
+			[]types.ComDetails{cdIngressTCP443Master},
+		),
+	)
 })
 
 var _ = Describe("String", func() {
