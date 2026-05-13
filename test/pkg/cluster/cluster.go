@@ -88,7 +88,7 @@ func AddNFTSvcToNodeDisruptionPolicy(cs *client.ClientSet) error {
 	_, err := machineConfigurationClient.OperatorV1().MachineConfigurations().Apply(context.TODO(), applyConfiguration,
 		metav1.ApplyOptions{FieldManager: "machine-config-operator", Force: true})
 	if err != nil {
-		return fmt.Errorf("updating cluster node disruption policy failed %v", err)
+		return fmt.Errorf("updating cluster node disruption policy failed: %w", err)
 	}
 
 	log.Println("MachineConfiguration updated successfully!")

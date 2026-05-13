@@ -98,7 +98,7 @@ func (u *utils) resolveImageStreamTag(namespace, name, tag string) (string, erro
 	}
 	var image string
 	if image, _, _, _, err = imageutil.ResolveRecentPullSpecForTag(imageStream, tag, false); err != nil {
-		return "", fmt.Errorf("unable to resolve the imagestream tag %s/%s:%s: %v", namespace, name, tag, err)
+		return "", fmt.Errorf("unable to resolve the imagestream tag %s/%s:%s: %w", namespace, name, tag, err)
 	}
 	return image, nil
 }
@@ -107,13 +107,13 @@ func (u *utils) CreateNamespace(namespace string) error {
 	ns := getNamespaceDefinition(namespace)
 	err := u.Create(context.TODO(), ns)
 	if err != nil && !k8serrors.IsAlreadyExists(err) {
-		return fmt.Errorf("failed creating namespace %s: %v", namespace, err)
+		return fmt.Errorf("failed creating namespace %s: %w", namespace, err)
 	}
 
 	// wait for it to be ready with the openshift.io/sa.scc.uid-range Annotation
 	err = u.waitForNamespaceSCCUAnnotation(ns)
 	if err != nil {
-		return fmt.Errorf("failed to wait for annotation 'openshift.io/sa.scc.uid-range' in namespace %s: %v", namespace, err)
+		return fmt.Errorf("failed to wait for annotation 'openshift.io/sa.scc.uid-range' in namespace %s: %w", namespace, err)
 	}
 
 	return nil
@@ -134,7 +134,7 @@ func (u *utils) DeleteNamespace(namespace string) error {
 	ns := getNamespaceDefinition(namespace)
 	err := u.Delete(context.TODO(), ns)
 	if err != nil {
-		return fmt.Errorf("failed deleting namespace %s: %v", namespace, err)
+		return fmt.Errorf("failed deleting namespace %s: %w", namespace, err)
 	}
 	if pollErr := wait.PollUntilContextTimeout(context.TODO(), time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
 		ns := &corev1.Namespace{}
@@ -143,7 +143,7 @@ func (u *utils) DeleteNamespace(namespace string) error {
 			return true, nil
 		}
 		if err != nil {
-			return false, fmt.Errorf("retrying due to error: %v", err) // keep retrying
+			return false, fmt.Errorf("retrying due to error: %w", err) // keep retrying
 		}
 		return false, nil
 	}); pollErr != nil {

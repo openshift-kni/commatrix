@@ -12,7 +12,7 @@ func CreateMachineConfig(NFTtable []byte, artifactsDir, nodePool string,
 	utilsHelpers utils.UtilsInterface) (machineConfig []byte, err error) {
 	machineConfig, err = firewall.NFTablesToMachineConfig(NFTtable, nodePool, utilsHelpers)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert nftables to MachineConfig: %v", err)
+		return nil, fmt.Errorf("failed to convert nftables to MachineConfig: %w", err)
 	}
 
 	fileName := fmt.Sprintf("mc-%s.yaml", nodePool)
