@@ -18,7 +18,7 @@ GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
 # golangci-lint version should be updated periodically
 # we keep it fixed to avoid it from unexpectedly failing on the project
 # in case of a version bump
-GOLANGCI_LINT_VER = v1.63.4
+GOLANGCI_LINT_VER = v2.12.2
 
 # Output directory
 OUTPUT_DIR=$(CURPATH)/cross-build-output
@@ -102,11 +102,11 @@ check-deps: deps-update
 	exit 1; fi
 
 $(GOLANGCI_LINT): ; $(info installing golangci-lint...)
-	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VER))
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANGCI_LINT_VER)
 
 .PHONY: lint
 lint: | $(GOLANGCI_LINT) ; $(info  running golangci-lint...) @ ## Run golangci-lint
-	GOFLAGS="" $(GOLANGCI_LINT) run --timeout=10m
+	GOFLAGS="" $(GOLANGCI_LINT) run
 
 .PHONY: test
 test:
