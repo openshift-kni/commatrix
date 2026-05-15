@@ -6,6 +6,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// isStaticPod returns true if the pod is a static (mirror) pod.
+// Static pods are managed directly by the kubelet from manifest files on disk,
+// not by the kube-scheduler. They are identified by having a Node as their
+// owner reference. Since static pods cannot be rescheduled to other nodes,
+// the point-in-time EndpointSlice snapshot is correct for them and scheduling
+// expansion should be skipped.
+func isStaticPod(pod corev1.Pod) bool {
+	for _, ref := range pod.OwnerReferences {
+		if ref.Kind == "Node" {
+			return true
+		}
+	}
+	return false
+}
+
 // getEligiblePoolsForPod returns all pools where the pod could potentially be
 // scheduled, based on its nodeSelector and required nodeAffinity constraints.
 // Unlike getEndpointSliceGroups which only returns pools where endpoints

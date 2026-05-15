@@ -322,6 +322,39 @@ func TestNodeMatchesPodConstraints_BothNodeSelectorAndAffinity(t *testing.T) {
 	}
 }
 
+func TestIsStaticPod(t *testing.T) {
+	staticPod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kube-apiserver-master-0",
+			OwnerReferences: []metav1.OwnerReference{
+				{Kind: "Node", Name: "master-0"},
+			},
+		},
+	}
+	if !isStaticPod(staticPod) {
+		t.Fatal("expected pod with Node owner to be detected as static")
+	}
+
+	regularPod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "router-default-abc",
+			OwnerReferences: []metav1.OwnerReference{
+				{Kind: "DaemonSet", Name: "router-default"},
+			},
+		},
+	}
+	if isStaticPod(regularPod) {
+		t.Fatal("expected DaemonSet-owned pod NOT to be detected as static")
+	}
+
+	noOwnerPod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "standalone"},
+	}
+	if isStaticPod(noOwnerPod) {
+		t.Fatal("expected pod with no owner NOT to be detected as static")
+	}
+}
+
 func TestNodeMatchesPodConstraints_ORSelectorTerms(t *testing.T) {
 	node := corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{

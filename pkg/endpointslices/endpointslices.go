@@ -213,13 +213,20 @@ func (ei *EndpointSlicesInfo) toComDetailsWithGroups(nodeToGroup map[string]stri
 		return nil, fmt.Errorf("failed to get pod name for endpointslice %s: %w", ei.EndpointSlice.Name, err)
 	}
 
-	// Determine all pools where this workload could be scheduled, based on
-	// the pod's nodeSelector and required nodeAffinity. This ensures firewall
-	// rules are created even for pools where no endpoint currently exists but
-	// where a pod could land after rescheduling.
-	pools := getEligiblePoolsForPod(ei.Pods[0], nodes, nodeToGroup)
-	if len(pools) == 0 {
+	// Static pods (owner Kind == "Node") are managed by the kubelet and cannot
+	// be rescheduled, so the EndpointSlice snapshot is authoritative for them.
+	// For scheduler-managed pods, determine all pools where the workload could
+	// be scheduled based on nodeSelector and required nodeAffinity, so that
+	// firewall rules are created for pools where a pod could land after
+	// rescheduling (e.g., after a node reboot).
+	var pools []string
+	if isStaticPod(ei.Pods[0]) {
 		pools = ei.getEndpointSliceGroups(nodeToGroup)
+	} else {
+		pools = getEligiblePoolsForPod(ei.Pods[0], nodes, nodeToGroup)
+		if len(pools) == 0 {
+			pools = ei.getEndpointSliceGroups(nodeToGroup)
+		}
 	}
 
 	epSlice := ei.EndpointSlice
