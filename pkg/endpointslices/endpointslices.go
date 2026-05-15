@@ -28,6 +28,7 @@ type EndpointSlicesInfo struct {
 type EndpointSlicesExporter struct {
 	*client.ClientSet
 	nodeToGroup map[string]string
+	nodes       []corev1.Node
 	sliceInfo   []EndpointSlicesInfo
 }
 
@@ -67,7 +68,7 @@ func New(cs *client.ClientSet, customNodeGroups map[string]labels.Selector) (*En
 		return nil, err
 	}
 
-	return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToPool, sliceInfo: []EndpointSlicesInfo{}}, nil
+	return &EndpointSlicesExporter{ClientSet: cs, nodeToGroup: nodeToPool, nodes: nodes, sliceInfo: []EndpointSlicesInfo{}}, nil
 }
 
 // load endpoint slices for services from type loadbalancer and node port,
@@ -151,7 +152,7 @@ func (ep *EndpointSlicesExporter) ToComDetails() ([]types.ComDetails, error) {
 	comDetails := make([]types.ComDetails, 0)
 
 	for _, epSliceInfo := range ep.sliceInfo {
-		cds, err := epSliceInfo.toComDetailsWithGroups(ep.nodeToGroup)
+		cds, err := epSliceInfo.toComDetailsWithGroups(ep.nodeToGroup, ep.nodes)
 		if err != nil {
 			switch err.(type) {
 			case *NoOwnerRefErr:
@@ -198,7 +199,7 @@ func (ei *EndpointSlicesInfo) getEndpointSliceGroups(nodeToGroup map[string]stri
 	return pools
 }
 
-func (ei *EndpointSlicesInfo) toComDetailsWithGroups(nodeToGroup map[string]string) ([]types.ComDetails, error) {
+func (ei *EndpointSlicesInfo) toComDetailsWithGroups(nodeToGroup map[string]string, nodes []corev1.Node) ([]types.ComDetails, error) {
 	if len(ei.EndpointSlice.OwnerReferences) == 0 {
 		return nil, &NoOwnerRefErr{name: ei.EndpointSlice.Name, namespace: ei.EndpointSlice.Namespace}
 	}
@@ -212,8 +213,21 @@ func (ei *EndpointSlicesInfo) toComDetailsWithGroups(nodeToGroup map[string]stri
 		return nil, fmt.Errorf("failed to get pod name for endpointslice %s: %w", ei.EndpointSlice.Name, err)
 	}
 
-	// Get the groups backing this EndpointSlice (pool names or roles).
-	pools := ei.getEndpointSliceGroups(nodeToGroup)
+	// Static pods (owner Kind == "Node") are managed by the kubelet and cannot
+	// be rescheduled, so the EndpointSlice snapshot is authoritative for them.
+	// For scheduler-managed pods, determine all pools where the workload could
+	// be scheduled based on nodeSelector and required nodeAffinity, so that
+	// firewall rules are created for pools where a pod could land after
+	// rescheduling (e.g., after a node reboot).
+	var pools []string
+	if isStaticPod(ei.Pods[0]) {
+		pools = ei.getEndpointSliceGroups(nodeToGroup)
+	} else {
+		pools = getEligiblePoolsForPod(ei.Pods[0], nodes, nodeToGroup)
+		if len(pools) == 0 {
+			pools = ei.getEndpointSliceGroups(nodeToGroup)
+		}
+	}
 
 	epSlice := ei.EndpointSlice
 	optional := isOptional(epSlice)

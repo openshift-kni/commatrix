@@ -133,7 +133,8 @@ var (
 			},
 		},
 		Spec: corev1.PodSpec{
-			HostNetwork: true,
+			HostNetwork:  true,
+			NodeSelector: map[string]string{"node-role.kubernetes.io/master": ""},
 			Containers: []corev1.Container{
 				{
 					Name:  "test-container",
@@ -210,7 +211,8 @@ var (
 			},
 		},
 		Spec: corev1.PodSpec{
-			HostNetwork: true,
+			HostNetwork:  true,
+			NodeSelector: map[string]string{"node-role.kubernetes.io/master": ""},
 			Containers: []corev1.Container{
 				{
 					Name:  "main-container",
@@ -992,6 +994,196 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			expectedMatrix := types.ComMatrix{Ports: expected}
 			expectedMatrix.SortAndRemoveDuplicates()
 			o.Expect(gotMatrix.Ports).To(o.Equal(expectedMatrix.Ports))
+		})
+	})
+
+	g.Context("Multi-pool endpoint expansion", func() {
+		g.It("Should expand unconstrained worker pods to all worker pools", func() {
+			g.By("Setting up a cluster with master + two worker pools (standard and customcnf)")
+			sch := runtime.NewScheme()
+			o.Expect(corev1.AddToScheme(sch)).To(o.Succeed())
+			o.Expect(discoveryv1.AddToScheme(sch)).To(o.Succeed())
+			o.Expect(machineconfigurationv1.AddToScheme(sch)).To(o.Succeed())
+			o.Expect(configv1.AddToScheme(sch)).To(o.Succeed())
+
+			masterNode := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "master-0",
+					Annotations: map[string]string{
+						"machineconfiguration.openshift.io/currentConfig": "rendered-master-abc",
+					},
+					Labels: map[string]string{"node-role.kubernetes.io/master": ""},
+				},
+			}
+			standardWorker := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "worker-standard-0",
+					Annotations: map[string]string{
+						"machineconfiguration.openshift.io/currentConfig": "rendered-worker-abc",
+					},
+					Labels: map[string]string{"node-role.kubernetes.io/worker": ""},
+				},
+			}
+			customcnfWorker := &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "worker-customcnf-0",
+					Annotations: map[string]string{
+						"machineconfiguration.openshift.io/currentConfig": "rendered-customcnf-abc",
+					},
+					Labels: map[string]string{"node-role.kubernetes.io/worker": ""},
+				},
+			}
+
+			routerPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "router-default-abc",
+					Namespace: "openshift-ingress",
+					Labels:    map[string]string{"app": "router"},
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: "ReplicaSet", Name: "router-default-xyz"},
+					},
+				},
+				Spec: corev1.PodSpec{
+					HostNetwork:  true,
+					NodeSelector: map[string]string{"node-role.kubernetes.io/worker": ""},
+					Containers: []corev1.Container{
+						{
+							Name:  "router",
+							Image: "router:latest",
+							Ports: []corev1.ContainerPort{
+								{ContainerPort: 80},
+								{ContainerPort: 443},
+								{ContainerPort: 1936},
+							},
+						},
+					},
+				},
+			}
+
+			routerService := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "router-internal-default",
+					Namespace: "openshift-ingress",
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "router"},
+					Ports: []corev1.ServicePort{
+						{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP},
+						{Name: "https", Port: 443, Protocol: corev1.ProtocolTCP},
+						{Name: "stats", Port: 1936, Protocol: corev1.ProtocolTCP},
+					},
+				},
+			}
+
+			standardWorkerName := standardWorker.Name
+			routerEndpointSlice := &discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "router-internal-default-eps",
+					Namespace: "openshift-ingress",
+					Labels:    map[string]string{"kubernetes.io/service-name": "router-internal-default"},
+					OwnerReferences: []metav1.OwnerReference{
+						{Kind: "Service", Name: "router-internal-default"},
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						NodeName:  &standardWorkerName,
+						Addresses: []string{"10.0.0.1"},
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     func(s string) *string { return &s }("http"),
+						Port:     func(i int32) *int32 { return &i }(80),
+						Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+					},
+					{
+						Name:     func(s string) *string { return &s }("https"),
+						Port:     func(i int32) *int32 { return &i }(443),
+						Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+					},
+					{
+						Name:     func(s string) *string { return &s }("stats"),
+						Port:     func(i int32) *int32 { return &i }(1936),
+						Protocol: func(p corev1.Protocol) *corev1.Protocol { return &p }(corev1.ProtocolTCP),
+					},
+				},
+			}
+
+			mcpCustomcnf := &machineconfigurationv1.MachineConfigPool{
+				ObjectMeta: metav1.ObjectMeta{Name: "customcnf"},
+				Spec: machineconfigurationv1.MachineConfigPoolSpec{
+					NodeSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"node-role.kubernetes.io/worker": ""}},
+				},
+				Status: machineconfigurationv1.MachineConfigPoolStatus{MachineCount: 1},
+			}
+
+			testNetworkMultiPool := &configv1.Network{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec:       configv1.NetworkSpec{ServiceNodePortRange: "30000-32767"},
+			}
+
+			fakeClient := fake.NewClientBuilder().WithScheme(sch).WithObjects(
+				masterNode, standardWorker, customcnfWorker,
+				routerPod, routerService, routerEndpointSlice,
+				mcpMaster, mcpWorker, mcpCustomcnf,
+				testNetworkMultiPool,
+			).Build()
+			fakeClientset := fakek.NewSimpleClientset(masterNode, standardWorker, customcnfWorker)
+
+			clientset := &client.ClientSet{
+				Client:          fakeClient,
+				CoreV1Interface: fakeClientset.CoreV1(),
+			}
+
+			eps, err := endpointslices.New(clientset, nil)
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			ctrl := gomock.NewController(g.GinkgoT())
+			defer ctrl.Finish()
+			mockUtilsMultiPool := mock_utils.NewMockUtilsInterface(ctrl)
+			mockUtilsMultiPool.EXPECT().ListNodes().Return(
+				[]corev1.Node{*masterNode, *standardWorker, *customcnfWorker}, nil,
+			).AnyTimes()
+
+			g.By("Creating endpoint matrix")
+			commatrixCreator := New(
+				configv1.BareMetalPlatformType,
+				configv1.HighlyAvailableTopologyMode,
+				WithExporter(eps),
+				WithUtilsHelpers(mockUtilsMultiPool),
+			)
+			commatrix, err := commatrixCreator.CreateEndpointMatrix()
+			o.Expect(err).ToNot(o.HaveOccurred())
+
+			g.By("Verifying router ports appear on BOTH worker pools (standard=worker, customcnf)")
+			for _, port := range []int{80, 443, 1936} {
+				foundWorker := false
+				foundCustomcnf := false
+				for _, entry := range commatrix.Ports {
+					if entry.Port == port && entry.Service == "router-internal-default" {
+						if entry.NodeGroup == "worker" {
+							foundWorker = true
+						}
+						if entry.NodeGroup == "customcnf" {
+							foundCustomcnf = true
+						}
+					}
+				}
+				o.Expect(foundWorker).To(o.BeTrue(),
+					"Port %d should be present on 'worker' pool", port)
+				o.Expect(foundCustomcnf).To(o.BeTrue(),
+					"Port %d should be present on 'customcnf' pool (even though router endpoint is only on standard worker)", port)
+			}
+
+			g.By("Verifying router ports do NOT appear on master pool")
+			for _, entry := range commatrix.Ports {
+				if entry.Service == "router-internal-default" {
+					o.Expect(entry.NodeGroup).ToNot(o.Equal("master"),
+						"Router ports should not appear on master pool (nodeSelector restricts to worker)")
+				}
+			}
 		})
 	})
 })
