@@ -438,7 +438,8 @@ func TestSpecialNodesButaneOutput(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{{Kind: "DaemonSet", Name: "common-ds"}},
 		},
 		Spec: corev1.PodSpec{
-			HostNetwork: true,
+			HostNetwork:  true,
+			NodeSelector: map[string]string{"node-role.kubernetes.io/worker": ""},
 			Containers: []corev1.Container{{
 				Name: "common-ctr", Image: "img",
 				Ports: []corev1.ContainerPort{{ContainerPort: 8080}},
@@ -470,7 +471,7 @@ func TestSpecialNodesButaneOutput(t *testing.T) {
 		}},
 	}
 
-	// Service running ONLY on worker-2 (port 443)
+	// Service running ONLY on worker-2 (port 443), pinned via nodeSelector
 	specialPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ingress-pod", Namespace: "ns2",
@@ -478,7 +479,8 @@ func TestSpecialNodesButaneOutput(t *testing.T) {
 			OwnerReferences: []metav1.OwnerReference{{Kind: "DaemonSet", Name: "ingress-ds"}},
 		},
 		Spec: corev1.PodSpec{
-			HostNetwork: true,
+			HostNetwork:  true,
+			NodeSelector: map[string]string{"custom-group": "mc-special"},
 			Containers: []corev1.Container{{
 				Name: "ingress-ctr", Image: "img",
 				Ports: []corev1.ContainerPort{{ContainerPort: 443}},
