@@ -340,10 +340,12 @@ func (cc *ConnectionCheck) getLoopbackIPs(debugPod *corev1.Pod) map[string]bool 
 	}
 	out, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"chroot", "/host", "/bin/sh", "-c", "ip -j addr show lo"})
 	if err != nil {
+		log.Warningf("failed to get loopback IPs from pod %s: %v", debugPod.Name, err)
 		return map[string]bool{}
 	}
 	var parsed []iface
-	if json.Unmarshal(out, &parsed) != nil {
+	if err := json.Unmarshal(out, &parsed); err != nil {
+		log.Warningf("failed to parse loopback IP output from pod %s: %v", debugPod.Name, err)
 		return map[string]bool{}
 	}
 	ips := make(map[string]bool)
