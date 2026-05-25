@@ -1172,6 +1172,22 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				[]corev1.Node{*masterNode, *standardWorker, *customcnfWorker}, nil,
 			).AnyTimes()
 
+			mockUtilsMultiPool.EXPECT().CreateNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
+			mockUtilsMultiPool.EXPECT().DeleteNamespace(consts.DefaultDebugNamespace).Return(nil).AnyTimes()
+			mockDebugPod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "debug-pod",
+					Namespace: consts.DefaultDebugNamespace,
+				},
+				Status: corev1.PodStatus{
+					Phase: corev1.PodRunning,
+				},
+			}
+			mockUtilsMultiPool.EXPECT().CreatePodOnNode(gomock.Any(), consts.DefaultDebugNamespace, gomock.Any(), gomock.Any()).Return(mockDebugPod, nil).AnyTimes()
+			mockUtilsMultiPool.EXPECT().DeletePod(mockDebugPod).Return(nil).AnyTimes()
+			mockUtilsMultiPool.EXPECT().WaitForPodStatus(consts.DefaultDebugNamespace, mockDebugPod, corev1.PodRunning).Return(nil).AnyTimes()
+			mockUtilsMultiPool.EXPECT().RunCommandOnPod(mockDebugPod, gomock.Any()).Return([]byte("32768 60999\n"), nil).AnyTimes()
+
 			g.By("Creating endpoint matrix")
 			commatrixCreator := New(
 				configv1.BareMetalPlatformType,
