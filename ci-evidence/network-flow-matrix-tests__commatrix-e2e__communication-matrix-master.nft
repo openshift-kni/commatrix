@@ -1,0 +1,27 @@
+#!/usr/sbin/nft -f
+table inet openshift_filter {
+    chain OPENSHIFT {
+        type filter hook input priority 1; policy accept;
+
+        # Allow loopback traffic
+        iif lo accept
+
+        # Allow established and related traffic
+        ct state established,related accept
+
+        # Allow ICMP on ipv4
+        ip protocol icmp accept
+        # Allow ICMP on ipv6
+        ip6 nexthdr ipv6-icmp accept
+
+        # Allow specific TCP and UDP ports
+        tcp dport { 22, 53, 80, 111, 443, 1936, 2379, 2380, 2381, 6080, 6443, 9001, 9099, 9100, 9103, 9104, 9105, 9107, 9108, 9258, 9443, 9637, 9978, 9979, 9980, 10250, 10256, 10257, 10259, 17697, 22623, 22624, 30000-32767 } accept
+        udp dport { 53, 68, 111, 30000-32767 } accept
+
+        # Drop broadcast traffic with rate-limited logging
+        ip daddr 255.255.255.255 jump { limit rate 1/minute log prefix "firewall "; drop; }
+
+        # Rate-limited logging and default drop
+        jump { limit rate 1/minute log prefix "firewall "; drop; }
+    }
+}

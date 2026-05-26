@@ -1,0 +1,293 @@
+table inet openshift_filter {
+	chain OPENSHIFT {
+		type filter hook input priority filter + 1; policy accept;
+		iif "lo" accept
+		ct state established,related accept
+		ip protocol icmp accept
+		ip6 nexthdr ipv6-icmp accept
+		tcp dport { 22, 53, 80, 111, 443, 1936, 2379-2381, 6080, 6443, 9001, 9099-9100, 9103-9105, 9107-9108, 9258, 9443, 9637, 9978-9980, 10250, 10256-10257, 10259, 17697, 22623-22624, 30000-32767 } accept
+		udp dport { 53, 68, 111, 30000-32767 } accept
+		ip daddr 255.255.255.255 jump {
+			limit rate 1/minute burst 5 packets log prefix "firewall "
+			drop
+		}
+		tcp dport 9000-9999 accept
+		udp dport 9000-9999 accept
+		tcp dport 30000-32767 accept
+		udp dport 30000-32767 accept
+		tcp dport 10180 accept
+		udp dport 10180 accept
+		tcp dport 80 accept
+		udp dport 80 accept
+		jump {
+			limit rate 1/minute burst 5 packets log prefix "firewall "
+			drop
+		}
+	}
+}
+table ip mangle {
+	chain KUBE-IPTABLES-HINT {
+	}
+
+	chain KUBE-KUBELET-CANARY {
+	}
+
+	chain OVN-KUBE-ITP {
+	}
+
+	chain OUTPUT {
+		type route hook output priority mangle; policy accept;
+		counter packets 117191 bytes 155907888 jump OVN-KUBE-ITP
+	}
+}
+table ip filter {
+	chain KUBE-FIREWALL {
+		ip saddr# Warning: table ip filter is managed by iptables-nft, do not touch!
+ != 127.0.0.0/8 ip daddr 127.0.0.0/8  ct status dnat counter packets 0 bytes 0 drop
+	}
+
+	chain OUTPUT {
+		type filter hook output priority filter; policy accept;
+		tcp flags syn / fin,syn,rst,ack tcp dport 22624 counter packets 0 bytes 0 reject
+		tcp flags syn / fin,syn,rst,ack tcp dport 22623 counter packets 0 bytes 0 reject
+		counter packets 152206 bytes 213261218 jump KUBE-FIREWALL
+	}
+
+	chain INPUT {
+		type filter hook input priority filter; policy accept;
+		counter packets 154781 bytes 153962856 jump KUBE-FIREWALL
+	}
+
+	chain KUBE-KUBELET-CANARY {
+	}
+
+	chain FORWARD {
+		type filter hook forward priority filter; policy drop;
+		ip daddr 169.254.0.1 counter packets 0 bytes 0 accept
+		ip saddr 169.254.0.1 counter packets 0 bytes 0 accept
+		ip daddr 172.30.0.0/16 counter packets 0 bytes 0 accept
+		ip saddr 172.30.0.0/16 counter packets 0 bytes 0 accept
+		ip daddr 10.128.0.0/14 counter packets 0 bytes 0 accept
+		ip saddr 10.128.0.0/14 counter packets 0 bytes 0 accept
+		tcp flags syn / fin,syn,rst,ack tcp dport 22624 counter packets 0 bytes 0 reject
+		tcp flags syn / fin,syn,rst,ack tcp dport 22623 counter packets 0 bytes 0 reject
+	}
+}
+table ip6 mangle {
+	chain KUBE-IPTABLES-HINT {
+	}
+
+	chain KUBE-KUBELET-CANARY {
+	}
+}
+table ip nat {
+	chain KUBE-KUBELET-CANARY {
+	}
+
+	chain OVN-KUBE-ITP {
+	}
+
+	chain OVN-KUBE-NODEPORT {
+	}
+
+	chain OVN-KUBE-EXTERNALIP {
+	}
+
+	chain OVN-KUBE-ETP {
+	}
+
+	chain OUTPUT {
+		type nat hook output priority dstnat; policy accept;
+		counter packets 796 bytes 48487 jump OVN-KUBE-EXTERNALIP
+		counter packets 796 bytes 48487 jump OVN-KUBE-NODEPORT
+		counter packets 796 bytes 48487 jump OVN-KUBE-ITP
+	}
+
+	chain PREROUTING {
+		type nat hook prerouting priority dstnat; policy accept;
+		counter packets 518 bytes 113560 jump OVN-KUBE-ETP
+		counter packets 518 bytes 113560 jump OVN-KUBE-EXTERNALIP
+		counter packets 518 bytes 113560 jump OVN-KUBE-NODEPORT
+	}
+
+	chain OVN-KUBE-EGRESS-IP-MULTI-NIC {
+	}
+
+	chain POSTROUTING {
+		type nat hook postrouting priority srcnat; policy accept;
+		counter packets 734 bytes 44767 jump OVN-KUBE-EGRESS-IP-MULTI-NIC
+	}
+}
+table ip6 nat {
+	chain KUBE-KUBELET-CANARY {
+	}
+}
+table ip6 filter {
+	chain KUBE-KUBELET-CANARY {
+	}
+}
+table ip raw {
+	chain PREROUTING {
+		type filter hook prerouting priority raw; policy accept;
+# Warning: table ip raw is managed by iptables-nft, do not touch!
+		udp dport 6081 counter packets 0 bytes 0 notrack
+	}
+
+	chain OUTPUT {
+		type filter hook output priority raw; policy accept;
+		udp dport 6081 counter packets 0 bytes 0 notrack
+	}
+}
+table ip6 raw {
+	chain PREROUTING {
+		type filter hook prerouting# Warning: table ip6 raw is managed by iptables-nft, do not touch!
+ priority raw; policy accept;
+		udp dport 6081 counter packets 0 bytes 0 notrack
+	}
+
+	chain OUTPUT {
+		type filter hook output priority raw; policy accept;
+		udp dport 6081 counter packets 0 bytes 0 notrack
+	}
+}
+table inet ovn-kubernetes {
+	set remote-node-ips-v4 {
+		type ipv4_addr
+		comment "Block egress ICMP needs frag to remote Kubernetes nodes"
+	}
+
+	set remote-node-ips-v6 {
+		type ipv6_addr
+		comment "Block egress ICMPv6 packet too big to remote Kubernetes nodes"
+	}
+
+	set udn-open-ports-v4 {
+		type ipv4_addr . inet_proto . inet_service
+		comment "default network open ports of pods in user defined networks (IPv4)"
+	}
+
+	set udn-open-ports-v6 {
+		type ipv6_addr . inet_proto . inet_service
+		comment "default network open ports of pods in user defined networks (IPv6)"
+	}
+
+	set udn-open-ports-icmp-v4 {
+		type ipv4_addr
+		comment "default network IPs of pods in user defined networks that allow ICMP (IPv4)"
+	}
+
+	set udn-open-ports-icmp-v6 {
+		type ipv6_addr
+		comment "default network IPs of pods in user defined networks that allow ICMP (IPv6)"
+	}
+
+	set udn-pod-default-ips-v4 {
+		type ipv4_addr
+		comment "default network IPs of pods in user defined networks (IPv4)"
+	}
+
+	set udn-pod-default-ips-v6 {
+		type ipv6_addr
+		comment "default network IPs of pods in user defined networks (IPv6)"
+	}
+
+	set mgmtport-no-snat-nodeports {
+		type inet_proto . inet_service
+		comment "NodePorts not subject to management port SNAT"
+	}
+
+	set mgmtport-no-snat-services-v4 {
+		type ipv4_addr . inet_proto . inet_service
+		comment "eTP:Local short-circuit not subject to management port SNAT (IPv4)"
+	}
+
+	set mgmtport-no-snat-services-v6 {
+		type ipv6_addr . inet_proto . inet_service
+		comment "eTP:Local short-circuit not subject to management port SNAT (IPv6)"
+	}
+
+	set mgmtport-no-snat-subnets-v4 {
+		type ipv4_addr
+		flags interval
+		comment "subnets not subject to management port SNAT (IPv4)"
+	}
+
+	set mgmtport-no-snat-subnets-v6 {
+		type ipv6_addr
+		flags interval
+		comment "subnets not subject to management port SNAT (IPv6)"
+	}
+
+	map udn-mark-nodeports {
+		type inet_proto . inet_service : verdict
+		comment "UDN services NodePorts mark"
+	}
+
+	map udn-mark-external-ips-v4 {
+		type ipv4_addr . inet_proto . inet_service : verdict
+		comment "UDN services External IPs mark (IPv4)"
+	}
+
+	map udn-mark-external-ips-v6 {
+		type ipv6_addr . inet_proto . inet_service : verdict
+		comment "UDN services External IPs mark (IPv6)"
+	}
+
+	map egress-service-snat-v4 {
+		type ipv4_addr : ipv4_addr
+	}
+
+	chain no-pmtud {
+		comment "Block egress needs frag/packet too big to remote k8s nodes"
+		type filter hook output priority filter; policy accept;
+		ip daddr @remote-node-ips-v4 icmp type destination-unreachable icmp code frag-needed drop
+	}
+
+	chain udn-isolation {
+		comment "Host isolation for user defined networks"
+		type filter hook output priority filter; policy accept;
+		ip daddr . meta l4proto . th dport @udn-open-ports-v4 accept
+		ip daddr @udn-open-ports-icmp-v4 meta l4proto icmp accept
+		socket cgroupv2 level 2 "system.slice/kubelet.service" ip daddr @udn-pod-default-ips-v4 accept
+		ip daddr @udn-pod-default-ips-v4 drop
+	}
+
+	chain udn-service-mark {
+		comment "UDN services packet mark"
+		fib daddr type local meta l4proto . th dport vmap @udn-mark-nodeports
+		ip daddr . meta l4proto . th dport vmap @udn-mark-external-ips-v4
+		ip6 daddr . meta l4proto . th dport vmap @udn-mark-external-ips-v6
+	}
+
+	chain udn-service-prerouting {
+		comment "UDN services packet mark - Prerouting"
+		type filter hook prerouting priority mangle; policy accept;
+		iifname != "ovn-k8s-mp0" jump udn-service-mark
+	}
+
+	chain udn-service-output {
+		comment "UDN services packet mark - Output"
+		type filter hook output priority mangle; policy accept;
+		jump udn-service-mark
+	}
+
+	chain ovn-kube-pod-subnet-masq {
+	}
+
+	chain mgmtport-snat {
+		comment "OVN SNAT to Management Port"
+		type nat hook postrouting priority srcnat; policy accept;
+		oifname != "ovn-k8s-mp0" return
+		meta l4proto . th dport @mgmtport-no-snat-nodeports return
+		ip saddr 10.128.0.2 return
+		ip daddr . meta l4proto . th dport @mgmtport-no-snat-services-v4 return
+		ip saddr @mgmtport-no-snat-subnets-v4 return
+		snat ip to 10.128.0.2
+	}
+
+	chain egress-services {
+		type nat hook postrouting priority srcnat; policy accept;
+		meta mark 0x000003f0 return comment "DoNotSNAT"
+		snat ip to ip saddr map @egress-service-snat-v4
+	}
+}

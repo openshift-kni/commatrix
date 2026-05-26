@@ -1,0 +1,33 @@
+Test: Run multi-stage test post phase
+  Message: "telco5g-network-flow-matrix-single-node-bm" pod "telco5g-network-flow-matrix-single-node-bm-gather-extra" failed: could not watch pod: the pod ci-op-lishpd96/telco5g-network-flow-matrix-single-node-bm-gather-extra failed after 5m21s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 123, reason Error
+---
+: connection reset by peer
+[must-gather-ct9k2] POD 2026-05-25T14:28:03.576153836Z [disk usage checker] Started
+[must-gather-ct9k2] POD 202
+
+Test: Run multi-stage test telco5g-network-flow-matrix-single-node-bm - telco5g-network-flow-matrix-single-node-bm-gather-extra container test
+  Message: : connection reset by peer
+[must-gather-ct9k2] POD 2026-05-25T14:28:03.576153836Z [disk usage checker] Started
+[must-gather-ct9k2] POD 2026-05-25T14:28:03.578689213Z bash: line 1: /usr/bin/gather_multus_logs: No such file or directory
+[must-gather-ct9k2] POD 2026-05-25T14:28:03.579250850Z [disk usage checker] Volume usage percentage: current = 8 ; allowed = 100
+[must-gather-ct9k2] POD 2026-05-25T14:28:03.584727696Z Caches written to disk
+[must-gather-ct9k2] OUT 2026-05-25T14:28:12.940387074Z wai
+
+Test: Run multi-stage test telco5g-network-flow-matrix-single-node-bm - telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests container test
+  Message: �[0m Rebooting first node: cnfdu15.upstreamci.bos2.laband waiting for disconnect 
+   �[38;5;243m@ 05/25/26 14:13:32.749�[0m
+2026/05/25 14:13:35 Waiting for node cnfdu15.upstreamci.bos2.lab to be in NotReady state
+2026/05/25 14:20:36 Node cnfdu15.upstreamci.bos2.lab is NotReady
+  �[1mSTEP:�[0m Waiting for node to be ready �[38;5;243m@ 05/25/26 14:20:36.124�[0m
+2026/05/25 14:20:36 Waiting for node cnfdu15.upstreamci.bos2.lab to be in Ready state
+2026/05/25 14:20:45 Node cnfdu15.upstreamci.bos2.lab
+
+Test: Run multi-stage test test phase
+  Message: "telco5g-network-flow-matrix-single-node-bm" pod "telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-lishpd96/telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests failed after 13m1s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+�[0m Rebooting first node: cnfdu15.upstreamci.bos2.laband waiting for disconnect 
+   �[38;5;243m@ 05/25/26 14:13:3

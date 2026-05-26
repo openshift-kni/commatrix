@@ -233,6 +233,17 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// CRI-O may bind a TCP stream listener on a Linux ephemeral port (e.g. 32768-60999);
+		// it has no EndpointSlice and the port differs across reboots.
+		const (
+			ephemeralMin = 32768
+			ephemeralMax = 60999
+		)
+		if cd.Service == "crio" && cd.Protocol == "TCP" &&
+			cd.Port >= ephemeralMin && cd.Port <= ephemeralMax {
+			continue
+		}
+
 		res = append(res, cd)
 	}
 	return &types.ComMatrix{Ports: res}
