@@ -381,6 +381,32 @@ var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
 	},
 }
 
+// LinuxIPEphemeralPortDynamicRange is the typical Linux kernel ephemeral port
+// allocation window (net.ipv4.ip_local_port_range on RHEL/OpenShift nodes).
+//
+// Processes may bind LISTEN sockets in this range without a Kubernetes
+// EndpointSlice mapping (notably CRI-O on the node primary address). These
+// should be excluded only from EndpointSlice-vs-ss reconciliation (for example
+// e2e validation), not added to firewall matrix dynamic ranges emitted for MC/NFT.
+var LinuxIPEphemeralPortDynamicRange = DynamicRangeList{
+	{
+		Direction:   "Ingress",
+		Protocol:    "TCP",
+		MinPort:     32768,
+		MaxPort:     60999,
+		Description: "Linux kernel ephemeral port range",
+		Optional:    true,
+	},
+	{
+		Direction:   "Ingress",
+		Protocol:    "UDP",
+		MinPort:     32768,
+		MaxPort:     60999,
+		Description: "Linux kernel ephemeral port range",
+		Optional:    true,
+	},
+}
+
 // GetStaticEntries returns the static entries for the given platform, topology,
 // IPv6 and DHCP configuration.
 func GetStaticEntries(platformType configv1.PlatformType, topology configv1.TopologyMode, ipv6Enabled, dhcpEnabled bool) ([]ComDetails, error) {

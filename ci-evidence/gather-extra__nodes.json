@@ -1,0 +1,25 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Node",
+            "metadata": {
+                "annotations": {
+                    "k8s.ovn.org/host-cidrs": "[\"192.168.17.171/24\"]",
+                    "k8s.ovn.org/l3-gateway-config": "{\"default\":{\"mode\":\"shared\",\"bridge-id\":\"br-ex\",\"interface-id\":\"br-ex_cnfdu18\",\"mac-address\":\"30:3e:a7:03:32:00\",\"ip-addresses\":[\"192.168.17.171/24\"],\"ip-address\":\"192.168.17.171/24\",\"next-hops\":[\"192.168.17.1\"],\"next-hop\":\"192.168.17.1\",\"node-port-enable\":\"true\",\"vlan-id\":\"0\"}}",
+                    "k8s.ovn.org/layer2-topology-version": "2.0",
+                    "k8s.ovn.org/node-chassis-id": "dfa81bd2-ac51-4d4f-9017-c6fb99f13e10",
+                    "k8s.ovn.org/node-encap-ips": "[\"192.168.17.171\"]",
+                    "k8s.ovn.org/node-id": "7",
+                    "k8s.ovn.org/node-masquerade-subnet": "{\"ipv4\":\"169.254.0.0/17\",\"ipv6\":\"fd69::/112\"}",
+                    "k8s.ovn.org/node-primary-ifaddr": "{\"ipv4\":\"192.168.17.171/24\"}",
+                    "k8s.ovn.org/node-subnets": "{\"default\":[\"10.133.2.0/23\"]}",
+                    "k8s.ovn.org/node-transit-switch-port-ifaddr": "{\"ipv4\":\"100.88.0.7/16\"}",
+                    "k8s.ovn.org/zone-name": "cnfdu18",
+                    "machine.openshift.io/machine": "openshift-machine-api/cnfdu18-rlbxk-worker-0-zqtfx",
+                    "machineconfiguration.openshift.io/controlPlaneTopology": "HighlyAvailable",
+                    "machineconfiguration.openshift.io/currentConfig": "rendered-worker-fd59e1002f30f94ef8a0ecc61468c44f",
+                    "machineconfiguration.openshift.io/desiredConfig": "rendered-worker-fd59e1002f30f94ef8a0ecc61468c44f",
+                    "machineconfiguration.openshift.io/desiredDrain": "uncordon-rendered-worker-fd59e1002f30f94ef8a0ecc61468c44f",
+                    "machineconfiguration.openshift.io/firstPivotConfig": 

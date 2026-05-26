@@ -1,0 +1,60 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Endpoints",
+            "metadata": {
+                "creationTimestamp": "2026-05-25T13:15:17Z",
+                "labels": {
+                    "endpointslice.kubernetes.io/skip-mirror": "true"
+                },
+                "name": "kubernetes",
+                "namespace": "default",
+                "resourceVersion": "47703",
+                "uid": "de7a2dff-c06e-4fc1-b629-9a0967090868"
+            },
+            "subsets": [
+                {
+                    "addresses": [
+                        {
+                            "ip": "192.168.17.197"
+                        },
+                        {
+                            "ip": "192.168.17.198"
+                        },
+                        {
+                            "ip": "192.168.17.199"
+                        }
+                    ],
+                    "ports": [
+                        {
+                            "name": "https",
+                            "port": 6443,
+                            "protocol": "TCP"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Endpoints",
+            "metadata": {
+                "creationTimestamp": "2026-05-25T14:06:09Z",
+                "labels": {
+                    "app.kubernetes.io/managed-by": "prometheus-operator",
+                    "app.kubernetes.io/name": "kubelet",
+                    "endpointslice.kubernetes.io/skip-mirror": "true",
+                    "k8s-app": "kubelet"
+                },
+                "name": "kubelet",
+                "namespace": "kube-system",
+                "resourceVersion": "44237",
+                "uid": "1d624ac8-deca-478c-8784-56c6384aa196"
+            },
+            "subsets": [
+                {
+                    "addresses": [
+                        {
+                            "ip

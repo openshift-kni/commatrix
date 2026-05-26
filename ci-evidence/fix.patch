@@ -1,0 +1,51 @@
+diff --git a/pkg/types/static-custom-entries.go b/pkg/types/static-custom-entries.go
+index 3e5f5b8..06ef1f2 100644
+--- a/pkg/types/static-custom-entries.go
++++ b/pkg/types/static-custom-entries.go
+@@ -381,6 +381,32 @@ var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
+ 	},
+ }
+ 
++// LinuxIPEphemeralPortDynamicRange is the typical Linux kernel ephemeral port
++// allocation window (net.ipv4.ip_local_port_range on RHEL/OpenShift nodes).
++//
++// Processes may bind LISTEN sockets in this range without a Kubernetes
++// EndpointSlice mapping (notably CRI-O on the node primary address). These
++// should be excluded only from EndpointSlice-vs-ss reconciliation (for example
++// e2e validation), not added to firewall matrix dynamic ranges emitted for MC/NFT.
++var LinuxIPEphemeralPortDynamicRange = DynamicRangeList{
++	{
++		Direction:   "Ingress",
++		Protocol:    "TCP",
++		MinPort:     32768,
++		MaxPort:     60999,
++		Description: "Linux kernel ephemeral port range",
++		Optional:    true,
++	},
++	{
++		Direction:   "Ingress",
++		Protocol:    "UDP",
++		MinPort:     32768,
++		MaxPort:     60999,
++		Description: "Linux kernel ephemeral port range",
++		Optional:    true,
++	},
++}
++
+ // GetStaticEntries returns the static entries for the given platform, topology,
+ // IPv6 and DHCP configuration.
+ func GetStaticEntries(platformType configv1.PlatformType, topology configv1.TopologyMode, ipv6Enabled, dhcpEnabled bool) ([]ComDetails, error) {
+diff --git a/test/e2e/validation_test.go b/test/e2e/validation_test.go
+index 69aa564..e00a30d 100644
+--- a/test/e2e/validation_test.go
++++ b/test/e2e/validation_test.go
+@@ -156,7 +156,8 @@ var _ = Describe("Validation", func() {
+ 
+ 		missingEPSMat = filterOutPortsOfKnownServices(missingEPSMat)
+ 		// Don't include in the missing EPS matrix ports that are in dynamic ranges of the generated commatrix.
+-		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, commatrix.DynamicRanges)
++		ephemeralAndNodePortRanges := append(append(types.DynamicRangeList{}, commatrix.DynamicRanges...), types.LinuxIPEphemeralPortDynamicRange...)
++		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, ephemeralAndNodePortRanges)
+ 		if len(missingEPSMat.Ports) > 0 {
+ 			Fail(fmt.Sprintf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat))
+ 		}
