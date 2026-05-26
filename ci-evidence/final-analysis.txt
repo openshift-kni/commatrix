@@ -1,0 +1,25 @@
+**Root Cause:** The EPS vs open-ports validation failed because dynamic-range filtering covers only Kubernetes NodePort (30000–32767), not CRI-O stream listeners bound to the Linux sysctl ephemeral range on each node's primary IP (e.g. 33373, 40701, 43435 on masters and 38601, 44551, 45877 on workers). Those sockets correctly have no EndpointSlice. Separately, `docs/stable/raw/bm.csv` still documented bare-metal rows (metal3-httpd TCP 6388, machine-config-daemon TCP 8798 on master/worker, machine-approver TCP 9192) that CI's endpoint-derived matrix no longer includes (`-` in doc-diff).
+
+**Port-by-Port Analysis:**
+| Port | Process | Ephemeral? | Has Endpoint? | Action | Detail |
+|------|---------|-----------|---------------|--------|--------|
+| 33373 | crio | yes (sysctl range) | no | SKIP | Exclude in test via filter; not documentable as a fixed port. |
+| 40701 | crio | yes | no | SKIP | Same CRI-O pattern (master). |
+| 43435 | crio | yes | no | SKIP | Same CRI-O pattern (master). |
+| 38601 | crio | yes | no | SKIP | Same CRI-O pattern (worker). |
+| 44551 | crio | yes | no | SKIP | Same CRI-O pattern (worker). |
+| 45877 | crio | yes | no | SKIP | Same CRI-O pattern (worker). |
+| 6388 | metal3-httpd | no | n/a vs ss | REMOVE | Obsolete documented row versus generated matrix (`-` doc-diff). |
+| 8798 | machine-config-daemon | no | n/a | REMOVE | Obsolete documented rows master and worker (`-` doc-diff). |
+| 9192 | machine-approver/kube-rbac-proxy | no | n/a | REMOVE | Obsolete documented row (`-` doc-diff). |
+| 9443 | cluster-cloud-controller-manager | no | yes (EPS) | IGNORE | `+` in matrix-diff-ss only (warning path), not Missing EPS assertion. |
+| 68 UDP | NetworkManager | no | EPS-backed | IGNORE | `+` in SS diff only; third test already skips DHCP static UDP 68 for open-port checks. |
+
+**Suggested Fix:**
+- test/e2e/validation_test.go: extend filterOutPortsOfKnownServices to skip TCP ephemeral ports (32768–60999) with Service crio.
+- docs/stable/raw/bm.csv: remove TCP 6388, 8798 (master + worker), 9192 rows.
+- docs/stable/unique/bm.csv: remove TCP 6388 row to match raw bm.
+
+**Fix Written:** yes — see ./ci-evidence/fix.patch
+
+**Severity:** HIGH
