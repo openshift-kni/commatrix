@@ -227,6 +227,12 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// CRI-O exposes a TCP stream server on the node's primary address using an ephemeral
+		// port assigned at runtime (exec/attach/logs). There is no corresponding EndpointSlice.
+		if cd.Service == "crio" && cd.Protocol == "TCP" {
+			continue
+		}
+
 		// Skip dns ports used during provisioning for dhcp and tftp,
 		// not used for external traffic
 		if cd.Service == "dnsmasq" || cd.Service == "dig" {
