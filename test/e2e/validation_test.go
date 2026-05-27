@@ -27,11 +27,13 @@ const (
 	docCommatrixBaseFilePath = "../../docs/stable/raw/%s.csv"
 	diffFileComments         = "// `+` indicates a port that isn't in the current documented matrix, and has to be added.\n" +
 		"// `-` indicates a port that has to be removed from the documented matrix.\n"
-	commatrixFile      = "communication-matrix.csv"
-	ssCommatrixFile    = "ss-generated-matrix.csv"
-	matrixdiffFile     = "matrix-diff-ss"
-	serviceNodePortMin = 30000
-	serviceNodePortMax = 32767
+	commatrixFile            = "communication-matrix.csv"
+	ssCommatrixFile          = "ss-generated-matrix.csv"
+	matrixdiffFile           = "matrix-diff-ss"
+	serviceNodePortMin       = 30000
+	serviceNodePortMax       = 32767
+	linuxEphemeralMinPortTCP = 32768
+	linuxEphemeralMaxPortTCP = 60999
 )
 
 type EPSStatus string
@@ -221,6 +223,13 @@ func isDHCPClientPort(cd types.ComDetails) bool {
 func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 	res := []types.ComDetails{}
 	for _, cd := range mat.Ports {
+		// CRI-O may bind ephemeral TCP ports on the node data-plane IP for streaming
+		// workloads; these have no EndpointSlice and must not fail this check.
+		if cd.Service == "crio" && cd.Protocol == "TCP" &&
+			cd.Port >= linuxEphemeralMinPortTCP && cd.Port <= linuxEphemeralMaxPortTCP {
+			continue
+		}
+
 		// Skip "rpc.statd" ports, these are randomly open ports on the node
 		// no need to mention them in the matrix diff
 		if cd.Service == "rpc.statd" {

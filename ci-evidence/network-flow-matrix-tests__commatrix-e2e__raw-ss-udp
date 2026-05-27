@@ -1,0 +1,75 @@
+node: worker-2
+UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=992,fd=5))                          
+UNCONN 0      0      127.0.0.1:659   0.0.0.0:* users:(("rpc.statd",pid=1715,fd=43))                      
+UNCONN 0      0        0.0.0.0:45533 0.0.0.0:* users:(("rpc.statd",pid=1715,fd=7))                       
+UNCONN 0      0        0.0.0.0:6081  0.0.0.0:*                                                           
+UNCONN 0      0        0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1683,fd=5),("systemd",pid=1,fd=119))
+UNCONN 0      0          [::1]:323      [::]:* users:(("chronyd",pid=992,fd=6))                          
+UNCONN 0      0           [::]:36460    [::]:* users:(("rpc.statd",pid=1715,fd=9))                       
+UNCONN 0      0           [::]:6081     [::]:*                                                           
+UNCONN 0      0              *:53          *:* users:(("coredns",pid=3224,fd=13))                        
+UNCONN 0      0           [::]:111      [::]:* users:(("rpcbind",pid=1683,fd=7),("systemd",pid=1,fd=122))
+
+node: worker-1
+UNCONN 0      0        0.0.0.0:6081  0.0.0.0:*                                                          
+UNCONN 0      0        0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1679,fd=5),("systemd",pid=1,fd=81))
+UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=990,fd=5))                         
+UNCONN 0      0      127.0.0.1:659   0.0.0.0:* users:(("rpc.statd",pid=1705,fd=53))                     
+UNCONN 0      0        0.0.0.0:53548 0.0.0.0:* users:(("rpc.statd",pid=1705,fd=7))                      
+UNCONN 0      0           [::]:6081     [::]:*                                                          
+UNCONN 0      0              *:53          *:* users:(("coredns",pid=3241,fd=9))                        
+UNCONN 0      0           [::]:111      [::]:* users:(("rpcbind",pid=1679,fd=7),("systemd",pid=1,fd=83))
+UNCONN 0      0          [::1]:323      [::]:* users:(("chronyd",pid=990,fd=6))                         
+UNCONN 0      0           [::]:51817    [::]:* users:(("rpc.statd",pid=1705,fd=9))                      
+
+node: worker-0
+UNCONN 0      0        0.0.0.0:6081  0.0.0.0:*                                                          
+UNCONN 0      0        0.0.0.0:55528 0.0.0.0:* users:(("rpc.statd",pid=1738,fd=7))                      
+UNCONN 0      0        0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1729,fd=5),("systemd",pid=1,fd=90))
+UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=995,fd=5))                         
+UNCONN 0      0      127.0.0.1:659   0.0.0.0:* users:(("rpc.statd",pid=1738,fd=23))                     
+UNCONN 0      0           [::]:44996    [::]:* users:(("rpc.statd",pid=1738,fd=9))                      
+UNCONN 0      0           [::]:6081     [::]:*                                                          
+UNCONN 0      0              *:53          *:* users:(("coredns",pid=3167,fd=9))                        
+UNCONN 0      0           [::]:111      [::]:* users:(("rpcbind",pid=1729,fd=7),("systemd",pid=1,fd=94))
+UNCONN 0      0          [::1]:323      [::]:* users:(("chronyd",pid=995,fd=6))                         
+
+node: master-2
+UNCONN 0      0        0.0.0.0:6081  0.0.0.0:*                                                           
+UNCONN 0      0        0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1674,fd=5),("systemd",pid=1,fd=129))
+UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1063,fd=5))                         
+UNCONN 0      0        0.0.0.0:58091 0.0.0.0:* users:(("rpc.statd",pid=1675,fd=8))                       
+UNCONN 0      0      127.0.0.1:1003  0.0.0.0:* users:(("rpc.statd",pid=1675,fd=5))                       
+UNCONN 0      0           [::]:6081     [::]:*                                                           
+UNCONN 0      0              *:53          *:* users:(("coredns",pid=3298,fd=9))                         
+UNCONN 0      0           [::]:111      [::]:* users:(("rpcbind",pid=1674,fd=7),("systemd",pid=1,fd=131))
+UNCONN 0      0          [::1]:323      [::]:* users:(("chronyd",pid=1063,fd=6))                         
+UNCONN 0      0           [::]:35831    [::]:* users:(("rpc.statd",pid=1675,fd=10))                      
+
+node: master-1
+UNCONN 0      0        0.0.0.0:45185 0.0.0.0:* users:(("rpc.statd",pid=1836,fd=8))                       
+UNCONN 0      0        0.0.0.0:6081  0.0.0.0:*                                                           
+UNCONN 0      0        0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1832,fd=5),("systemd",pid=1,fd=173))
+UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1081,fd=5))                         
+UNCONN 0      0      127.0.0.1:740   0.0.0.0:* users:(("rpc.statd",pid=1836,fd=5))                       
+UNCONN 0      0           [::]:6081     [::]:*                                                           
+UNCONN 0      0              *:53          *:* users:(("coredns",pid=3358,fd=10))                        
+UNCONN 0      0           [::]:111      [::]:* users:(("rpcbind",pid=1832,fd=7),("systemd",pid=1,fd=175))
+UNCONN 0      0          [::1]:323      [::]:* users:(("chronyd",pid=1081,fd=6))                         
+UNCONN 0      0           [::]:50912    [::]:* users:(("rpc.statd",pid=1836,fd=10))                      
+
+node: master-0
+UNCONN 0      0                                0.0.0.0:6081  0.0.0.0:*                                                           
+UNCONN 0      0                         0.0.0.0%enp1s0:67    0.0.0.0:* users:(("dnsmasq",pid=18093,fd=4))                        
+UNCONN 0      0                             172.22.0.3:69    0.0.0.0:* users:(("dnsmasq",pid=18093,fd=6))                        
+UNCONN 0      0                                0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1835,fd=5),("systemd",pid=1,fd=158))
+UNCONN 0      0                              127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1080,fd=5))                         
+UNCONN 0      0                              127.0.0.1:743   0.0.0.0:* users:(("rpc.statd",pid=1838,fd=7))                       
+UNCONN 0      0                                0.0.0.0:44058 0.0.0.0:* users:(("rpc.statd",pid=1838,fd=8))                       
+UNCONN 0      0                                   [::]:6081     [::]:*                                                           
+UNCONN 0      0                                      *:53          *:* users:(("coredns",pid=3433,fd=11))                        
+UNCONN 0      0      [fe80::27b:17ff:fe77:8267]%enp1s0:69       [::]:* users:(("dnsmasq",pid=18093,fd=7))                        
+UNCONN 0      0                                   [::]:111      [::]:* users:(("rpcbind",pid=1835,fd=7),("systemd",pid=1,fd=160))
+UNCONN 0      0                                  [::1]:323      [::]:* users:(("chronyd",pid=1080,fd=6))                         
+UNCONN 0      0                                   [::]:58539    [::]:* users:(("rpc.statd",pid=1838,fd=10))                      
+
