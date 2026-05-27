@@ -1,0 +1,18 @@
+diff --git a/test/e2e/validation_test.go b/test/e2e/validation_test.go
+index 69aa564..1f2d716 100644
+--- a/test/e2e/validation_test.go
++++ b/test/e2e/validation_test.go
+@@ -221,6 +221,13 @@ func isDHCPClientPort(cd types.ComDetails) bool {
+ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
+ 	res := []types.ComDetails{}
+ 	for _, cd := range mat.Ports {
++		// Skip CRI-O kubelet streaming listeners on the node IP. The port is from the
++		// OS ephemeral range and changes across reboots; it is not represented in EndpointSlices.
++		// (Loopback-only CRI-O sockets are already dropped when building the ss matrix.)
++		if cd.Service == "crio" {
++			continue
++		}
++
+ 		// Skip "rpc.statd" ports, these are randomly open ports on the node
+ 		// no need to mention them in the matrix diff
+ 		if cd.Service == "rpc.statd" {

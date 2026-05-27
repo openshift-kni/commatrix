@@ -1,0 +1,38 @@
+UNIFIED PORT MAP — each port with all its data in one place
+
+PORT 68:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,UDP,68,,NetworkManager,,,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 8798:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 9099:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,9099,openshift-cluster-version,cluster-version-operator,cluster-version-operator,cluster-version-operator,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 9192:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,9192,openshift-cluster-machine-approver,machine-approver,machine-approver,kube-rbac-proxy,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 9443:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,9443,openshift-cloud-controller-manager-operator,cloud-controller-manager-operator,cluster-cloud-controller-manager-operator,cluster-cloud-controller-manager,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 38735:
+  Issues: NO_ENDPOINTSLICE
+  Ephemeral range: YES
+  Socket state: LISTEN 0      4096   192.168.17.15:38735 0.0.0.0:* users:(("crio",pid=4920,fd=12))
+  Matrix entry: Ingress,TCP,38735,,crio,,,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
