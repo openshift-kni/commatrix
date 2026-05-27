@@ -1,0 +1,26 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Node",
+            "metadata": {
+                "annotations": {
+                    "alpha.kubernetes.io/provided-node-ip": "10.0.98.3",
+                    "cloud.network.openshift.io/egress-ipconfig": "[{\"interface\":\"eni-050266a73f77d6803\",\"ifaddr\":{\"ipv4\":\"10.0.64.0/18\"},\"capacity\":{\"ipv4\":14,\"ipv6\":15}}]",
+                    "cluster.x-k8s.io/annotations-from-machine": "",
+                    "cluster.x-k8s.io/cluster-name": "ci-op-n0m8pgxk-8c898-mdqsx",
+                    "cluster.x-k8s.io/cluster-namespace": "openshift-cluster-api-guests",
+                    "cluster.x-k8s.io/labels-from-machine": "",
+                    "cluster.x-k8s.io/machine": "ci-op-n0m8pgxk-8c898-mdqsx-master-0",
+                    "csi.volume.kubernetes.io/nodeid": "{\"ebs.csi.aws.com\":\"i-044cb6ec6ca4800b7\"}",
+                    "k8s.ovn.org/host-cidrs": "[\"10.0.98.3/18\"]",
+                    "k8s.ovn.org/l3-gateway-config": "{\"default\":{\"mode\":\"shared\",\"bridge-id\":\"br-ex\",\"interface-id\":\"br-ex_ip-10-0-98-3.ec2.internal\",\"mac-address\":\"0a:ff:ef:93:a4:15\",\"ip-addresses\":[\"10.0.98.3/18\"],\"ip-address\":\"10.0.98.3/18\",\"next-hops\":[\"10.0.64.1\"],\"next-hop\":\"10.0.64.1\",\"node-port-enable\":\"true\",\"vlan-id\":\"0\"}}",
+                    "k8s.ovn.org/layer2-topology-version": "2.0",
+                    "k8s.ovn.org/node-chassis-id": "ede6435d-5290-4160-87e7-e24b25d2ab59",
+                    "k8s.ovn.org/node-encap-ips": "[\"10.0.98.3\"]",
+                    "k8s.ovn.org/node-id": "2",
+                    "k8s.ovn.org/node-masquerade-subnet": "{\"ipv4\":\"169.254.0.0/17\",\"ipv6\":\"fd69::/112\"}",
+                    "k8s.ovn.org/node-primary-ifaddr": "{\"ipv4\":\"10.0.98.3/18\"}",
+                    "k8s.ovn.org/node-subnets": "{\"default\":[\"10.128.0.0/23\"]}",
+                    "k8s.ovn.org/node-transit-switch-port-ifa

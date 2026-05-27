@@ -32,6 +32,10 @@ const (
 	matrixdiffFile     = "matrix-diff-ss"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
+	// Typical Linux default sysctl net.ipv4.ip_local_port_range (RHEL/OpenShift nodes).
+	// CRI-O may listen here for streams; ports are non-stable and never have an EndpointSlice.
+	linuxEphemeralPortMin = 32768
+	linuxEphemeralPortMax = 60999
 )
 
 type EPSStatus string
@@ -230,6 +234,13 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 		// Skip dns ports used during provisioning for dhcp and tftp,
 		// not used for external traffic
 		if cd.Service == "dnsmasq" || cd.Service == "dig" {
+			continue
+		}
+
+		// Skip CRI-O listeners in the kernel ephemeral port range (e.g. stream server);
+		// they are host-level sockets with no EndpointSlice and non-stable ports.
+		if cd.Service == "crio" && cd.Protocol == "TCP" &&
+			cd.Port >= linuxEphemeralPortMin && cd.Port <= linuxEphemeralPortMax {
 			continue
 		}
 

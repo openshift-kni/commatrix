@@ -1,0 +1,62 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "addressType": "IPv4",
+            "apiVersion": "discovery.k8s.io/v1",
+            "endpoints": [
+                {
+                    "addresses": [
+                        "10.0.98.3"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    }
+                }
+            ],
+            "kind": "EndpointSlice",
+            "metadata": {
+                "creationTimestamp": "2026-05-26T13:15:10Z",
+                "generation": 11,
+                "labels": {
+                    "kubernetes.io/service-name": "kubernetes"
+                },
+                "name": "kubernetes",
+                "namespace": "default",
+                "resourceVersion": "20175",
+                "uid": "530b4dba-911f-468d-a386-813857d3db38"
+            },
+            "ports": [
+                {
+                    "name": "https",
+                    "port": 6443,
+                    "protocol": "TCP"
+                }
+            ]
+        },
+        {
+            "addressType": "IPv4",
+            "apiVersion": "discovery.k8s.io/v1",
+            "endpoints": [
+                {
+                    "addresses": [
+                        "10.0.98.3"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    },
+                    "nodeName": "ip-10-0-98-3.ec2.internal",
+                    "targetRef": {
+                        "kind": "Node",
+                        "name": "ip-10-0-98-3.ec2.internal",
+                        "uid": "ab654d1c-e53f-4eb7-a453-e56c4f1150c9"
+                    }
+                }
+            ],
+            "kind": "EndpointSlice",
+            "metadata": {
+                "creationTimestamp": "2026-05-26T13:22:19Z",
+                "generateName": "kubelet-",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/managed-by": "pro

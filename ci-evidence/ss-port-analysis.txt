@@ -1,0 +1,2 @@
+Port 33239: LISTEN 0      4096    10.0.98.3:33239 0.0.0.0:* users:(("crio",pid=2708,fd=12))
+  Matrix entry: Ingress,TCP,33239,,crio,,,master,false
