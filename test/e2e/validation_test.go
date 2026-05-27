@@ -221,6 +221,13 @@ func isDHCPClientPort(cd types.ComDetails) bool {
 func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 	res := []types.ComDetails{}
 	for _, cd := range mat.Ports {
+		// Skip CRI-O daemon listeners (streaming, etc.). They bind to ephemeral host
+		// IPs/ports per node lifecycle and never appear as Kubernetes EndpointSlices,
+		// matching the rationale for skipping rpc.statd below.
+		if cd.Service == "crio" {
+			continue
+		}
+
 		// Skip "rpc.statd" ports, these are randomly open ports on the node
 		// no need to mention them in the matrix diff
 		if cd.Service == "rpc.statd" {
