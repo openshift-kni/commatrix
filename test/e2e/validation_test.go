@@ -227,6 +227,12 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// CRI-O can listen on ephemeral TCP ports (e.g. stream/exec); the chosen port changes
+		// across runs and reboots and does not correspond to Kubernetes EndpointSlices.
+		if cd.Service == "crio" && cd.Protocol == "TCP" && cd.Port >= 32768 && cd.Port <= 60999 {
+			continue
+		}
+
 		// Skip dns ports used during provisioning for dhcp and tftp,
 		// not used for external traffic
 		if cd.Service == "dnsmasq" || cd.Service == "dig" {
