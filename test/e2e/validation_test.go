@@ -227,6 +227,13 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// CRI-O may listen on the node / pod network address on a port from the
+		// kernel ephemeral range; it is not represented by an EndpointSlice and the
+		// port is not stable across reboots (same class as rpc.statd).
+		if cd.Service == "crio" && cd.Namespace == "" {
+			continue
+		}
+
 		// Skip dns ports used during provisioning for dhcp and tftp,
 		// not used for external traffic
 		if cd.Service == "dnsmasq" || cd.Service == "dig" {
