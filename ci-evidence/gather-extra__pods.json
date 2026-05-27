@@ -1,0 +1,46 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "annotations": {
+                    "openshift.io/scc": "hostaccess",
+                    "security.openshift.io/validated-scc-subject-type": "serviceaccount"
+                },
+                "creationTimestamp": "2026-05-26T13:24:00Z",
+                "generateName": "assisted-installer-controller-",
+                "generation": 1,
+                "labels": {
+                    "app": "assisted-installer-controller",
+                    "batch.kubernetes.io/controller-uid": "9949452d-2427-4cfa-9f4b-e148d3c651ac",
+                    "batch.kubernetes.io/job-name": "assisted-installer-controller",
+                    "controller-uid": "9949452d-2427-4cfa-9f4b-e148d3c651ac",
+                    "job-name": "assisted-installer-controller"
+                },
+                "name": "assisted-installer-controller-dl5q7",
+                "namespace": "assisted-installer",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "batch/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "Job",
+                        "name": "assisted-installer-controller",
+                        "uid": "9949452d-2427-4cfa-9f4b-e148d3c651ac"
+                    }
+                ],
+                "resourceVersion": "17069",
+                "uid": "e035ed5d-e48e-4c9c-887d-c00bbe583ec3"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "env": [
+                            {
+                                "name": "CLUSTER_ID",
+                                "valueFrom": {
+                                    "configMapKeyRef": {
+                                        "key": "cluster-id",
+                                        "name": "assisted-instal

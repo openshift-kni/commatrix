@@ -32,6 +32,11 @@ const (
 	matrixdiffFile     = "matrix-diff-ss"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
+	// Typical Linux net.ipv4.ip_local_port_range (RHEL/OpenShift defaults). Ports in this
+	// range are not Kubernetes services and have no EndpointSlice; CRI-O may bind here for
+	// runtime-internal sockets (similar to excluded rpc.statd ephemeral listeners).
+	linuxEphemeralPortMin = 32768
+	linuxEphemeralPortMax = 60999
 )
 
 type EPSStatus string
@@ -224,6 +229,13 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 		// Skip "rpc.statd" ports, these are randomly open ports on the node
 		// no need to mention them in the matrix diff
 		if cd.Service == "rpc.statd" {
+			continue
+		}
+
+		// CRI-O may listen on an OS-chosen port in the ephemeral range; it is not reflected
+		// in EndpointSlices and the port number is not stable across boots.
+		if cd.Service == "crio" && cd.Protocol == "TCP" &&
+			cd.Port >= linuxEphemeralPortMin && cd.Port <= linuxEphemeralPortMax {
 			continue
 		}
 
