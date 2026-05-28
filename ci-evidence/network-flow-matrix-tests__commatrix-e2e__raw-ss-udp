@@ -1,0 +1,11 @@
+node: cnfdu15.upstreamci.bos2.lab
+UNCONN 0      0        0.0.0.0:57297 0.0.0.0:* users:(("rpc.statd",pid=6460,fd=8))                       
+UNCONN 0      0        0.0.0.0:53    0.0.0.0:* users:(("dnsmasq",pid=6410,fd=4))                         
+UNCONN 0      0        0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=6459,fd=5),("systemd",pid=1,fd=271))
+UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=3393,fd=5))                         
+UNCONN 0      0      127.0.0.1:700   0.0.0.0:* users:(("rpc.statd",pid=6460,fd=5))                       
+UNCONN 0      0           [::]:41594    [::]:* users:(("rpc.statd",pid=6460,fd=10))                      
+UNCONN 0      0           [::]:53       [::]:* users:(("dnsmasq",pid=6410,fd=6))                         
+UNCONN 0      0           [::]:111      [::]:* users:(("rpcbind",pid=6459,fd=7),("systemd",pid=1,fd=273))
+UNCONN 0      0          [::1]:323      [::]:* users:(("chronyd",pid=3393,fd=6))                         
+

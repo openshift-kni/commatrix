@@ -1,0 +1,62 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "addressType": "IPv4",
+            "apiVersion": "discovery.k8s.io/v1",
+            "endpoints": [
+                {
+                    "addresses": [
+                        "192.168.17.17"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    }
+                }
+            ],
+            "kind": "EndpointSlice",
+            "metadata": {
+                "creationTimestamp": "2026-05-27T13:36:27Z",
+                "generation": 9,
+                "labels": {
+                    "kubernetes.io/service-name": "kubernetes"
+                },
+                "name": "kubernetes",
+                "namespace": "default",
+                "resourceVersion": "19554",
+                "uid": "fcf4c500-cad1-4c34-b369-11fd04bf8211"
+            },
+            "ports": [
+                {
+                    "name": "https",
+                    "port": 6443,
+                    "protocol": "TCP"
+                }
+            ]
+        },
+        {
+            "addressType": "IPv4",
+            "apiVersion": "discovery.k8s.io/v1",
+            "endpoints": [
+                {
+                    "addresses": [
+                        "192.168.17.17"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    },
+                    "nodeName": "cnfdu15.upstreamci.bos2.lab",
+                    "targetRef": {
+                        "kind": "Node",
+                        "name": "cnfdu15.upstreamci.bos2.lab",
+                        "uid": "52fa4eb7-a3c1-47de-bb6d-ee634337e7fe"
+                    }
+                }
+            ],
+            "kind": "EndpointSlice",
+            "metadata": {
+                "creationTimestamp": "2026-05-27T13:46:04Z",
+                "generateName": "kubelet-",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/manage

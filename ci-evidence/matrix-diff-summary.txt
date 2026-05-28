@@ -1,0 +1,9 @@
+
+Ports open but missing EndpointSlice:
+  Ingress,TCP,41681,,crio,,,master,false
+
+Ports in matrix but not in use on node:
+  Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,master,false
+  Ingress,TCP,9192,openshift-cluster-machine-approver,machine-approver,machine-approver,kube-rbac-proxy,master,false
+  Ingress,TCP,9443,openshift-cloud-controller-manager-operator,cloud-controller-manager-operator,cluster-cloud-controller-manager-operator,cluster-cloud-controller-manager,master,false
+  Ingress,UDP,68,,NetworkManager,,,master,false

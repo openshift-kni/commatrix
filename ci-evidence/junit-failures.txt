@@ -1,0 +1,16 @@
+Test: Run multi-stage test telco5g-network-flow-matrix-single-node-bm - telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests container test
+  Message: :�[0m Rebooting first node: cnfdu15.upstreamci.bos2.laband waiting for disconnect 
+   �[38;5;243m@ 05/27/26 14:16:22.266�[0m
+2026/05/27 14:16:25 Waiting for node cnfdu15.upstreamci.bos2.lab to be in NotReady state
+2026/05/27 14:23:28 Node cnfdu15.upstreamci.bos2.lab is NotReady
+  �[1mSTEP:�[0m Waiting for node to be ready �[38;5;243m@ 05/27/26 14:23:28.668�[0m
+2026/05/27 14:23:28 Waiting for node cnfdu15.upstreamci.bos2.lab to be in Ready state
+2026/05/27 14:23:41 Node cnfdu15.upstreamci.bos2.la
+
+Test: Run multi-stage test test phase
+  Message: "telco5g-network-flow-matrix-single-node-bm" pod "telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-ntsjp6nv/telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests failed after 14m41s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+:�[0m Rebooting first node: cnfdu15.upstreamci.bos2.laband waiting for disconnect 
+   �[38;5;243m@ 05/27/26 14:16
