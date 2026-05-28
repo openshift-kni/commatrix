@@ -1,0 +1,12 @@
+tion [38;5;9m[1m[It] should validate the communication matrix ports match the node's open ports[0m
+  [38;5;243m/tmp/secret/commatrix/test/e2e/validation_test.go:161[0m
+
+[38;5;9m[1mRan 4 of 4 Specs in 446.375 seconds[0m
+[38;5;9m[1mFAIL![0m -- [38;5;10m[1m3 Passed[0m | [38;5;9m[1m1 Failed[0m | [38;5;11m[1m0 Pending[0m | [38;5;14m[1m0 Skipped[0m
+--- FAIL: TestE2e (446.38s)
+FAIL
+
+Ginkgo ran 1 suite in 8m1.522562114s
+
+Test Suite Failed
+make: *** [Makefile:119: e2e-test] Error 1
