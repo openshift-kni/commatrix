@@ -1,0 +1,25 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Node",
+            "metadata": {
+                "annotations": {
+                    "alpha.kubernetes.io/provided-node-ip": "10.0.58.180",
+                    "cloud.network.openshift.io/egress-ipconfig": "[{\"interface\":\"eni-0614815a51e996868\",\"ifaddr\":{\"ipv4\":\"10.0.0.0/18\"},\"capacity\":{\"ipv4\":14,\"ipv6\":15}}]",
+                    "csi.volume.kubernetes.io/nodeid": "{\"ebs.csi.aws.com\":\"i-0d1e3e595408ec986\"}",
+                    "k8s.ovn.org/host-cidrs": "[\"10.0.58.180/18\"]",
+                    "k8s.ovn.org/l3-gateway-config": "{\"default\":{\"mode\":\"shared\",\"bridge-id\":\"br-ex\",\"interface-id\":\"br-ex_ip-10-0-58-180.us-west-1.compute.internal\",\"mac-address\":\"06:47:19:92:bf:45\",\"ip-addresses\":[\"10.0.58.180/18\"],\"ip-address\":\"10.0.58.180/18\",\"next-hops\":[\"10.0.0.1\"],\"next-hop\":\"10.0.0.1\",\"node-port-enable\":\"true\",\"vlan-id\":\"0\"}}",
+                    "k8s.ovn.org/layer2-topology-version": "2.0",
+                    "k8s.ovn.org/node-chassis-id": "47ae3842-4790-49d3-957c-00fccadf1315",
+                    "k8s.ovn.org/node-encap-ips": "[\"10.0.58.180\"]",
+                    "k8s.ovn.org/node-id": "2",
+                    "k8s.ovn.org/node-masquerade-subnet": "{\"ipv4\":\"169.254.0.0/17\",\"ipv6\":\"fd69::/112\"}",
+                    "k8s.ovn.org/node-primary-ifaddr": "{\"ipv4\":\"10.0.58.180/18\"}",
+                    "k8s.ovn.org/node-subnets": "{\"default\":[\"10.128.0.0/23\"]}",
+                    "k8s.ovn.org/node-transit-switch-port-ifaddr": "{\"ipv4\":\"100.88.0.2/16\"}",
+                    "k8s.ovn.org/zone-name": "ip-10-0-58-180.us-west-1.compute.internal",
+                    "machine.openshift.io/machine": "openshift-machine-api/ci-op-44b3wivt-8c898-gqrv9-master-0",
+                    "machineconfiguration.openshift.io/controlPlaneTopology": "SingleReplica",
+                    "machineconf

@@ -227,6 +227,12 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// Skip crio stream-server ports on the node IP; they bind an OS ephemeral port
+		// without a corresponding EndpointSlice. Documented CRI-O access uses kube-rbac-proxy (9637).
+		if cd.Service == "crio" {
+			continue
+		}
+
 		// Skip dns ports used during provisioning for dhcp and tftp,
 		// not used for external traffic
 		if cd.Service == "dnsmasq" || cd.Service == "dig" {

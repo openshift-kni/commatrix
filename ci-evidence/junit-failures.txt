@@ -1,0 +1,11 @@
+Test: Run multi-stage test aws-ovn-network-flow-matrix-single-node - aws-ovn-network-flow-matrix-single-node-network-flow-matrix-tests container test
+  Message: vt-8c898.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:6443/api/v1/nodes/ip-10-0-58-180.us-west-1.compute.internal": dial tcp 54.183.63.90:6443: connect: connection refused
+2026/05/27 13:57:02 Error getting node ip-10-0-58-180.us-west-1.compute.internal: Get "https://api.ci-op-44b3wivt-8c898.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:6443/api/v1/nodes/ip-10-0-58-180.us-west-1.compute.internal": dial tcp 54.176.11.128:6443: connect: connection refused
+2026/05/27 13:57:20 Node ip-10-0-58-180.us-west-1.compute.internal
+
+Test: Run multi-stage test test phase
+  Message: "aws-ovn-network-flow-matrix-single-node" pod "aws-ovn-network-flow-matrix-single-node-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-44b3wivt/aws-ovn-network-flow-matrix-single-node-network-flow-matrix-tests failed after 10m11s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+vt-8c898.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX:6443/api/v1/nodes/ip-10-0-58-180.us-west-1.compute.internal": dial tcp 54.183.6
