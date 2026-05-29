@@ -1,0 +1,40 @@
+UNIFIED PORT MAP — each port with all its data in one place
+
+PORT 68:
+  Issues: STALE_IN_MATRIX, STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,UDP,68,,NetworkManager,,,master,false
+  Matrix entry: Ingress,UDP,68,,NetworkManager,,,worker,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 6388:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,6388,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 8798:
+  Issues: STALE_IN_MATRIX, STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,master,false
+  Matrix entry: Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,worker,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 9192:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,9192,openshift-cluster-machine-approver,machine-approver,machine-approver,kube-rbac-proxy,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 9443:
+  Issues: STALE_IN_MATRIX
+  Ephemeral range: no
+  Matrix entry: Ingress,TCP,9443,openshift-cloud-controller-manager-operator,cloud-controller-manager-operator,cluster-cloud-controller-manager-operator,cluster-cloud-controller-manager,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE
+
+PORT 34077:
+  Issues: NO_ENDPOINTSLICE
+  Ephemeral range: YES
+  Socket state: LISTEN 0      4096   192.168.111.22:34077 0.0.0.0:* users:(("crio",pid=2829,fd=12))
+  Matrix entry: Ingress,TCP,34077,,crio,,,master,false
+  --> Needs decision: ADD / REMOVE / SKIP / INVESTIGATE

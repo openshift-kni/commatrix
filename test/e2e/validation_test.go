@@ -227,6 +227,12 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// Skip CRI-O stream server ports; they bind in the ephemeral port range
+		// (ip_local_port_range) and change on every reboot with no EndpointSlice.
+		if cd.Service == "crio" {
+			continue
+		}
+
 		// Skip dns ports used during provisioning for dhcp and tftp,
 		// not used for external traffic
 		if cd.Service == "dnsmasq" || cd.Service == "dig" {
