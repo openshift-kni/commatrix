@@ -1,0 +1,9 @@
+node: ip-10-0-120-205.ec2.internal
+UNCONN 0      0        0.0.0.0:59480 0.0.0.0:* users:(("rpc.statd",pid=1570,fd=8))                       
+UNCONN 0      0        0.0.0.0:111   0.0.0.0:* users:(("rpcbind",pid=1566,fd=5),("systemd",pid=1,fd=174))
+UNCONN 0      0      127.0.0.1:323   0.0.0.0:* users:(("chronyd",pid=1052,fd=5))                         
+UNCONN 0      0      127.0.0.1:898   0.0.0.0:* users:(("rpc.statd",pid=1570,fd=5))                       
+UNCONN 0      0           [::]:57781    [::]:* users:(("rpc.statd",pid=1570,fd=10))                      
+UNCONN 0      0           [::]:111      [::]:* users:(("rpcbind",pid=1566,fd=7),("systemd",pid=1,fd=176))
+UNCONN 0      0          [::1]:323      [::]:* users:(("chronyd",pid=1052,fd=6))                         
+

@@ -233,6 +233,12 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// Skip CRI-O daemon ports. CRI-O binds ephemeral ports on the node IP
+		// for internal streaming; these are host processes without EndpointSlices.
+		if cd.Service == "crio" && cd.Namespace == "" && cd.Pod == "" {
+			continue
+		}
+
 		res = append(res, cd)
 	}
 	return &types.ComMatrix{Ports: res}
