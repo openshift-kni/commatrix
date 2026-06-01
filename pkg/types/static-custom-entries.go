@@ -381,6 +381,19 @@ var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
 	},
 }
 
+// HostLocalEphemeralPortDynamicRange is the default Linux ip_local_port_range on RHEL/CoreOS.
+// Host processes such as CRI-O may bind ingress listeners in this range without an EndpointSlice.
+var HostLocalEphemeralPortDynamicRange = DynamicRangeList{
+	{
+		Direction:   "Ingress",
+		Protocol:    "TCP",
+		MinPort:     32768,
+		MaxPort:     60999,
+		Description: "Host local ephemeral ports",
+		Optional:    true,
+	},
+}
+
 // GetStaticEntries returns the static entries for the given platform, topology,
 // IPv6 and DHCP configuration.
 func GetStaticEntries(platformType configv1.PlatformType, topology configv1.TopologyMode, ipv6Enabled, dhcpEnabled bool) ([]ComDetails, error) {

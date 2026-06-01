@@ -156,7 +156,8 @@ var _ = Describe("Validation", func() {
 
 		missingEPSMat = filterOutPortsOfKnownServices(missingEPSMat)
 		// Don't include in the missing EPS matrix ports that are in dynamic ranges of the generated commatrix.
-		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, commatrix.DynamicRanges)
+		epsDynamicRanges := append(commatrix.DynamicRanges, types.HostLocalEphemeralPortDynamicRange...)
+		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, epsDynamicRanges)
 		if len(missingEPSMat.Ports) > 0 {
 			Fail(fmt.Sprintf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat))
 		}

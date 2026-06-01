@@ -1,0 +1,38 @@
+diff --git a/pkg/types/static-custom-entries.go b/pkg/types/static-custom-entries.go
+index 3e5f5b8..f898cb8 100644
+--- a/pkg/types/static-custom-entries.go
++++ b/pkg/types/static-custom-entries.go
+@@ -381,6 +381,19 @@ var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
+ 	},
+ }
+ 
++// HostLocalEphemeralPortDynamicRange is the default Linux ip_local_port_range on RHEL/CoreOS.
++// Host processes such as CRI-O may bind ingress listeners in this range without an EndpointSlice.
++var HostLocalEphemeralPortDynamicRange = DynamicRangeList{
++	{
++		Direction:   "Ingress",
++		Protocol:    "TCP",
++		MinPort:     32768,
++		MaxPort:     60999,
++		Description: "Host local ephemeral ports",
++		Optional:    true,
++	},
++}
++
+ // GetStaticEntries returns the static entries for the given platform, topology,
+ // IPv6 and DHCP configuration.
+ func GetStaticEntries(platformType configv1.PlatformType, topology configv1.TopologyMode, ipv6Enabled, dhcpEnabled bool) ([]ComDetails, error) {
+diff --git a/test/e2e/validation_test.go b/test/e2e/validation_test.go
+index 69aa564..aeef20d 100644
+--- a/test/e2e/validation_test.go
++++ b/test/e2e/validation_test.go
+@@ -156,7 +156,8 @@ var _ = Describe("Validation", func() {
+ 
+ 		missingEPSMat = filterOutPortsOfKnownServices(missingEPSMat)
+ 		// Don't include in the missing EPS matrix ports that are in dynamic ranges of the generated commatrix.
+-		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, commatrix.DynamicRanges)
++		epsDynamicRanges := append(commatrix.DynamicRanges, types.HostLocalEphemeralPortDynamicRange...)
++		missingEPSMat = filterOutPortsInDynamicRanges(missingEPSMat, epsDynamicRanges)
+ 		if len(missingEPSMat.Ports) > 0 {
+ 			Fail(fmt.Sprintf("the following ports are used but don't have an endpointslice: \n %s", missingEPSMat))
+ 		}
