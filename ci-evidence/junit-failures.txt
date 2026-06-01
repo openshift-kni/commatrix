@@ -1,0 +1,19 @@
+Test: Run multi-stage test telco5g-network-flow-matrix-bm - telco5g-network-flow-matrix-bm-network-flow-matrix-tests container test
+  Message:  worker: all machines ready and updated
+2026/05/31 14:56:52 MCP update completed successfully.
+  �[1mSTEP:�[0m Rebooting first node: cnfdu7and waiting for disconnect 
+   �[38;5;243m@ 05/31/26 14:56:52.593�[0m
+2026/05/31 14:56:55 Waiting for node cnfdu7 to be in NotReady state
+2026/05/31 14:57:41 Node cnfdu7 is NotReady
+  �[1mSTEP:�[0m Waiting for node to be ready �[38;5;243m@ 05/31/26 14:57:41.525�[0m
+2026/05/31 14:57:41 Waiting for node cnfdu7 to be in Ready state
+  �[1mSTEP:�[0m Waiting for im
+
+Test: Run multi-stage test test phase
+  Message: "telco5g-network-flow-matrix-bm" pod "telco5g-network-flow-matrix-bm-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-j5kzzix4/telco5g-network-flow-matrix-bm-network-flow-matrix-tests failed after 12m8s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+worker: all machines ready and updated
+2026/05/31 14:56:52 MCP update completed successfully.
+  �[1mSTEP:�[0m Rebooting first node: cnfdu7and waiting 
