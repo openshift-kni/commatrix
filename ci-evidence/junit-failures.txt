@@ -1,0 +1,19 @@
+Test: Run multi-stage test metal-ovn-network-flow-matrix-bm - metal-ovn-network-flow-matrix-bm-network-flow-matrix-tests container test
+  Message: l machines ready and updated
+2026/05/31 14:43:33 MCP update completed successfully.
+  �[1mSTEP:�[0m Rebooting first node: master-0and waiting for disconnect 
+   �[38;5;243m@ 05/31/26 14:43:33.259�[0m
+2026/05/31 14:43:35 Waiting for node master-0 to be in NotReady state
+2026/05/31 14:44:28 Node master-0 is NotReady
+  �[1mSTEP:�[0m Waiting for node to be ready �[38;5;243m@ 05/31/26 14:44:28.045�[0m
+2026/05/31 14:44:28 Waiting for node master-0 to be in Ready state
+2026/05/31 14:46:42 Node master-0
+
+Test: Run multi-stage test test phase
+  Message: "metal-ovn-network-flow-matrix-bm" pod "metal-ovn-network-flow-matrix-bm-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-p05tl0bx/metal-ovn-network-flow-matrix-bm-network-flow-matrix-tests failed after 10m3s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+l machines ready and updated
+2026/05/31 14:43:33 MCP update completed successfully.
+  �[1mSTEP:�[0m Rebooting first node: master-0and waiting fo

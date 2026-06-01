@@ -227,6 +227,12 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// Skip CRI-O ephemeral stream ports bound on the node IP in the Linux
+		// ephemeral port range. They have no EndpointSlice and change on reboot.
+		if cd.Service == "crio" && cd.Namespace == "" {
+			continue
+		}
+
 		// Skip dns ports used during provisioning for dhcp and tftp,
 		// not used for external traffic
 		if cd.Service == "dnsmasq" || cd.Service == "dig" {
