@@ -1,0 +1,30 @@
+Severity: HIGH
+Fix type: data_update
+Suggested fix: Update the matrix or investigate the port discrepancies:
+
+REMOVE from matrix (ports no longer in use):
+  Ingress,TCP,6388,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,false
+  Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,master,false
+  Ingress,TCP,9192,openshift-cluster-machine-approver,machine-approver,machine-approver,kube-rbac-proxy,master,false
+  Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,worker,false
+  Ingress,TCP,9443,openshift-cloud-controller-manager-operator,cloud-controller-manager-operator,cluster-cloud-controller-manager-operator,cluster-cloud-controller-manager,master,false
+  Ingress,UDP,68,,NetworkManager,,,master,false
+  Ingress,UDP,68,,NetworkManager,,,worker,false
+
+INVESTIGATE — ports open on node but no EndpointSlice found:
+  Ingress,TCP,35003,,crio,,,master,false
+    Range: Linux ephemeral port 35003 (range 32768-60999). Process: unknown (PID ?). Listens on: ?. This port is randomly assigned by the OS and changes on every reboot.
+    Action: Ephemeral port owned by 'unknown'. This is a host-level process, not a Kubernetes Service. Consider: is this port needed in the matrix? Does this process always run? Options: add static entry, skip in test, or investigate further.
+
+
+Failed test: Validation [It] should validate the communication matrix ports match the node's open ports
+  Message: 
+
+Failed test: [43.520 seconds]
+  Message: 
+
+Failed test: the following ports are used but don't have an endpointslice:
+  Message: Ingress,TCP,35003,,crio,,,master,false   Ingress,TCP,39763,,crio,,,master,false   Ingress,TCP,42803,,crio,,,master,false   Ingress,TCP,34205,,crio,,,worker,false   Ingress,TCP,35849,,crio,,,worker,false   Ingress,TCP,43651,,crio,,,worker,false
+
+Failed test: TestE2e
+  Message: Failed in 611.82s

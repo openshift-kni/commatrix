@@ -1,7 +1,6 @@
 Direction,Protocol,Port,Namespace,Service,Pod,Container,Node Role,Optional
 Ingress,TCP,22,Host system service,sshd,,,worker,TRUE
 Ingress,TCP,111,Host system service,rpcbind,,,worker,TRUE
-Ingress,TCP,8798,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,machine-config-daemon,worker,FALSE
 Ingress,TCP,9001,openshift-machine-config-operator,machine-config-daemon,machine-config-daemon,kube-rbac-proxy,worker,FALSE
 Ingress,TCP,9100,openshift-monitoring,node-exporter,node-exporter,kube-rbac-proxy,worker,FALSE
 Ingress,TCP,9103,openshift-ovn-kubernetes,ovn-kubernetes-node,ovnkube-node,kube-rbac-proxy-node,worker,FALSE

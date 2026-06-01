@@ -1,0 +1,67 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "addressType": "IPv4",
+            "apiVersion": "discovery.k8s.io/v1",
+            "endpoints": [
+                {
+                    "addresses": [
+                        "192.168.111.20"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    }
+                },
+                {
+                    "addresses": [
+                        "192.168.111.21"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    }
+                },
+                {
+                    "addresses": [
+                        "192.168.111.22"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    }
+                }
+            ],
+            "kind": "EndpointSlice",
+            "metadata": {
+                "creationTimestamp": "2026-05-31T13:28:59Z",
+                "generation": 29,
+                "labels": {
+                    "kubernetes.io/service-name": "kubernetes"
+                },
+                "name": "kubernetes",
+                "namespace": "default",
+                "resourceVersion": "44674",
+                "uid": "6a215368-4ac9-4cc5-839b-010b2bf683b7"
+            },
+            "ports": [
+                {
+                    "name": "https",
+                    "port": 6443,
+                    "protocol": "TCP"
+                }
+            ]
+        },
+        {
+            "addressType": "IPv4",
+            "apiVersion": "discovery.k8s.io/v1",
+            "endpoints": [
+                {
+                    "addresses": [
+                        "192.168.111.20"
+                    ],
+                    "conditions": {
+                        "ready": true
+                    },
+                    "nodeName": "master-0",
+                    "targetRef": {
+                        "kind": "Node",
+              

@@ -1,0 +1,28 @@
+Test: Run multi-stage test metal-ovn-network-flow-matrix-bm - metal-ovn-network-flow-matrix-bm-gather-must-gather container test
+  Message: d
+I0531 14:49:35.456079     125 walker.go:133] file quay-io-openshift-release-dev-ocp-v4-0-art-dev-sha256-04a9c0f916f2e85f115d89dbf671d9bf2057b4094d7c2ea260a57beaa82e80fa/cluster-scoped-resources/machineconfiguration.openshift.io/machineconfigs/00-master.yaml redacted
+I0531 14:49:35.456303     125 walker.go:133] file quay-io-openshift-release-dev-ocp-v4-0-art-dev-sha256-04a9c0f916f2e85f115d89dbf671d9bf2057b4094d7c2ea260a57beaa82e80fa/cluster-scoped-resources/machineconfiguration.openshift.io/mac
+
+Test: Run multi-stage test metal-ovn-network-flow-matrix-bm - metal-ovn-network-flow-matrix-bm-network-flow-matrix-tests container test
+  Message: m Generating communication matrix using oc command �[38;5;243m@ 05/31/26 14:46:02.464�[0m
+  �[1mSTEP:�[0m Reading the generated commatrix files �[38;5;243m@ 05/31/26 14:46:44.771�[0m
+  �[1mSTEP:�[0m Reading the ss-generated matrix (actual open ports from the cluster) �[38;5;243m@ 05/31/26 14:46:44.771�[0m
+  �[1mSTEP:�[0m Getting IPv6 enabled status �[38;5;243m@ 05/31/26 14:46:44.771�[0m
+  �[1mSTEP:�[0m Getting DHCP enabled status �[38;5;243m@ 05/31/26 14:46:44.889�[0m
+  �[1mSTEP:�[0m Creating ex
+
+Test: Run multi-stage test post phase
+  Message: "metal-ovn-network-flow-matrix-bm" pod "metal-ovn-network-flow-matrix-bm-gather-must-gather" failed: could not watch pod: the pod ci-op-ddj5hts8/metal-ovn-network-flow-matrix-bm-gather-must-gather failed after 1m50s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+d
+I0531 14:49:35.456079     125 walker.go:133] file quay-io-openshift-release-dev-ocp-v4-0-art-dev-sha256-04a9c0f916f2e85f115d89dbf671d9bf2057b4094d7c2ea260a5
+
+Test: Run multi-stage test test phase
+  Message: "metal-ovn-network-flow-matrix-bm" pod "metal-ovn-network-flow-matrix-bm-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-ddj5hts8/metal-ovn-network-flow-matrix-bm-network-flow-matrix-tests failed after 11m47s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+m Generating communication matrix using oc command �[38;5;243m@ 05/31/26 14:46:02.464�[0m
+  �[1mSTEP:�[0m Reading the generated commatrix files
