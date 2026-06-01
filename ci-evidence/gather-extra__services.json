@@ -1,0 +1,64 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "creationTimestamp": "2026-05-31T13:20:56Z",
+                "labels": {
+                    "component": "apiserver",
+                    "provider": "kubernetes"
+                },
+                "name": "kubernetes",
+                "namespace": "default",
+                "resourceVersion": "267",
+                "uid": "399e9f01-7b2f-4f12-97ee-e2fd1db362bd"
+            },
+            "spec": {
+                "clusterIP": "172.30.0.1",
+                "clusterIPs": [
+                    "172.30.0.1"
+                ],
+                "internalTrafficPolicy": "Cluster",
+                "ipFamilies": [
+                    "IPv4"
+                ],
+                "ipFamilyPolicy": "SingleStack",
+                "ports": [
+                    {
+                        "name": "https",
+                        "port": 443,
+                        "protocol": "TCP",
+                        "targetPort": 6443
+                    }
+                ],
+                "sessionAffinity": "None",
+                "type": "ClusterIP"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "creationTimestamp": "2026-05-31T13:28:11Z",
+                "name": "openshift",
+                "namespace": "default",
+                "resourceVersion": "11729",
+                "uid": "81a1194e-380d-4754-a2fb-e3449b089f9f"
+            },
+            "spec": {
+                "externalName": "kubernetes.default.svc.cluster.local",
+                "sessionAffinity": "None",
+                "type": "ExternalName"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Service"

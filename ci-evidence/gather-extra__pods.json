@@ -1,0 +1,48 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "annotations": {
+                    "debug.openshift.io/source-container": "container-00",
+                    "debug.openshift.io/source-resource": "/v1, Resource=nodes/ip-10-0-1-207.us-west-2.compute.internal",
+                    "openshift.io/required-scc": "privileged"
+                },
+                "creationTimestamp": "2026-05-31T14:10:07Z",
+                "generation": 1,
+                "labels": {
+                    "debug.openshift.io/managed-by": "oc-debug",
+                    "topology.kubernetes.io/region": "us-west-2",
+                    "topology.kubernetes.io/zone": "us-west-2b"
+                },
+                "name": "ip-10-0-1-207us-west-2computeinternal-debug-pmwsb",
+                "namespace": "default",
+                "resourceVersion": "25354",
+                "uid": "5480c602-aad7-4fe3-ba52-811dea8cb090"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": [
+                            "/bin/bash",
+                            "-c",
+                            "sleep 300"
+                        ],
+                        "env": [
+                            {
+                                "name": "TMOUT",
+                                "value": "900"
+                            },
+                            {
+                                "name": "HOST",
+                                "value": "/host"
+                            }
+                        ],
+                        "image": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:0fac16cbe2b479be505ecd4db955aa2238c54e169ca0a45d4d23242685020322",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "container-00",
+                        "resources": {},
+                        "securityContext": {
+  

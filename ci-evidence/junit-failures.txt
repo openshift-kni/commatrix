@@ -1,0 +1,15 @@
+Test: Run multi-stage test aws-ovn-network-flow-matrix-single-node - aws-ovn-network-flow-matrix-single-node-network-flow-matrix-tests container test
+  Message: 0m Generating communication matrix using oc command �[38;5;243m@ 05/31/26 14:07:51.643�[0m
+  �[1mSTEP:�[0m Reading the generated commatrix files �[38;5;243m@ 05/31/26 14:08:33.557�[0m
+  �[1mSTEP:�[0m Reading the ss-generated matrix (actual open ports from the cluster) �[38;5;243m@ 05/31/26 14:08:33.557�[0m
+  �[1mSTEP:�[0m Getting IPv6 enabled status �[38;5;243m@ 05/31/26 14:08:33.557�[0m
+  �[1mSTEP:�[0m Getting DHCP enabled status �[38;5;243m@ 05/31/26 14:08:33.718�[0m
+  �[1mSTEP:�[0m Creating e
+
+Test: Run multi-stage test test phase
+  Message: "aws-ovn-network-flow-matrix-single-node" pod "aws-ovn-network-flow-matrix-single-node-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-qbm9z6xp/aws-ovn-network-flow-matrix-single-node-network-flow-matrix-tests failed after 10m59s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+0m Generating communication matrix using oc command �[38;5;243m@ 05/31/26 14:07:51.643�[0m
+  �[1mSTEP:�[0m Reading the gen
