@@ -1,0 +1,34 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "annotations": {
+                    "k8s.ovn.org/pod-networks": "{\"default\":{\"ip_addresses\":[\"10.133.2.8/23\"],\"mac_address\":\"0a:58:0a:85:02:08\",\"gateway_ips\":[\"10.133.2.1\"],\"routes\":[{\"dest\":\"10.132.0.0/14\",\"nextHop\":\"10.133.2.1\"},{\"dest\":\"172.30.0.0/16\",\"nextHop\":\"10.133.2.1\"},{\"dest\":\"169.254.0.5/32\",\"nextHop\":\"10.133.2.1\"},{\"dest\":\"100.64.0.0/16\",\"nextHop\":\"10.133.2.1\"}],\"ip_address\":\"10.133.2.8/23\",\"gateway_ip\":\"10.133.2.1\",\"role\":\"primary\"}}",
+                    "k8s.v1.cni.cncf.io/network-status": "[{\n    \"name\": \"ovn-kubernetes\",\n    \"interface\": \"eth0\",\n    \"ips\": [\n        \"10.133.2.8\"\n    ],\n    \"mac\": \"0a:58:0a:85:02:08\",\n    \"default\": true,\n    \"dns\": {}\n}]",
+                    "openshift.io/scc": "hostmount-anyuid",
+                    "security.openshift.io/validated-scc-subject-type": "serviceaccount"
+                },
+                "creationTimestamp": "2026-06-01T15:08:47Z",
+                "generateName": "nfs-client-provisioner-7dcf78f57c-",
+                "generation": 1,
+                "labels": {
+                    "app": "nfs-client-provisioner",
+                    "pod-template-hash": "7dcf78f57c"
+                },
+                "name": "nfs-client-provisioner-7dcf78f57c-xkwv4",
+                "namespace": "nfs",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "ReplicaSet",
+                        "name": "nfs-client-provisioner-7dcf78f57c",
+                        "uid": "c1ef8927-e78a-4b1c-9fe0-ef4b22bd74d0"
+                    }
+                ],
+                "resourceVersion": "50373",
+             

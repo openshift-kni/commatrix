@@ -1,0 +1,12 @@
+Port 38931: LISTEN 0      4096   192.168.17.195:38931 0.0.0.0:* users:(("crio",pid=2862,fd=11))
+  Matrix entry: Ingress,TCP,38931,,crio,,,master,false
+Port 43463: LISTEN 0      4096   192.168.17.194:43463 0.0.0.0:* users:(("crio",pid=2902,fd=11))
+  Matrix entry: Ingress,TCP,43463,,crio,,,master,false
+Port 44899: LISTEN 0      4096   192.168.17.196:44899 0.0.0.0:* users:(("crio",pid=2903,fd=12))
+  Matrix entry: Ingress,TCP,44899,,crio,,,master,false
+Port 41969: LISTEN 0      4096   192.168.17.170:41969 0.0.0.0:* users:(("crio",pid=5718,fd=11))
+  Matrix entry: Ingress,TCP,41969,,crio,,,worker,false
+Port 42297: LISTEN 0      4096   XXXXXXXXXXXX27:42297 0.0.0.0:* users:(("crio",pid=3072,fd=11))
+  Matrix entry: Ingress,TCP,42297,,crio,,,worker,false
+Port 46527: LISTEN 0      4096   XXXXXXXXXXXX43:46527 0.0.0.0:* users:(("crio",pid=3088,fd=11))
+  Matrix entry: Ingress,TCP,46527,,crio,,,worker,false

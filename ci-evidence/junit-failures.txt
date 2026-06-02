@@ -1,0 +1,29 @@
+Test: Run multi-stage test telco5g-network-flow-matrix-bm - telco5g-network-flow-matrix-bm-network-flow-matrix-tests container test
+  Message: time: {Sec: 1, Usec: 521261},
+                  Stime: {Sec: 0, Usec: 567184},
+                  Maxrss: 75452,
+                  Ixrss: 0,
+                  Idrss: 0,
+                  Isrss: 0,
+                  Minflt: 29674,
+                  Majflt: 0,
+                  Nswap: 0,
+                  Inblock: 0,
+                  Oublock: 0,
+                  Msgsnd: 0,
+                  Msgrcv: 0,
+                  Nsignals: 0,
+                  Nvcsw: 29114,
+                  Nivcsw: 53,
+   
+
+Test: Run multi-stage test test phase
+  Message: "telco5g-network-flow-matrix-bm" pod "telco5g-network-flow-matrix-bm-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-m07l5pnt/telco5g-network-flow-matrix-bm-network-flow-matrix-tests failed after 13m2s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+time: {Sec: 1, Usec: 521261},
+                  Stime: {Sec: 0, Usec: 567184},
+                  Maxrss: 75452,
+                  Ixrss: 0,
+          
