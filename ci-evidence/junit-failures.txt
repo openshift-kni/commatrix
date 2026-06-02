@@ -1,0 +1,15 @@
+Test: Run multi-stage test telco5g-network-flow-matrix-single-node-bm - telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests container test
+  Message: �[0m Generating communication matrix using oc command �[38;5;243m@ 06/01/26 15:15:23.07�[0m
+  �[1mSTEP:�[0m Reading the generated commatrix files �[38;5;243m@ 06/01/26 15:16:18.951�[0m
+  �[1mSTEP:�[0m Reading the ss-generated matrix (actual open ports from the cluster) �[38;5;243m@ 06/01/26 15:16:18.951�[0m
+  �[1mSTEP:�[0m Getting IPv6 enabled status �[38;5;243m@ 06/01/26 15:16:18.951�[0m
+  �[1mSTEP:�[0m Getting DHCP enabled status �[38;5;243m@ 06/01/26 15:16:19.152�[0m
+  �[1mSTEP:�[0m Creating 
+
+Test: Run multi-stage test test phase
+  Message: "telco5g-network-flow-matrix-single-node-bm" pod "telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests" failed: could not watch pod: the pod ci-op-slri56fb/telco5g-network-flow-matrix-single-node-bm-network-flow-matrix-tests failed after 18m16s (failed containers: test): ContainerFailed one or more containers exited
+
+Container test exited with code 2, reason Error
+---
+�[0m Generating communication matrix using oc command �[38;5;243m@ 06/01/26 15:15:23.07�[0m
+  �[1mSTEP:�[0m Readi

@@ -1,0 +1,3 @@
+Prow UI: https://prow.ci.openshift.org/view/gs/test-platform-results/logs/periodic-ci-openshift-release-main-nightly-4.23-telco5g-network-flow-matrix-single-node-bm/2061432852678971392
+Artifacts: https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/test-platform-results/logs/periodic-ci-openshift-release-main-nightly-4.23-telco5g-network-flow-matrix-single-node-bm/2061432852678971392/artifacts/
+Build log: https://gcsweb-ci.apps.ci.l2s4.p1.openshiftapps.com/gcs/test-platform-results/logs/periodic-ci-openshift-release-main-nightly-4.23-telco5g-network-flow-matrix-single-node-bm/2061432852678971392/build-log.txt
