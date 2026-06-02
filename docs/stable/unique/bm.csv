@@ -3,7 +3,6 @@ Ingress,TCP,53,openshift-dns,dns-default,dns-default,dns,master,FALSE
 Ingress,TCP,6180,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
 Ingress,TCP,6183,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
 Ingress,TCP,6385,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
-Ingress,TCP,6388,openshift-machine-api,metal3-state,metal3,metal3-httpd,master,FALSE
 Ingress,TCP,9444,openshift-kni-infra,,haproxy,haproxy,master,FALSE
 Ingress,TCP,9445,openshift-kni-infra,,haproxy,haproxy,master,FALSE
 Ingress,TCP,9454,openshift-kni-infra,,haproxy,haproxy,master,FALSE
