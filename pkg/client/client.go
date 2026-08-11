@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -30,6 +31,14 @@ func New() (*ClientSet, error) {
 
 	restConfig, err := ctrl.GetConfig()
 	if err != nil {
+		if clientcmd.IsEmptyConfig(err) {
+			return nil, fmt.Errorf(
+				"failed to get Kubernetes config: could not build a cluster client config "+
+					"(in-cluster config is not available and no kubeconfig was loaded). "+
+					"Try --kubeconfig, set %s to a kubeconfig file path, or use ~/.kube/config",
+				clientcmd.RecommendedConfigPathEnvVar,
+			)
+		}
 		return nil, fmt.Errorf("failed to get Kubernetes config: %w", err)
 	}
 	clientSet := &ClientSet{}
