@@ -3,7 +3,7 @@
 FROM registry.redhat.io/openshift4/ose-cli-rhel9:v4.20@sha256:7434fde9f36d6e638a77977ff1bc2c77d61508227744319497c007649f12fd00 AS ose-cli
 
 # Build the manager binary
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.24@sha256:8412323224878c4e27cd6f7dc6ce99c50f878f37df323285bff29a53f8ec37cd AS builder
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.24@sha256:d58fb6c99de1a2f642f56442b9c043f313341b76d1057ddee467a89e1cfe7ecd AS builder
 
 WORKDIR /opt/app-root
 
