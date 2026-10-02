@@ -1,39 +1,42 @@
+version: "2"
 run:
   issues-exit-code: 2
+formatters:
+  enable:
+    - gofmt
+    - goimports
 linters:
   enable:
-  - godot
-  - goimports
-  - gofmt
-  - ginkgolinter
-  - dogsled
-  - copyloopvar
-  - gocritic
-  - misspell
-  - nolintlint
-  - stylecheck
-  - unconvert
-  - unparam
-  - whitespace
-  - revive
-  - unused
-  - wastedassign
-linters-settings:
-  godot:
-    scope: toplevel
-    capital: true
-    exclude:
-    - 'SPDX-License-Identifier.*'
-    - '\+groupName.*'
-  gocritic:
-    disabled-checks:
-      - captLocal
-      - exitAfterDefer
-  unparam:
-    check-exported: true
-  revive:
-    rules:
-    - name: receiver-naming
-      disabled: true
-    - name: dot-imports
-      disabled: true
+    - godot
+    - ginkgolinter
+    - dogsled
+    - copyloopvar
+    - gocritic
+    - misspell
+    - nolintlint
+    - staticcheck
+    - unconvert
+    - unparam
+    - whitespace
+    - revive
+    - unused
+    - wastedassign
+  settings:
+    godot:
+      scope: toplevel
+      capital: true
+      exclude:
+        - 'SPDX-License-Identifier.*'
+        - '\+groupName.*'
+    gocritic:
+      disabled-checks:
+        - captLocal
+        - exitAfterDefer
+    unparam:
+      check-exported: true
+    revive:
+      rules:
+        - name: receiver-naming
+          disabled: true
+        - name: dot-imports
+          disabled: true
