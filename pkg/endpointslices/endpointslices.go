@@ -19,6 +19,8 @@ import (
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
 
+const listPageSize int64 = 500
+
 type EndpointSlicesInfo struct {
 	EndpointSlice discoveryv1.EndpointSlice
 	Service       corev1.Service
@@ -76,76 +78,120 @@ func New(cs *client.ClientSet, customNodeGroups map[string]labels.Selector) (*En
 func (ep *EndpointSlicesExporter) LoadExposedEndpointSlicesInfo() error {
 	// get all the services
 	servicesList := &corev1.ServiceList{}
-	err := ep.List(context.TODO(), servicesList, &rtclient.ListOptions{})
+	ctx := context.TODO()
+	err := ep.List(ctx, servicesList, &rtclient.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list services: %w", err)
 	}
-	epsliceInfos := []EndpointSlicesInfo{}
+
+	servicesByNamespace := make(map[string][]corev1.Service)
+	namespaces := make([]string, 0)
 	for _, service := range servicesList.Items {
-		// get the endpoint slice for this object
-		epl := &discoveryv1.EndpointSliceList{}
-		label, err := labels.Parse(fmt.Sprintf("kubernetes.io/service-name=%s", service.Name))
-		if err != nil {
-			return fmt.Errorf("failed to create selector for endpoint slice: %w", err)
-		}
-		err = ep.List(context.TODO(), epl, &rtclient.ListOptions{Namespace: service.Namespace, LabelSelector: label})
-		if err != nil {
-			return fmt.Errorf("failed to list endpoint slice: %w", err)
-		}
-
-		if len(epl.Items) == 0 {
-			log.Debugf("no endpoint slice found for service name %q", service.Name)
-			continue
-		}
-
 		if len(service.Spec.Selector) == 0 {
 			log.Debugf("no selector defined for service %q, skipping", service.Name)
 			continue
 		}
+		if _, ok := servicesByNamespace[service.Namespace]; !ok {
+			namespaces = append(namespaces, service.Namespace)
+		}
+		servicesByNamespace[service.Namespace] = append(servicesByNamespace[service.Namespace], service)
+	}
 
-		pods := &corev1.PodList{}
-		label = labels.SelectorFromSet(service.Spec.Selector)
-		err = ep.List(context.TODO(), pods, &rtclient.ListOptions{Namespace: service.Namespace, LabelSelector: label})
+	epsliceInfos := []EndpointSlicesInfo{}
+	for _, namespace := range namespaces {
+		namespaceEndpointSlices, err := listAllPages(ctx, ep.Client, namespace,
+			func(l *discoveryv1.EndpointSliceList) []discoveryv1.EndpointSlice { return l.Items })
 		if err != nil {
-			return fmt.Errorf("failed to list pods: %w", err)
+			return fmt.Errorf("failed to list endpoint slices in namespace %q: %w", namespace, err)
 		}
 
-		// If there are no pods found for the service, skip.
-		if len(pods.Items) == 0 {
-			log.Debugf("no pods found for service name %q", service.Name)
-			continue
+		namespacePods, err := listAllPages(ctx, ep.Client, namespace,
+			func(l *corev1.PodList) []corev1.Pod { return l.Items })
+		if err != nil {
+			return fmt.Errorf("failed to list pods in namespace %q: %w", namespace, err)
 		}
 
-		ports := epl.Items[0].Ports
-		// For non-hostNetwork pods, the targetPort (containerPort) is inside the pod's
-		// network namespace and is not reachable on the host. Only ports with an
-		// explicit hostPort are on the host and need firewall entries.
-		// NodePort/LoadBalancer nodePorts are covered by the dynamic NodePort range.
-		// hostNetwork pods listen directly on the host, so all their
-		// containerPorts need firewall entries and are kept as-is.
-		if !isHostNetworked(pods.Items[0]) {
-			epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], epl.Items[0].Ports)
-			ports = filterEndpointPortsByPodHostPort(epsPortsInfo)
+		endpointSlicesByService := make(map[string][]discoveryv1.EndpointSlice)
+		for _, endpointSlice := range namespaceEndpointSlices {
+			serviceName := endpointSlice.Labels[discoveryv1.LabelServiceName]
+			if serviceName != "" {
+				endpointSlicesByService[serviceName] = append(endpointSlicesByService[serviceName], endpointSlice)
+			}
 		}
-		if len(ports) == 0 {
-			continue
-		}
-		// Exclude ports explicitly bound to localhost (127.0.0.1 or ::1)
-		epsPortsInfo := getEndpointSlicePortsFromPod(pods.Items[0], ports)
-		portsNoLocalhost := filterOutLocalhostPorts(epsPortsInfo)
-		if len(portsNoLocalhost) == 0 {
-			continue
-		}
-		epl.Items[0].Ports = portsNoLocalhost
 
-		epsliceInfo := createEPSliceInfo(service, epl.Items[0], pods.Items)
-		log.Debugf("epsliceInfo created %+v", epsliceInfo)
-		epsliceInfos = append(epsliceInfos, epsliceInfo)
+		for _, service := range servicesByNamespace[namespace] {
+			serviceEndpointSlices := endpointSlicesByService[service.Name]
+			if len(serviceEndpointSlices) == 0 {
+				log.Debugf("no endpoint slice found for service name %q", service.Name)
+				continue
+			}
+
+			serviceSelector := labels.Set(service.Spec.Selector).AsSelector()
+			pods := make([]corev1.Pod, 0)
+			for _, pod := range namespacePods {
+				if serviceSelector.Matches(labels.Set(pod.Labels)) {
+					pods = append(pods, pod)
+				}
+			}
+
+			// If there are no pods found for the service, skip.
+			if len(pods) == 0 {
+				log.Debugf("no pods found for service name %q", service.Name)
+				continue
+			}
+
+			for _, endpointSlice := range serviceEndpointSlices {
+				ports := endpointSlice.Ports
+				// For non-hostNetwork pods, the targetPort (containerPort) is inside the pod's
+				// network namespace and is not reachable on the host. Only ports with an
+				// explicit hostPort are on the host and need firewall entries.
+				// NodePort/LoadBalancer nodePorts are covered by the dynamic NodePort range.
+				// hostNetwork pods listen directly on the host, so all their
+				// containerPorts need firewall entries and are kept as-is.
+				if !isHostNetworked(pods[0]) {
+					epsPortsInfo := getEndpointSlicePortsFromPod(pods[0], endpointSlice.Ports)
+					ports = filterEndpointPortsByPodHostPort(epsPortsInfo)
+				}
+				if len(ports) == 0 {
+					continue
+				}
+				// Exclude ports explicitly bound to localhost (127.0.0.1 or ::1)
+				epsPortsInfo := getEndpointSlicePortsFromPod(pods[0], ports)
+				portsNoLocalhost := filterOutLocalhostPorts(epsPortsInfo)
+				if len(portsNoLocalhost) == 0 {
+					continue
+				}
+				endpointSlice.Ports = portsNoLocalhost
+
+				epsliceInfo := createEPSliceInfo(service, endpointSlice, pods)
+				log.Debugf("epsliceInfo created %+v", epsliceInfo)
+				epsliceInfos = append(epsliceInfos, epsliceInfo)
+			}
+		}
 	}
 
 	log.Debugf("length of the created epsliceInfos slice: %d", len(epsliceInfos))
 	ep.sliceInfo = epsliceInfos
 	return nil
+}
+
+// listAllPages lists all objects of list type PL in namespace, following continue tokens.
+func listAllPages[T any, L any, PL interface {
+	*L
+	rtclient.ObjectList
+}](ctx context.Context, c rtclient.Client, namespace string, items func(PL) []T) ([]T, error) {
+	var all []T
+	opts := &rtclient.ListOptions{Namespace: namespace, Limit: listPageSize}
+	for {
+		list := PL(new(L))
+		if err := c.List(ctx, list, opts); err != nil {
+			return nil, err
+		}
+		all = append(all, items(list)...)
+		if opts.Continue = list.GetContinue(); opts.Continue == "" {
+			return all, nil
+		}
+	}
 }
 
 func (ep *EndpointSlicesExporter) ToComDetails() ([]types.ComDetails, error) {
