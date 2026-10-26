@@ -161,7 +161,7 @@ var _ = Describe("GenerateSS", func() {
 			Return([]byte("32768 60999\n"), nil).AnyTimes()
 		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
 			[]string{"chroot", "/host", "/bin/sh", "-c", "crio status config"}).
-			Return([]byte("[crio.api]\nstream_port = \"0\"\n"), nil).AnyTimes()
+			Return([]byte("[crio.api]\nstream_port = \"40000\"\n"), nil).AnyTimes()
 
 		// Mock expectation for /proc/{pid}/cgroup command
 		for _, pid := range pids {

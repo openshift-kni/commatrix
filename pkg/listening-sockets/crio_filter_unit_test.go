@@ -21,7 +21,7 @@ func TestCreateSSOutputUsesConfiguredHostEphemeralRange(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
 	check := &ConnectionCheck{podUtils: mockUtils}
-	pod := &corev1.Pod{}
+	pod := debugPodWithContainerID()
 
 	tcpOutput := []byte(
 		"LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:((\"crio\",pid=42,fd=3))\n" +
@@ -37,6 +37,10 @@ func TestCreateSSOutputUsesConfiguredHostEphemeralRange(t *testing.T) {
 		pod,
 		[]string{"chroot", "/host", "/bin/sh", "-c", "crio status config"},
 	).Return([]byte("[crio.api]\nstream_port = \"0\"\n"), nil)
+	mockUtils.EXPECT().RunCommandOnPod(
+		pod,
+		crioStreamPortProbeCommand("deadbeef"),
+	).Return([]byte(`time="now" level=debug msg="ExecResponse: url:\"http://127.0.0.1:62000/exec/token\""`), nil)
 	mockUtils.EXPECT().RunCommandOnPod(
 		pod,
 		[]string{"chroot", "/host", "/bin/sh", "-c", "ip -j addr show lo"},
@@ -56,14 +60,66 @@ func TestCreateSSOutputUsesConfiguredHostEphemeralRange(t *testing.T) {
 	}
 }
 
+func TestCreateSSOutputFiltersOnlyRuntimeCRIOStreamPort(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
+	check := &ConnectionCheck{podUtils: mockUtils}
+	pod := debugPodWithContainerID()
+
+	tcpOutput := []byte(
+		"LISTEN 0 4096 0.0.0.0:45000 0.0.0.0:* users:((\"crio\",pid=42,fd=3))\n" +
+			"LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:((\"crio\",pid=42,fd=4))\n" +
+			"LISTEN 0 4096 0.0.0.0:41000 0.0.0.0:* users:((\"custom-daemon\",pid=43,fd=5))",
+	)
+	mockUtils.EXPECT().RunCommandOnPod(pod, []string{"/bin/sh", "-c", "ss -anpltH"}).Return(tcpOutput, nil)
+	mockUtils.EXPECT().RunCommandOnPod(pod, []string{"/bin/sh", "-c", "ss -anpluH"}).Return(nil, nil)
+	mockUtils.EXPECT().RunCommandOnPod(
+		pod,
+		[]string{"/bin/sh", "-c", "cat /host/proc/sys/net/ipv4/ip_local_port_range"},
+	).Return([]byte("32768 60999\n"), nil)
+	mockUtils.EXPECT().RunCommandOnPod(
+		pod,
+		[]string{"chroot", "/host", "/bin/sh", "-c", "crio status config"},
+	).Return([]byte("[crio.api]\nstream_port = \"0\"\n[crio.metrics]\nenable_metrics = true\nmetrics_host = \"0.0.0.0\"\nmetrics_port = 40000\n"), nil)
+	mockUtils.EXPECT().RunCommandOnPod(
+		pod,
+		crioStreamPortProbeCommand("deadbeef"),
+	).Return([]byte(`time="now" level=debug msg="ExecResponse: url:\"http://127.0.0.1:45000/exec/token\""`), nil)
+	mockUtils.EXPECT().RunCommandOnPod(
+		pod,
+		[]string{"chroot", "/host", "/bin/sh", "-c", "ip -j addr show lo"},
+	).Return([]byte("[]"), nil)
+	mockUtils.EXPECT().RunCommandOnPod(
+		pod,
+		[]string{"/bin/sh", "-c", "cat /proc/42/cgroup"},
+	).Return([]byte("0::/system.slice/crio.service\n"), nil).Times(2)
+	mockUtils.EXPECT().RunCommandOnPod(
+		pod,
+		[]string{"/bin/sh", "-c", "cat /proc/43/cgroup"},
+	).Return([]byte("0::/system.slice/custom-daemon.service\n"), nil)
+	expectVerifiedCRIOProcess(mockUtils, pod, "42")
+
+	got, _, _, err := check.createSSOutputFromNode(pod, "worker")
+	if err != nil {
+		t.Fatalf("createSSOutputFromNode returned an error: %v", err)
+	}
+	if len(got) != 2 || got[0].Port != 40000 || got[1].Port != 41000 {
+		t.Fatalf("expected fixed metrics and unrelated listeners to remain, got %#v", got)
+	}
+}
+
 func TestCreateSSOutputRetainsListenersWhenClassificationUnavailable(t *testing.T) {
 	tests := []struct {
-		name         string
-		rangeOutput  []byte
-		rangeErr     error
-		configOutput []byte
-		configErr    error
-		expectConfig bool
+		name            string
+		rangeOutput     []byte
+		rangeErr        error
+		configOutput    []byte
+		configErr       error
+		expectConfig    bool
+		probeOutput     []byte
+		probeErr        error
+		expectProbe     bool
+		omitContainerID bool
 	}{
 		{
 			name:         "CRI-O config command failure",
@@ -76,6 +132,29 @@ func TestCreateSSOutputRetainsListenersWhenClassificationUnavailable(t *testing.
 			rangeOutput:  []byte("32768 60999\n"),
 			configOutput: []byte("[crio.api]\nstream_port = 0\n"),
 			expectConfig: true,
+		},
+		{
+			name:         "runtime stream probe failure",
+			rangeOutput:  []byte("32768 60999\n"),
+			configOutput: []byte("[crio.api]\nstream_port = \"0\"\n"),
+			expectConfig: true,
+			probeErr:     errors.New("probe unavailable"),
+			expectProbe:  true,
+		},
+		{
+			name:         "malformed runtime stream response",
+			rangeOutput:  []byte("32768 60999\n"),
+			configOutput: []byte("[crio.api]\nstream_port = \"0\"\n"),
+			expectConfig: true,
+			probeOutput:  []byte("ExecResponse: unavailable"),
+			expectProbe:  true,
+		},
+		{
+			name:            "debug container ID unavailable",
+			rangeOutput:     []byte("32768 60999\n"),
+			configOutput:    []byte("[crio.api]\nstream_port = \"0\"\n"),
+			expectConfig:    true,
+			omitContainerID: true,
 		},
 		{
 			name:         "host range command failure",
@@ -99,7 +178,10 @@ func TestCreateSSOutputRetainsListenersWhenClassificationUnavailable(t *testing.
 			ctrl := gomock.NewController(t)
 			mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
 			check := &ConnectionCheck{podUtils: mockUtils}
-			pod := &corev1.Pod{}
+			pod := debugPodWithContainerID()
+			if tt.omitContainerID {
+				pod.Status.ContainerStatuses = nil
+			}
 			entry := []byte(`LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:(("crio",pid=42,fd=3))`)
 
 			mockUtils.EXPECT().RunCommandOnPod(
@@ -115,6 +197,11 @@ func TestCreateSSOutputRetainsListenersWhenClassificationUnavailable(t *testing.
 				mockUtils.EXPECT().RunCommandOnPod(
 					pod, []string{"chroot", "/host", "/bin/sh", "-c", "crio status config"},
 				).Return(tt.configOutput, tt.configErr)
+			}
+			if tt.expectProbe {
+				mockUtils.EXPECT().RunCommandOnPod(
+					pod, crioStreamPortProbeCommand("deadbeef"),
+				).Return(tt.probeOutput, tt.probeErr)
 			}
 			mockUtils.EXPECT().RunCommandOnPod(
 				pod, []string{"chroot", "/host", "/bin/sh", "-c", "ip -j addr show lo"},
@@ -135,35 +222,52 @@ func TestCreateSSOutputRetainsListenersWhenClassificationUnavailable(t *testing.
 }
 
 func TestHostEphemeralRangeEndpointsAreInclusive(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
-	check := &ConnectionCheck{podUtils: mockUtils}
-	pod := &corev1.Pod{}
-	entries := []string{
-		`LISTEN 0 4096 0.0.0.0:32767 0.0.0.0:* users:(("crio",pid=41,fd=3))`,
-		`LISTEN 0 4096 0.0.0.0:32768 0.0.0.0:* users:(("crio",pid=42,fd=3))`,
-		`LISTEN 0 4096 0.0.0.0:60999 0.0.0.0:* users:(("crio",pid=43,fd=3))`,
-		`LISTEN 0 4096 0.0.0.0:61000 0.0.0.0:* users:(("crio",pid=44,fd=3))`,
+	tests := []struct {
+		name       string
+		streamPort int
+		streamPID  string
+	}{
+		{name: "minimum endpoint", streamPort: defaultEphemeralMin, streamPID: "42"},
+		{name: "maximum endpoint", streamPort: defaultEphemeralMax, streamPID: "43"},
 	}
 
-	for _, pid := range []string{"41", "42", "43", "44"} {
-		mockUtils.EXPECT().RunCommandOnPod(
-			pod, []string{"/bin/sh", "-c", fmt.Sprintf("cat /proc/%s/cgroup", pid)},
-		).Return([]byte("0::/system.slice/crio.service\n"), nil)
-	}
-	expectVerifiedCRIOProcess(mockUtils, pod, "42")
-	expectVerifiedCRIOProcess(mockUtils, pod, "43")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
+			check := &ConnectionCheck{podUtils: mockUtils}
+			pod := &corev1.Pod{}
+			entries := []string{
+				`LISTEN 0 4096 0.0.0.0:32767 0.0.0.0:* users:(("crio",pid=41,fd=3))`,
+				`LISTEN 0 4096 0.0.0.0:32768 0.0.0.0:* users:(("crio",pid=42,fd=3))`,
+				`LISTEN 0 4096 0.0.0.0:60999 0.0.0.0:* users:(("crio",pid=43,fd=3))`,
+				`LISTEN 0 4096 0.0.0.0:61000 0.0.0.0:* users:(("crio",pid=44,fd=3))`,
+			}
 
-	got := check.toComDetails(
-		pod,
-		entries,
-		"TCP",
-		"worker",
-		portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-		true,
-	)
-	if len(got) != 2 || got[0].Port != 32767 || got[1].Port != 61000 {
-		t.Fatalf("expected exact range endpoints to be filtered and adjacent ports retained, got %#v", got)
+			for _, pid := range []string{"41", "42", "43", "44"} {
+				mockUtils.EXPECT().RunCommandOnPod(
+					pod, []string{"/bin/sh", "-c", fmt.Sprintf("cat /proc/%s/cgroup", pid)},
+				).Return([]byte("0::/system.slice/crio.service\n"), nil)
+			}
+			expectVerifiedCRIOProcess(mockUtils, pod, tt.streamPID)
+
+			got := check.toComDetails(
+				pod,
+				entries,
+				"TCP",
+				"worker",
+				portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
+				tt.streamPort,
+			)
+			if len(got) != 3 {
+				t.Fatalf("expected only runtime stream port %d to be filtered, got %#v", tt.streamPort, got)
+			}
+			for _, listener := range got {
+				if listener.Port == tt.streamPort {
+					t.Fatalf("expected runtime stream port %d to be filtered, got %#v", tt.streamPort, got)
+				}
+			}
+		})
 	}
 }
 
@@ -189,7 +293,7 @@ func TestMutableProcessNameDoesNotEstablishCRIOProvenance(t *testing.T) {
 		"TCP",
 		"worker",
 		portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-		true,
+		40000,
 	)
 	if len(got) != 1 || got[0].Service != "crio" {
 		t.Fatalf("expected spoofed process name to remain reportable, got %#v", got)
@@ -249,7 +353,7 @@ func TestUncertainCRIOProvenanceRemainsReportable(t *testing.T) {
 				"TCP",
 				"worker",
 				portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-				true,
+				40000,
 			)
 			if len(got) != 1 || got[0].Port != 40000 {
 				t.Fatalf("expected listener with uncertain provenance to remain reportable, got %#v", got)
@@ -306,7 +410,7 @@ func TestVerifiedCRIOFilteringPrecedesOwnershipDeduplication(t *testing.T) {
 				"TCP",
 				"worker",
 				portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-				true,
+				40000,
 			)
 			matrix := &types.ComMatrix{Ports: ports}
 			matrix.SortAndRemoveDuplicates()
@@ -356,10 +460,113 @@ func TestMultipleOwnersRemainReportableRegardlessOfOrder(t *testing.T) {
 				"TCP",
 				"worker",
 				portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-				true,
+				40000,
 			)
 			if len(got) != 1 || got[0].Port != 40000 {
 				t.Fatalf("expected mixed-owner listener to remain visible, got %#v", got)
+			}
+		})
+	}
+}
+
+func TestEmptyNamedCoOwnerRemainsReportableRegardlessOfOrder(t *testing.T) {
+	tests := []struct {
+		name     string
+		entry    string
+		firstPID string
+	}{
+		{
+			name:     "empty owner first",
+			entry:    `LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:(("",pid=43,fd=4),("crio",pid=42,fd=3))`,
+			firstPID: "43",
+		},
+		{
+			name:     "CRI-O owner first",
+			entry:    `LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:(("crio",pid=42,fd=3),("",pid=43,fd=4))`,
+			firstPID: "42",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
+			check := &ConnectionCheck{podUtils: mockUtils}
+			pod := &corev1.Pod{}
+
+			mockUtils.EXPECT().RunCommandOnPod(
+				pod, []string{"/bin/sh", "-c", fmt.Sprintf("cat /proc/%s/cgroup", tt.firstPID)},
+			).Return([]byte("0::/system.slice/service.scope\n"), nil)
+			expectVerifiedCRIOProcess(mockUtils, pod, "42")
+			mockUtils.EXPECT().RunCommandOnPod(
+				pod,
+				[]string{"/bin/sh", "-c", "readlink /host/proc/43/exe"},
+			).Return([]byte("/usr/bin/custom-daemon\n"), nil)
+
+			got := check.toComDetails(
+				pod,
+				[]string{tt.entry},
+				"TCP",
+				"worker",
+				portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
+				40000,
+			)
+			if len(got) != 1 || got[0].Port != 40000 {
+				t.Fatalf("expected empty-named mixed owner to remain visible, got %#v", got)
+			}
+		})
+	}
+}
+
+func TestMalformedCoOwnerRemainsReportable(t *testing.T) {
+	tests := []struct {
+		name         string
+		entry        string
+		verifyOwners bool
+	}{
+		{
+			name:  "missing PID",
+			entry: `LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:(("crio",pid=42,fd=3),("unknown",fd=4))`,
+		},
+		{
+			name:         "unquoted task name with valid PID",
+			entry:        `LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:(("crio",pid=42,fd=3),(unknown,pid=43,fd=4))`,
+			verifyOwners: true,
+		},
+		{
+			name:  "unterminated task name",
+			entry: `LISTEN 0 4096 0.0.0.0:40000 0.0.0.0:* users:(("crio",pid=42,fd=3),("unknown,pid=43,fd=4))`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockUtils := mock_utils.NewMockUtilsInterface(ctrl)
+			check := &ConnectionCheck{podUtils: mockUtils}
+			pod := &corev1.Pod{}
+
+			mockUtils.EXPECT().RunCommandOnPod(
+				pod, []string{"/bin/sh", "-c", "cat /proc/42/cgroup"},
+			).Return([]byte("0::/system.slice/crio.service\n"), nil)
+			if tt.verifyOwners {
+				expectVerifiedCRIOProcess(mockUtils, pod, "42")
+				mockUtils.EXPECT().RunCommandOnPod(
+					pod,
+					[]string{"/bin/sh", "-c", "readlink /host/proc/43/exe"},
+				).Return([]byte("/usr/bin/custom-daemon\n"), nil)
+			}
+
+			got := check.toComDetails(
+				pod,
+				[]string{tt.entry},
+				"TCP",
+				"worker",
+				portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
+				40000,
+			)
+			if len(got) != 1 || got[0].Port != 40000 {
+				t.Fatalf("expected listener with malformed co-owner to remain visible, got %#v", got)
 			}
 		})
 	}
@@ -384,7 +591,7 @@ func TestAllVerifiedCRIOOwnersAreSuppressed(t *testing.T) {
 		"TCP",
 		"worker",
 		portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-		true,
+		40000,
 	)
 	if len(got) != 0 {
 		t.Fatalf("expected listener with only verified CRI-O owners to be suppressed, got %#v", got)
@@ -408,7 +615,7 @@ func TestVerifiedCRIOUDPListenerRemainsReportable(t *testing.T) {
 		"UDP",
 		"worker",
 		portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-		true,
+		40000,
 	)
 	if len(got) != 1 || got[0].Protocol != "UDP" || got[0].Port != 40000 {
 		t.Fatalf("expected CRI-O UDP listener to remain reportable, got %#v", got)
@@ -437,7 +644,7 @@ func TestKubernetesIdentifiedListenerRemainsReportable(t *testing.T) {
 		"TCP",
 		"worker",
 		portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-		true,
+		40000,
 	)
 	if len(got) != 1 || got[0].Namespace != "namespace" || got[0].Pod != "pod" || got[0].Container != "container" {
 		t.Fatalf("expected Kubernetes-identified listener to remain reportable, got %#v", got)
@@ -460,9 +667,9 @@ func TestFixedCRIOStreamPortRemainsReportable(t *testing.T) {
 		[]string{"/bin/sh", "-c", "cat /proc/42/cgroup"},
 	).Return([]byte("0::/system.slice/crio.service\n"), nil)
 
-	usesEphemeralStreamPort, err := check.crioUsesEphemeralStreamPort(pod)
+	ephemeralStreamPort, err := check.getCRIOEphemeralStreamPort(pod)
 	if err != nil {
-		t.Fatalf("crioUsesEphemeralStreamPort returned an error: %v", err)
+		t.Fatalf("getCRIOEphemeralStreamPort returned an error: %v", err)
 	}
 	got := check.toComDetails(
 		pod,
@@ -470,10 +677,20 @@ func TestFixedCRIOStreamPortRemainsReportable(t *testing.T) {
 		"TCP",
 		"worker",
 		portRange{min: defaultEphemeralMin, max: defaultEphemeralMax},
-		usesEphemeralStreamPort,
+		ephemeralStreamPort,
 	)
 	if len(got) != 1 || got[0].Port != 40000 {
 		t.Fatalf("expected configured fixed CRI-O stream port to remain reportable, got %#v", got)
+	}
+}
+
+func debugPodWithContainerID() *corev1.Pod {
+	return &corev1.Pod{
+		Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "container"}}},
+		Status: corev1.PodStatus{ContainerStatuses: []corev1.ContainerStatus{{
+			Name:        "container",
+			ContainerID: "cri-o://deadbeef",
+		}}},
 	}
 }
 

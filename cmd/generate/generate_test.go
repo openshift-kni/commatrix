@@ -669,7 +669,7 @@ func TestButaneAndMCOutputFiles(t *testing.T) {
 	mockUtils.EXPECT().RunCommandOnPod(
 		mockPod,
 		[]string{"chroot", "/host", "/bin/sh", "-c", "crio status config"},
-	).Return([]byte("[crio.api]\nstream_port = \"0\"\n"), nil).AnyTimes()
+	).Return([]byte("[crio.api]\nstream_port = \"40000\"\n"), nil).AnyTimes()
 	mockUtils.EXPECT().RunCommandOnPod(mockPod, []string{"/bin/sh", "-c", "ss -anpltH"}).Return([]byte(
 		"LISTEN 0 4096 0.0.0.0:5355 0.0.0.0:* \n",
 	), nil).AnyTimes()

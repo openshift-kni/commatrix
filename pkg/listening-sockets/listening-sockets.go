@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"path"
 	"regexp"
 	"strconv"
@@ -137,12 +138,12 @@ func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, group st
 	if err != nil {
 		log.Debugf("CRI-O ephemeral listener filtering disabled: %v", err)
 	}
-	crioUsesEphemeralStreamPort := false
+	crioEphemeralStreamPort := 0
 	if err == nil {
-		crioUsesEphemeralStreamPort, err = cc.crioUsesEphemeralStreamPort(debugPod)
+		crioEphemeralStreamPort, err = cc.getCRIOEphemeralStreamPort(debugPod)
 		if err != nil {
 			log.Debugf("CRI-O ephemeral listener filtering disabled: %v", err)
-			crioUsesEphemeralStreamPort = false
+			crioEphemeralStreamPort = 0
 		}
 	}
 
@@ -151,10 +152,10 @@ func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, group st
 	ssOutFilteredUDP := filterEntries(splitByLines(ssOutUDP), loopbackIPs)
 
 	tcpComDetails := cc.toComDetails(
-		debugPod, ssOutFilteredTCP, "TCP", group, hostEphemeralRange, crioUsesEphemeralStreamPort,
+		debugPod, ssOutFilteredTCP, "TCP", group, hostEphemeralRange, crioEphemeralStreamPort,
 	)
 	udpComDetails := cc.toComDetails(
-		debugPod, ssOutFilteredUDP, "UDP", group, hostEphemeralRange, crioUsesEphemeralStreamPort,
+		debugPod, ssOutFilteredUDP, "UDP", group, hostEphemeralRange, crioEphemeralStreamPort,
 	)
 
 	res := []types.ComDetails{}
@@ -175,7 +176,7 @@ func (cc *ConnectionCheck) toComDetails(
 	protocol string,
 	pool string,
 	hostEphemeralRange portRange,
-	crioUsesEphemeralStreamPort bool,
+	crioEphemeralStreamPort int,
 ) []types.ComDetails {
 	res := make([]types.ComDetails, 0)
 
@@ -202,7 +203,7 @@ func (cc *ConnectionCheck) toComDetails(
 		cd.NodeGroup = pool
 		cd.Optional = false
 		if cc.isHostLocalCRIOEphemeralListener(
-			debugPod, ssEntry, *cd, hostEphemeralRange, crioUsesEphemeralStreamPort,
+			debugPod, ssEntry, *cd, hostEphemeralRange, crioEphemeralStreamPort,
 		) {
 			continue
 		}
@@ -229,25 +230,81 @@ func (cc *ConnectionCheck) getHostEphemeralPortRange(debugPod *corev1.Pod) (port
 	return portRange{min: minPort, max: maxPort}, nil
 }
 
-func (cc *ConnectionCheck) crioUsesEphemeralStreamPort(debugPod *corev1.Pod) (bool, error) {
+func (cc *ConnectionCheck) getCRIOEphemeralStreamPort(debugPod *corev1.Pod) (int, error) {
 	out, err := cc.podUtils.RunCommandOnPod(
 		debugPod,
 		[]string{"chroot", "/host", "/bin/sh", "-c", "crio status config"},
 	)
 	if err != nil {
-		return false, fmt.Errorf("failed reading live CRI-O configuration: %w", err)
+		return 0, fmt.Errorf("failed reading live CRI-O configuration: %w", err)
 	}
 
 	match := regexp.MustCompile(`(?m)^\s*stream_port\s*=\s*"([0-9]+)"\s*$`).FindSubmatch(out)
 	if len(match) != 2 {
-		return false, fmt.Errorf("stream_port not found in live CRI-O configuration")
+		return 0, fmt.Errorf("stream_port not found in live CRI-O configuration")
 	}
 	streamPort, err := strconv.Atoi(string(match[1]))
 	if err != nil || streamPort < 0 || streamPort > 65535 {
-		return false, fmt.Errorf("invalid CRI-O stream_port %q", match[1])
+		return 0, fmt.Errorf("invalid CRI-O stream_port %q", match[1])
+	}
+	if streamPort != 0 {
+		return 0, nil
 	}
 
-	return streamPort == 0, nil
+	return cc.probeCRIOStreamPort(debugPod)
+}
+
+func (cc *ConnectionCheck) probeCRIOStreamPort(debugPod *corev1.Pod) (int, error) {
+	containerID, err := debugPodContainerID(debugPod)
+	if err != nil {
+		return 0, err
+	}
+
+	out, commandErr := cc.podUtils.RunCommandOnPod(debugPod, crioStreamPortProbeCommand(containerID))
+	streamURL := regexp.MustCompile(`https?://(?:\[[^\]]+\]|[^:/\\\s"]+):[0-9]+/exec/[^\\\s"]+`).Find(out)
+	if len(streamURL) == 0 {
+		if commandErr != nil {
+			// RunCommandOnPod errors contain command output, including the short-lived
+			// stream token. Do not wrap or log that output.
+			return 0, fmt.Errorf("failed requesting CRI-O runtime stream URL")
+		}
+		return 0, fmt.Errorf("CRI-O runtime stream URL not found in probe output")
+	}
+
+	parsedURL, err := url.Parse(string(streamURL))
+	if err != nil {
+		return 0, fmt.Errorf("failed parsing CRI-O runtime stream URL")
+	}
+	streamPort, err := strconv.Atoi(parsedURL.Port())
+	if err != nil || streamPort < 1 || streamPort > 65535 {
+		return 0, fmt.Errorf("invalid CRI-O runtime stream port")
+	}
+
+	return streamPort, nil
+}
+
+func debugPodContainerID(debugPod *corev1.Pod) (string, error) {
+	for _, status := range debugPod.Status.ContainerStatuses {
+		if status.Name != "container" {
+			continue
+		}
+		const crioPrefix = "cri-o://"
+		if !strings.HasPrefix(status.ContainerID, crioPrefix) {
+			return "", fmt.Errorf("debug pod container is not running under CRI-O")
+		}
+		containerID := strings.TrimPrefix(status.ContainerID, crioPrefix)
+		if !regexp.MustCompile(`^[0-9a-fA-F]+$`).MatchString(containerID) {
+			return "", fmt.Errorf("debug pod has an invalid CRI-O container ID")
+		}
+		return containerID, nil
+	}
+
+	return "", fmt.Errorf("debug pod CRI-O container ID is unavailable")
+}
+
+func crioStreamPortProbeCommand(containerID string) []string {
+	cmd := fmt.Sprintf("crictl --debug exec %s true 2>&1", containerID)
+	return []string{"chroot", "/host", "/bin/sh", "-c", cmd}
 }
 
 func (cc *ConnectionCheck) isHostLocalCRIOEphemeralListener(
@@ -255,13 +312,14 @@ func (cc *ConnectionCheck) isHostLocalCRIOEphemeralListener(
 	ssEntry string,
 	cd types.ComDetails,
 	hostEphemeralRange portRange,
-	crioUsesEphemeralStreamPort bool,
+	crioEphemeralStreamPort int,
 ) bool {
-	if !crioUsesEphemeralStreamPort ||
+	if crioEphemeralStreamPort == 0 ||
 		cd.Protocol != "TCP" ||
 		cd.Namespace != "" ||
 		cd.Pod != "" ||
 		cd.Container != "" ||
+		cd.Port != crioEphemeralStreamPort ||
 		!hostEphemeralRange.contains(cd.Port) {
 		return false
 	}
@@ -327,22 +385,137 @@ func (cc *ConnectionCheck) isHostCRIOPID(debugPod *corev1.Pod, pid string) (bool
 }
 
 func extractOwnerPIDs(ssEntry string) ([]string, error) {
-	ownerMatches := regexp.MustCompile(`\("[^"]+"[^)]*\)`).FindAllString(ssEntry, -1)
-	if len(ownerMatches) == 0 {
-		return nil, fmt.Errorf("socket owners not found in the input string")
+	ownerTuples, err := extractOwnerTuples(ssEntry)
+	if err != nil {
+		return nil, err
 	}
 
-	pids := make([]string, 0, len(ownerMatches))
-	pidRegexp := regexp.MustCompile(`pid=(\d+)`)
-	for _, owner := range ownerMatches {
-		match := pidRegexp.FindStringSubmatch(owner)
-		if len(match) < 2 {
+	pids := make([]string, 0, len(ownerTuples))
+	for _, owner := range ownerTuples {
+		fields, err := splitOwnerTupleFields(owner[1 : len(owner)-1])
+		if err != nil {
+			return nil, err
+		}
+		pid := ""
+		for _, field := range fields {
+			field = strings.TrimSpace(field)
+			if !strings.HasPrefix(field, "pid=") {
+				continue
+			}
+			candidate := strings.TrimPrefix(field, "pid=")
+			if pid != "" || !regexp.MustCompile(`^\d+$`).MatchString(candidate) {
+				return nil, fmt.Errorf("invalid PID field for socket owner %q", owner)
+			}
+			pid = candidate
+		}
+		if pid == "" {
 			return nil, fmt.Errorf("PID not found for socket owner %q", owner)
 		}
-		pids = append(pids, match[1])
+		pids = append(pids, pid)
 	}
 
 	return pids, nil
+}
+
+func extractOwnerTuples(ssEntry string) ([]string, error) {
+	const ownerPrefix = "users:("
+	ownerIdx := strings.Index(ssEntry, ownerPrefix)
+	if ownerIdx == -1 {
+		return nil, fmt.Errorf("socket owners not found in the input string")
+	}
+
+	owners := ssEntry[ownerIdx+len(ownerPrefix):]
+	tuples := make([]string, 0)
+	for pos := 0; pos < len(owners); {
+		for pos < len(owners) && (owners[pos] == ' ' || owners[pos] == '\t' || owners[pos] == ',') {
+			pos++
+		}
+		if pos >= len(owners) {
+			return nil, fmt.Errorf("unterminated socket owners list")
+		}
+		if owners[pos] == ')' {
+			if len(tuples) == 0 {
+				return nil, fmt.Errorf("socket owners not found in the input string")
+			}
+			return tuples, nil
+		}
+		if owners[pos] != '(' {
+			return nil, fmt.Errorf("malformed socket owner list")
+		}
+
+		start := pos
+		depth := 0
+		inQuote := false
+		escaped := false
+		for ; pos < len(owners); pos++ {
+			char := owners[pos]
+			if escaped {
+				escaped = false
+				continue
+			}
+			if inQuote && char == '\\' {
+				escaped = true
+				continue
+			}
+			if char == '"' {
+				inQuote = !inQuote
+				continue
+			}
+			if inQuote {
+				continue
+			}
+			switch char {
+			case '(':
+				depth++
+			case ')':
+				depth--
+				if depth == 0 {
+					pos++
+					tuples = append(tuples, owners[start:pos])
+					break
+				}
+			}
+			if depth == 0 {
+				break
+			}
+		}
+		if depth != 0 || inQuote || escaped {
+			return nil, fmt.Errorf("malformed socket owner tuple")
+		}
+	}
+
+	return nil, fmt.Errorf("unterminated socket owners list")
+}
+
+func splitOwnerTupleFields(owner string) ([]string, error) {
+	fields := make([]string, 0)
+	start := 0
+	inQuote := false
+	escaped := false
+	for pos := 0; pos < len(owner); pos++ {
+		char := owner[pos]
+		if escaped {
+			escaped = false
+			continue
+		}
+		if inQuote && char == '\\' {
+			escaped = true
+			continue
+		}
+		if char == '"' {
+			inQuote = !inQuote
+			continue
+		}
+		if char == ',' && !inQuote {
+			fields = append(fields, owner[start:pos])
+			start = pos + 1
+		}
+	}
+	if inQuote || escaped {
+		return nil, fmt.Errorf("malformed socket owner tuple")
+	}
+	fields = append(fields, owner[start:])
+	return fields, nil
 }
 
 // getContainerInfo receives an ss entry and gets the ContainerInfo obj of the container exposing this port.
