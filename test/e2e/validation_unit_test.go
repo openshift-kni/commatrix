@@ -14,63 +14,46 @@ func TestFilterOutPortsOfKnownServices(t *testing.T) {
 		filtered bool
 	}{
 		{
-			name: "CRI-O host-local TCP listener in the ephemeral range",
+			name: "unverified CRI-O listener remains reportable",
 			listener: types.ComDetails{
 				Protocol: "TCP",
 				Port:     40000,
 				Service:  "crio",
+			},
+		},
+		{
+			name: "rpc.statd listener is ignored",
+			listener: types.ComDetails{
+				Protocol: "TCP",
+				Port:     40000,
+				Service:  "rpc.statd",
 			},
 			filtered: true,
 		},
 		{
-			name: "non-CRI-O fixed listener",
+			name: "dnsmasq listener is ignored",
+			listener: types.ComDetails{
+				Protocol: "UDP",
+				Port:     53,
+				Service:  "dnsmasq",
+			},
+			filtered: true,
+		},
+		{
+			name: "dig listener is ignored",
+			listener: types.ComDetails{
+				Protocol: "UDP",
+				Port:     53,
+				Service:  "dig",
+			},
+			filtered: true,
+		},
+		{
+			name: "custom listener remains reportable",
 			listener: types.ComDetails{
 				Protocol: "TCP",
 				Port:     8080,
 				Service:  "custom-daemon",
-			},
-		},
-		{
-			name: "fixed CRI-O listener",
-			listener: types.ComDetails{
-				Protocol: "TCP",
-				Port:     10000,
-				Service:  "crio",
-			},
-		},
-		{
-			name: "CRI-O listener on an arbitrary high port",
-			listener: types.ComDetails{
-				Protocol: "TCP",
-				Port:     61000,
-				Service:  "crio",
-			},
-		},
-		{
-			name: "non-CRI-O listener in the ephemeral range",
-			listener: types.ComDetails{
-				Protocol: "TCP",
-				Port:     40000,
-				Service:  "custom-daemon",
-			},
-		},
-		{
-			name: "CRI-O UDP listener in the ephemeral range",
-			listener: types.ComDetails{
-				Protocol: "UDP",
-				Port:     40000,
-				Service:  "crio",
-			},
-		},
-		{
-			name: "CRI-O ephemeral listener with Kubernetes identity",
-			listener: types.ComDetails{
-				Protocol:  "TCP",
-				Port:      40000,
-				Service:   "crio",
-				Namespace: "test-namespace",
-				Pod:       "test-pod",
-				Container: "test-container",
 			},
 		},
 	}
@@ -89,7 +72,7 @@ func TestFilterOutPortsOfKnownServices(t *testing.T) {
 	}
 }
 
-func TestEndpointSliceBackedListenerIsNotMissing(t *testing.T) {
+func TestEndpointSliceBackedListenerMatchesByTuple(t *testing.T) {
 	endpointSlicePort := types.ComDetails{
 		Direction: "Ingress",
 		Protocol:  "TCP",
@@ -112,7 +95,7 @@ func TestEndpointSliceBackedListenerIsNotMissing(t *testing.T) {
 		&types.ComMatrix{Ports: []types.ComDetails{endpointSlicePort}},
 		&types.ComMatrix{Ports: []types.ComDetails{ssListener}},
 	)
-	missing := filterOutPortsOfKnownServices(diff.GetUniqueSecondary())
+	missing := diff.GetUniqueSecondary()
 	if len(missing.Ports) != 0 {
 		t.Fatalf("expected EndpointSlice-backed listener not to be missing, got %#v", missing.Ports)
 	}

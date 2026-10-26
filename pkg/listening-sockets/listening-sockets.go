@@ -26,6 +26,15 @@ const (
 	localAddrPortFieldIdx = 3
 )
 
+type portRange struct {
+	min int
+	max int
+}
+
+func (r portRange) contains(port int) bool {
+	return port >= r.min && port <= r.max
+}
+
 type ConnectionCheck struct {
 	*client.ClientSet
 	podUtils    utils.UtilsInterface
@@ -124,13 +133,25 @@ func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, group st
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	hostEphemeralRange, err := cc.getHostEphemeralPortRange(debugPod)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	crioUsesEphemeralStreamPort, err := cc.crioUsesEphemeralStreamPort(debugPod)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	loopbackIPs := cc.getLoopbackIPs(debugPod)
 	ssOutFilteredTCP := filterEntries(splitByLines(ssOutTCP), loopbackIPs)
 	ssOutFilteredUDP := filterEntries(splitByLines(ssOutUDP), loopbackIPs)
 
-	tcpComDetails := cc.toComDetails(debugPod, ssOutFilteredTCP, "TCP", group)
-	udpComDetails := cc.toComDetails(debugPod, ssOutFilteredUDP, "UDP", group)
+	tcpComDetails := cc.toComDetails(
+		debugPod, ssOutFilteredTCP, "TCP", group, hostEphemeralRange, crioUsesEphemeralStreamPort,
+	)
+	udpComDetails := cc.toComDetails(
+		debugPod, ssOutFilteredUDP, "UDP", group, hostEphemeralRange, crioUsesEphemeralStreamPort,
+	)
 
 	res := []types.ComDetails{}
 	res = append(res, udpComDetails...)
@@ -144,11 +165,21 @@ func splitByLines(bytes []byte) []string {
 	return strings.Split(str, "\n")
 }
 
-func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string, protocol string, pool string) []types.ComDetails {
+func (cc *ConnectionCheck) toComDetails(
+	debugPod *corev1.Pod,
+	ssOutput []string,
+	protocol string,
+	pool string,
+	hostEphemeralRange portRange,
+	crioUsesEphemeralStreamPort bool,
+) []types.ComDetails {
 	res := make([]types.ComDetails, 0)
 
 	for _, ssEntry := range ssOutput {
 		cd := parseComDetail(ssEntry)
+		if cd == nil {
+			continue
+		}
 
 		containerName, nameSpace, podName := "", "", ""
 		containerInfo, err := cc.getContainerInfo(debugPod, ssEntry)
@@ -166,9 +197,109 @@ func (cc *ConnectionCheck) toComDetails(debugPod *corev1.Pod, ssOutput []string,
 		cd.Protocol = protocol
 		cd.NodeGroup = pool
 		cd.Optional = false
+		if cc.isHostLocalCRIOEphemeralListener(
+			debugPod, ssEntry, *cd, hostEphemeralRange, crioUsesEphemeralStreamPort,
+		) {
+			continue
+		}
 		res = append(res, *cd)
 	}
 	return res
+}
+
+func (cc *ConnectionCheck) getHostEphemeralPortRange(debugPod *corev1.Pod) (portRange, error) {
+	const rangePath = "/host/proc/sys/net/ipv4/ip_local_port_range"
+	out, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"/bin/sh", "-c", "cat " + rangePath})
+	if err != nil {
+		return portRange{}, fmt.Errorf("failed reading host ephemeral port range: %w", err)
+	}
+
+	minPort, maxPort, err := types.ParsePortRangeSpace(string(out))
+	if err != nil {
+		return portRange{}, fmt.Errorf("failed parsing host ephemeral port range: %w", err)
+	}
+	if minPort < 1 || maxPort > 65535 || minPort > maxPort {
+		return portRange{}, fmt.Errorf("invalid host ephemeral port range %d-%d", minPort, maxPort)
+	}
+
+	return portRange{min: minPort, max: maxPort}, nil
+}
+
+func (cc *ConnectionCheck) crioUsesEphemeralStreamPort(debugPod *corev1.Pod) (bool, error) {
+	out, err := cc.podUtils.RunCommandOnPod(
+		debugPod,
+		[]string{"chroot", "/host", "/bin/sh", "-c", "crio status config"},
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed reading live CRI-O configuration: %w", err)
+	}
+
+	match := regexp.MustCompile(`(?m)^\s*stream_port\s*=\s*"([0-9]+)"\s*$`).FindSubmatch(out)
+	if len(match) != 2 {
+		return false, fmt.Errorf("stream_port not found in live CRI-O configuration")
+	}
+	streamPort, err := strconv.Atoi(string(match[1]))
+	if err != nil || streamPort < 0 || streamPort > 65535 {
+		return false, fmt.Errorf("invalid CRI-O stream_port %q", match[1])
+	}
+
+	return streamPort == 0, nil
+}
+
+func (cc *ConnectionCheck) isHostLocalCRIOEphemeralListener(
+	debugPod *corev1.Pod,
+	ssEntry string,
+	cd types.ComDetails,
+	hostEphemeralRange portRange,
+	crioUsesEphemeralStreamPort bool,
+) bool {
+	if !crioUsesEphemeralStreamPort ||
+		cd.Protocol != "TCP" ||
+		cd.Namespace != "" ||
+		cd.Pod != "" ||
+		cd.Container != "" ||
+		!hostEphemeralRange.contains(cd.Port) {
+		return false
+	}
+
+	verified, err := cc.isHostCRIOProcess(debugPod, ssEntry)
+	if err != nil {
+		log.Debugf("failed to verify CRI-O ownership for ss entry %q: %v", ssEntry, err)
+		return false
+	}
+	return verified
+}
+
+func (cc *ConnectionCheck) isHostCRIOProcess(debugPod *corev1.Pod, ssEntry string) (bool, error) {
+	pid, err := extractPID(ssEntry)
+	if err != nil {
+		return false, err
+	}
+
+	exeCommand := fmt.Sprintf("readlink /host/proc/%s/exe", pid)
+	exe, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"/bin/sh", "-c", exeCommand})
+	if err != nil {
+		return false, err
+	}
+	exePath := strings.TrimSuffix(strings.TrimSpace(string(exe)), " (deleted)")
+	if path.Base(exePath) != "crio" {
+		return false, nil
+	}
+
+	cgroupCommand := fmt.Sprintf("cat /host/proc/%s/cgroup", pid)
+	cgroup, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"/bin/sh", "-c", cgroupCommand})
+	if err != nil {
+		return false, err
+	}
+	for _, field := range strings.FieldsFunc(string(cgroup), func(r rune) bool {
+		return r == '/' || r == '\n'
+	}) {
+		if field == "crio.service" {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // getContainerInfo receives an ss entry and gets the ContainerInfo obj of the container exposing this port.

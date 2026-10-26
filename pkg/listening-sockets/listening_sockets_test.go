@@ -156,6 +156,13 @@ var _ = Describe("GenerateSS", func() {
 			[]string{"/bin/sh", "-c", "ss -anpluH"}).
 			Return([]byte(udpExecCommandOutput), nil).AnyTimes()
 
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
+			[]string{"/bin/sh", "-c", "cat /host/proc/sys/net/ipv4/ip_local_port_range"}).
+			Return([]byte("32768 60999\n"), nil).AnyTimes()
+		mockUtils.EXPECT().RunCommandOnPod(gomock.Any(),
+			[]string{"chroot", "/host", "/bin/sh", "-c", "crio status config"}).
+			Return([]byte("[crio.api]\nstream_port = \"0\"\n"), nil).AnyTimes()
+
 		// Mock expectation for /proc/{pid}/cgroup command
 		for _, pid := range pids {
 			command := []string{"/bin/sh", "-c", fmt.Sprintf("cat /proc/%s/cgroup", pid)}

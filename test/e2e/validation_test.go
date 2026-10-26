@@ -32,8 +32,6 @@ const (
 	matrixdiffFile     = "matrix-diff-ss"
 	serviceNodePortMin = 30000
 	serviceNodePortMax = 32767
-	hostEphemeralMin   = 32768
-	hostEphemeralMax   = 60999
 )
 
 type EPSStatus string
@@ -223,10 +221,6 @@ func isDHCPClientPort(cd types.ComDetails) bool {
 func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 	res := []types.ComDetails{}
 	for _, cd := range mat.Ports {
-		if isHostLocalCRIOEphemeralListener(cd) {
-			continue
-		}
-
 		// Skip "rpc.statd" ports, these are randomly open ports on the node
 		// no need to mention them in the matrix diff
 		if cd.Service == "rpc.statd" {
@@ -242,19 +236,6 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 		res = append(res, cd)
 	}
 	return &types.ComMatrix{Ports: res}
-}
-
-// isHostLocalCRIOEphemeralListener identifies CRI-O's host-owned listeners.
-// For ss-derived entries Service holds the owning process name, while empty
-// Kubernetes identity fields indicate that the listener does not belong to a pod.
-func isHostLocalCRIOEphemeralListener(cd types.ComDetails) bool {
-	return cd.Service == "crio" &&
-		cd.Protocol == "TCP" &&
-		cd.Namespace == "" &&
-		cd.Pod == "" &&
-		cd.Container == "" &&
-		cd.Port >= hostEphemeralMin &&
-		cd.Port <= hostEphemeralMax
 }
 
 func filterOutPortsInDynamicRanges(mat *types.ComMatrix, dynamicRanges types.DynamicRangeList) *types.ComMatrix {
