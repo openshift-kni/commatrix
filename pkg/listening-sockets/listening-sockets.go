@@ -135,11 +135,15 @@ func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, group st
 	}
 	hostEphemeralRange, err := cc.getHostEphemeralPortRange(debugPod)
 	if err != nil {
-		return nil, nil, nil, err
+		log.Debugf("CRI-O ephemeral listener filtering disabled: %v", err)
 	}
-	crioUsesEphemeralStreamPort, err := cc.crioUsesEphemeralStreamPort(debugPod)
-	if err != nil {
-		return nil, nil, nil, err
+	crioUsesEphemeralStreamPort := false
+	if err == nil {
+		crioUsesEphemeralStreamPort, err = cc.crioUsesEphemeralStreamPort(debugPod)
+		if err != nil {
+			log.Debugf("CRI-O ephemeral listener filtering disabled: %v", err)
+			crioUsesEphemeralStreamPort = false
+		}
 	}
 
 	loopbackIPs := cc.getLoopbackIPs(debugPod)
@@ -271,11 +275,31 @@ func (cc *ConnectionCheck) isHostLocalCRIOEphemeralListener(
 }
 
 func (cc *ConnectionCheck) isHostCRIOProcess(debugPod *corev1.Pod, ssEntry string) (bool, error) {
-	pid, err := extractPID(ssEntry)
+	pids, err := extractOwnerPIDs(ssEntry)
 	if err != nil {
 		return false, err
 	}
 
+	allVerified := true
+	var verificationErr error
+	for _, pid := range pids {
+		verified, err := cc.isHostCRIOPID(debugPod, pid)
+		if err != nil {
+			allVerified = false
+			if verificationErr == nil {
+				verificationErr = fmt.Errorf("failed verifying PID %s: %w", pid, err)
+			}
+			continue
+		}
+		if !verified {
+			allVerified = false
+		}
+	}
+
+	return allVerified, verificationErr
+}
+
+func (cc *ConnectionCheck) isHostCRIOPID(debugPod *corev1.Pod, pid string) (bool, error) {
 	exeCommand := fmt.Sprintf("readlink /host/proc/%s/exe", pid)
 	exe, err := cc.podUtils.RunCommandOnPod(debugPod, []string{"/bin/sh", "-c", exeCommand})
 	if err != nil {
@@ -300,6 +324,25 @@ func (cc *ConnectionCheck) isHostCRIOProcess(debugPod *corev1.Pod, ssEntry strin
 	}
 
 	return false, nil
+}
+
+func extractOwnerPIDs(ssEntry string) ([]string, error) {
+	ownerMatches := regexp.MustCompile(`\("[^"]+"[^)]*\)`).FindAllString(ssEntry, -1)
+	if len(ownerMatches) == 0 {
+		return nil, fmt.Errorf("socket owners not found in the input string")
+	}
+
+	pids := make([]string, 0, len(ownerMatches))
+	pidRegexp := regexp.MustCompile(`pid=(\d+)`)
+	for _, owner := range ownerMatches {
+		match := pidRegexp.FindStringSubmatch(owner)
+		if len(match) < 2 {
+			return nil, fmt.Errorf("PID not found for socket owner %q", owner)
+		}
+		pids = append(pids, match[1])
+	}
+
+	return pids, nil
 }
 
 // getContainerInfo receives an ss entry and gets the ContainerInfo obj of the container exposing this port.
