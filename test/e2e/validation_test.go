@@ -233,6 +233,13 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// Skip CRI-O streaming server ports. CRI-O opens ephemeral TCP ports
+		// for container exec/attach/port-forward operations. These are randomly
+		// allocated host-level ports with no corresponding endpointslice.
+		if cd.Service == "crio" {
+			continue
+		}
+
 		res = append(res, cd)
 	}
 	return &types.ComMatrix{Ports: res}
