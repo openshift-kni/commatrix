@@ -115,8 +115,10 @@ var _ = Describe("WriteFile", func() {
 	})
 
 	It("returns an error for a nonexistent parent directory", func() {
+		path := filepath.Join(GinkgoT().TempDir(), "missing-parent", "file.txt")
+
 		u := &utils{}
-		err := u.WriteFile("/nonexistent/dir/file.txt", []byte("data"))
+		err := u.WriteFile(path, []byte("data"))
 		Expect(err).To(HaveOccurred())
 	})
 })
