@@ -88,15 +88,20 @@ var _ = Describe("Generate", func() {
 })
 
 var _ = Describe("String", func() {
+	var header string
+
+	BeforeEach(func() {
+		var err error
+		header, err = types.GetComMatrixHeadersByFormat(types.FormatCSV)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
 	It("returns only the header for an empty diff", func() {
 		diff := Generate(&types.ComMatrix{}, &types.ComMatrix{})
 
 		str, err := diff.String()
 		Expect(err).ToNot(HaveOccurred())
-
-		lines := strings.Split(strings.TrimSpace(str), "\n")
-		Expect(lines).To(HaveLen(1))
-		Expect(lines[0]).To(ContainSubstring("Direction"))
+		Expect(str).To(Equal(header + "\n"))
 	})
 
 	It("prefixes unique primary entries with '+ ' and unique secondary with '- '", func() {
@@ -111,22 +116,13 @@ var _ = Describe("String", func() {
 		str, err := diff.String()
 		Expect(err).ToNot(HaveOccurred())
 
-		lines := strings.Split(strings.TrimSpace(str), "\n")
-		var plusLines, minusLines, plainLines int
-		for _, line := range lines[1:] {
-			switch {
-			case strings.HasPrefix(line, "+ "):
-				plusLines++
-			case strings.HasPrefix(line, "- "):
-				minusLines++
-			default:
-				plainLines++
-			}
-		}
-
-		Expect(plusLines).To(Equal(1))
-		Expect(minusLines).To(Equal(1))
-		Expect(plainLines).To(Equal(1))
+		lines := strings.Split(strings.TrimSuffix(str, "\n"), "\n")
+		Expect(lines[0]).To(Equal(header))
+		Expect(lines[1:]).To(ConsistOf(
+			"+ "+cdIngressTCP443Master.String(),
+			"- "+cdIngressTCP8080Worker.String(),
+			cdEgressUDP53Worker.String(),
+		))
 	})
 })
 
