@@ -17,7 +17,7 @@ func HandleAndExit(err error) {
 	if err == nil {
 		return
 	}
-	fmt.Fprintf(stderr, "error: %v\n", err)
+	_, _ = fmt.Fprintf(stderr, "error: %v\n", err)
 	osExit(1)
 }
 
