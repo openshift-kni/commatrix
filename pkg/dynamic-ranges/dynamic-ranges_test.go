@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	"github.com/openshift-kni/commatrix/pkg/types"
 )
@@ -67,10 +68,10 @@ var _ = g.Describe("Dynamic Ranges", func() {
 			o.Expect(got).To(o.HaveLen(2))
 			o.Expect(got[0].MinPort).To(o.Equal(10000))
 			o.Expect(got[0].MaxPort).To(o.Equal(10100))
-			o.Expect(got[0].Protocol).To(o.Equal("TCP"))
+			o.Expect(got[0].Protocol).To(o.Equal(consts.ProtocolTCP))
 			o.Expect(got[1].MinPort).To(o.Equal(10000))
 			o.Expect(got[1].MaxPort).To(o.Equal(10100))
-			o.Expect(got[1].Protocol).To(o.Equal("UDP"))
+			o.Expect(got[1].Protocol).To(o.Equal(consts.ProtocolUDP))
 		})
 	})
 })

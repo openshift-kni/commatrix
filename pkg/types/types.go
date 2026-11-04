@@ -333,18 +333,18 @@ func (m *ComMatrix) ToNFTables() ([]byte, error) {
 	var tcpPorts []string
 	var udpPorts []string
 	for _, line := range m.Ports {
-		if line.Protocol == "TCP" {
+		if line.Protocol == consts.ProtocolTCP {
 			tcpPorts = append(tcpPorts, fmt.Sprint(line.Port))
-		} else if line.Protocol == "UDP" {
+		} else if line.Protocol == consts.ProtocolUDP {
 			udpPorts = append(udpPorts, fmt.Sprint(line.Port))
 		}
 	}
 
 	for _, dr := range m.DynamicRanges {
 		rangeStr := dr.PortRangeString()
-		if dr.Protocol == "TCP" {
+		if dr.Protocol == consts.ProtocolTCP {
 			tcpPorts = append(tcpPorts, rangeStr)
-		} else if dr.Protocol == "UDP" {
+		} else if dr.Protocol == consts.ProtocolUDP {
 			udpPorts = append(udpPorts, rangeStr)
 		}
 	}

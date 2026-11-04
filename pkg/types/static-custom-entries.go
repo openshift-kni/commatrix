@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
+
+	"github.com/openshift-kni/commatrix/pkg/consts"
 )
 
 var GeneralStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      22,
 		NodeGroup: "worker",
 		Service:   "sshd",
@@ -19,7 +21,7 @@ var GeneralStaticEntriesWorker = []ComDetails{
 		Optional:  true,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      10250,
 		NodeGroup: "worker",
 		Service:   "kubelet",
@@ -29,7 +31,7 @@ var GeneralStaticEntriesWorker = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      9107,
 		NodeGroup: "worker",
 		Service:   "egressip-node-healthcheck",
@@ -39,7 +41,7 @@ var GeneralStaticEntriesWorker = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      111,
 		NodeGroup: "worker",
 		Service:   "rpcbind",
@@ -49,7 +51,7 @@ var GeneralStaticEntriesWorker = []ComDetails{
 		Optional:  true,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      111,
 		NodeGroup: "worker",
 		Service:   "rpcbind",
@@ -59,7 +61,7 @@ var GeneralStaticEntriesWorker = []ComDetails{
 		Optional:  true,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      10256,
 		NodeGroup: "worker",
 		Service:   "ovnkube",
@@ -73,7 +75,7 @@ var GeneralStaticEntriesWorker = []ComDetails{
 var GeneralStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      10256,
 		NodeGroup: "master",
 		Service:   "ovnkube",
@@ -83,7 +85,7 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      10250,
 		NodeGroup: "master",
 		Service:   "kubelet",
@@ -93,7 +95,7 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      9107,
 		NodeGroup: "master",
 		Service:   "egressip-node-healthcheck",
@@ -103,7 +105,7 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      111,
 		NodeGroup: "master",
 		Service:   "rpcbind",
@@ -113,7 +115,7 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Optional:  true,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      111,
 		NodeGroup: "master",
 		Service:   "rpcbind",
@@ -123,7 +125,7 @@ var GeneralStaticEntriesMaster = []ComDetails{
 		Optional:  true,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      22,
 		NodeGroup: "master",
 		Service:   "sshd",
@@ -137,7 +139,7 @@ var GeneralStaticEntriesMaster = []ComDetails{
 var BaremetalStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      53,
 		NodeGroup: "worker",
 		Service:   "dns-default",
@@ -147,7 +149,7 @@ var BaremetalStaticEntriesWorker = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      53,
 		NodeGroup: "worker",
 		Service:   "dns-default",
@@ -157,7 +159,7 @@ var BaremetalStaticEntriesWorker = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      18080,
 		NodeGroup: "worker",
 		Service:   "",
@@ -171,7 +173,7 @@ var BaremetalStaticEntriesWorker = []ComDetails{
 var BaremetalStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      53,
 		NodeGroup: "master",
 		Service:   "dns-default",
@@ -181,7 +183,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      53,
 		NodeGroup: "master",
 		Service:   "dns-default",
@@ -191,7 +193,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      9444,
 		NodeGroup: "master",
 		Service:   "",
@@ -201,7 +203,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      9445,
 		NodeGroup: "master",
 		Service:   "",
@@ -211,7 +213,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      9454,
 		NodeGroup: "master",
 		Service:   "",
@@ -221,7 +223,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      18080,
 		NodeGroup: "master",
 		Service:   "",
@@ -235,7 +237,7 @@ var BaremetalStaticEntriesMaster = []ComDetails{
 var NoneStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      53,
 		NodeGroup: "worker",
 		Service:   "dns-default",
@@ -245,7 +247,7 @@ var NoneStaticEntriesWorker = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      53,
 		NodeGroup: "worker",
 		Service:   "dns-default",
@@ -259,7 +261,7 @@ var NoneStaticEntriesWorker = []ComDetails{
 var NoneStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "TCP",
+		Protocol:  consts.ProtocolTCP,
 		Port:      53,
 		NodeGroup: "master",
 		Service:   "dns-default",
@@ -269,7 +271,7 @@ var NoneStaticEntriesMaster = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      53,
 		NodeGroup: "master",
 		Service:   "dns-default",
@@ -283,7 +285,7 @@ var NoneStaticEntriesMaster = []ComDetails{
 var StandardStaticEntries = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      6081,
 		NodeGroup: "worker",
 		Service:   "ovn-kubernetes geneve",
@@ -293,7 +295,7 @@ var StandardStaticEntries = []ComDetails{
 		Optional:  false,
 	}, {
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      6081,
 		NodeGroup: "master",
 		Service:   "ovn-kubernetes geneve",
@@ -308,7 +310,7 @@ var StandardStaticEntries = []ComDetails{
 var GeneralIPv6StaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      546,
 		NodeGroup: "worker",
 		Service:   "NetworkManager",
@@ -322,7 +324,7 @@ var GeneralIPv6StaticEntriesWorker = []ComDetails{
 var GeneralIPv6StaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      546,
 		NodeGroup: "master",
 		Service:   "NetworkManager",
@@ -337,7 +339,7 @@ var GeneralIPv6StaticEntriesMaster = []ComDetails{
 var GeneralDHCPStaticEntriesWorker = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      68,
 		NodeGroup: "worker",
 		Service:   "NetworkManager",
@@ -351,7 +353,7 @@ var GeneralDHCPStaticEntriesWorker = []ComDetails{
 var GeneralDHCPStaticEntriesMaster = []ComDetails{
 	{
 		Direction: "Ingress",
-		Protocol:  "UDP",
+		Protocol:  consts.ProtocolUDP,
 		Port:      68,
 		NodeGroup: "master",
 		Service:   "NetworkManager",
@@ -365,7 +367,7 @@ var GeneralDHCPStaticEntriesMaster = []ComDetails{
 var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
 	{
 		Direction:   "Ingress",
-		Protocol:    "TCP",
+		Protocol:    consts.ProtocolTCP,
 		MinPort:     30000,
 		MaxPort:     32767,
 		Description: "Kubelet node ports",
@@ -373,7 +375,7 @@ var KubeletNodePortDefaultDynamicRange = DynamicRangeList{
 	},
 	{
 		Direction:   "Ingress",
-		Protocol:    "UDP",
+		Protocol:    consts.ProtocolUDP,
 		MinPort:     30000,
 		MaxPort:     32767,
 		Description: "Kubelet node ports",
