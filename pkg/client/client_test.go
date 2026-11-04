@@ -30,15 +30,15 @@ var _ = Describe("NewScheme", func() {
 		})).To(BeTrue())
 	})
 
-	It("registers OpenShift operator API group", func() {
-		Expect(testScheme.IsGroupRegistered("operator.openshift.io")).To(BeTrue())
-	})
-
-	It("registers machineconfiguration API group", func() {
-		Expect(testScheme.IsGroupRegistered("machineconfiguration.openshift.io")).To(BeTrue())
-	})
-
-	It("registers OpenShift config API group", func() {
-		Expect(testScheme.IsGroupRegistered("config.openshift.io")).To(BeTrue())
-	})
+	DescribeTable("registers OpenShift API types",
+		func(group string, kinds []string) {
+			for _, kind := range kinds {
+				gvk := schema.GroupVersionKind{Group: group, Version: "v1", Kind: kind}
+				Expect(testScheme.Recognizes(gvk)).To(BeTrue(), "expected %s to be registered", gvk)
+			}
+		},
+		Entry("operator.openshift.io", "operator.openshift.io", []string{"MachineConfiguration"}),
+		Entry("machineconfiguration.openshift.io", "machineconfiguration.openshift.io", []string{"MachineConfigPool", "MachineConfig"}),
+		Entry("config.openshift.io", "config.openshift.io", []string{"Infrastructure", "ClusterVersion", "Network"}),
+	)
 })
