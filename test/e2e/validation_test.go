@@ -240,6 +240,16 @@ func filterOutPortsOfKnownServices(mat *types.ComMatrix) *types.ComMatrix {
 			continue
 		}
 
+		// Skip haproxy DNS resolver ephemeral UDP sockets. On HyperShift, the
+		// node-local kube-apiserver-proxy haproxy config uses parse-resolv-conf
+		// so the hostname-based KAS backend is re-resolved. haproxy's DNS
+		// resolver keeps outbound client UDP sockets on random high ports that
+		// appear in ss output with no corresponding endpointslice. Real haproxy
+		// service listeners are TCP, so only UDP is filtered.
+		if cd.Service == "haproxy" && cd.Protocol == "UDP" {
+			continue
+		}
+
 		res = append(res, cd)
 	}
 	return &types.ComMatrix{Ports: res}
