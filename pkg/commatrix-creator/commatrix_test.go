@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/openshift-kni/commatrix/pkg/client"
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/endpointslices"
 	matrixdiff "github.com/openshift-kni/commatrix/pkg/matrix-diff"
 	"github.com/openshift-kni/commatrix/pkg/types"
@@ -34,7 +35,7 @@ var (
 	exampleComDetailsList = []types.ComDetails{
 		{
 			Direction: "ingress",
-			Protocol:  "TCP",
+			Protocol:  consts.ProtocolTCP,
 			Port:      9050,
 			Namespace: "example-namespace",
 			Service:   "example-service",
@@ -45,7 +46,7 @@ var (
 		},
 		{
 			Direction: "ingress",
-			Protocol:  "UDP",
+			Protocol:  consts.ProtocolUDP,
 			Port:      9051,
 			Namespace: "example-namespace2",
 			Service:   "example-service2",
@@ -59,7 +60,7 @@ var (
 	testEpsComDetails = []types.ComDetails{
 		{
 			Direction: "Ingress",
-			Protocol:  "TCP",
+			Protocol:  consts.ProtocolTCP,
 			Port:      80,
 			Namespace: "test-ns",
 			Service:   "test-service",
@@ -72,7 +73,7 @@ var (
 	exampleDynamicRanges = types.DynamicRangeList{
 		{
 			Direction:   "ingress",
-			Protocol:    "TCP",
+			Protocol:    consts.ProtocolTCP,
 			MinPort:     9000,
 			MaxPort:     9999,
 			Description: "example dynamic range",
@@ -909,7 +910,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			entries := []types.ComDetails{
 				{
 					Direction: "Ingress",
-					Protocol:  "TCP",
+					Protocol:  consts.ProtocolTCP,
 					Port:      1000,
 					Namespace: "ns1",
 					Service:   "svc1",
@@ -920,7 +921,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				},
 				{
 					Direction: "Ingress",
-					Protocol:  "UDP",
+					Protocol:  consts.ProtocolUDP,
 					Port:      2000,
 					Namespace: "ns2",
 					Service:   "svc2",
@@ -944,7 +945,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 			expected := []types.ComDetails{
 				{
 					Direction: "Ingress",
-					Protocol:  "TCP",
+					Protocol:  consts.ProtocolTCP,
 					Port:      1000,
 					Namespace: "ns1",
 					Service:   "svc1",
@@ -955,7 +956,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				},
 				{
 					Direction: "Ingress",
-					Protocol:  "TCP",
+					Protocol:  consts.ProtocolTCP,
 					Port:      1000,
 					Namespace: "ns1",
 					Service:   "svc1",
@@ -966,7 +967,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				},
 				{
 					Direction: "Ingress",
-					Protocol:  "UDP",
+					Protocol:  consts.ProtocolUDP,
 					Port:      2000,
 					Namespace: "ns2",
 					Service:   "svc2",
@@ -977,7 +978,7 @@ var _ = g.Describe("Commatrix creator pkg tests", func() {
 				},
 				{
 					Direction: "Ingress",
-					Protocol:  "UDP",
+					Protocol:  consts.ProtocolUDP,
 					Port:      2000,
 					Namespace: "ns2",
 					Service:   "svc2",

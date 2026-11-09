@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/openshift-kni/commatrix/pkg/consts"
 	"github.com/openshift-kni/commatrix/pkg/utils"
 
 	g "github.com/onsi/ginkgo/v2"
@@ -86,10 +87,10 @@ var _ = g.Describe("Dynamic range parsing and helpers", func() {
 
 	g.Describe("parseDynamicRangeFromCSVRow", func() {
 		g.It("creates DynamicRange from a valid CSV row fields", func() {
-			dr, err := parseDynamicRangeFromCSVRow("Ingress", "TCP", "NodePort range", true, "30000-32767")
+			dr, err := parseDynamicRangeFromCSVRow("Ingress", consts.ProtocolTCP, "NodePort range", true, "30000-32767")
 			o.Expect(err).ToNot(o.HaveOccurred())
 			o.Expect(dr.Direction).To(o.Equal("Ingress"))
-			o.Expect(dr.Protocol).To(o.Equal("TCP"))
+			o.Expect(dr.Protocol).To(o.Equal(consts.ProtocolTCP))
 			o.Expect(dr.MinPort).To(o.Equal(30000))
 			o.Expect(dr.MaxPort).To(o.Equal(32767))
 			o.Expect(dr.Description).To(o.Equal("NodePort range"))
@@ -97,7 +98,7 @@ var _ = g.Describe("Dynamic range parsing and helpers", func() {
 		})
 
 		g.It("errors on invalid port range field", func() {
-			_, err := parseDynamicRangeFromCSVRow("Egress", "UDP", "bad", false, "foo-bar")
+			_, err := parseDynamicRangeFromCSVRow("Egress", consts.ProtocolUDP, "bad", false, "foo-bar")
 			o.Expect(err).To(o.HaveOccurred())
 		})
 	})
@@ -118,7 +119,7 @@ var _ = g.Describe("Dynamic range parsing and helpers", func() {
 			// Ports
 			o.Expect(cm.Ports).To(o.HaveLen(1))
 			o.Expect(cm.Ports[0].Direction).To(o.Equal("Ingress"))
-			o.Expect(cm.Ports[0].Protocol).To(o.Equal("TCP"))
+			o.Expect(cm.Ports[0].Protocol).To(o.Equal(consts.ProtocolTCP))
 			o.Expect(cm.Ports[0].Port).To(o.Equal(443))
 			o.Expect(cm.Ports[0].Namespace).To(o.Equal("ns1"))
 			o.Expect(cm.Ports[0].Service).To(o.Equal("svc1"))
@@ -130,7 +131,7 @@ var _ = g.Describe("Dynamic range parsing and helpers", func() {
 			// Dynamic ranges
 			o.Expect(cm.DynamicRanges).To(o.HaveLen(1))
 			o.Expect(cm.DynamicRanges[0].Direction).To(o.Equal("Egress"))
-			o.Expect(cm.DynamicRanges[0].Protocol).To(o.Equal("UDP"))
+			o.Expect(cm.DynamicRanges[0].Protocol).To(o.Equal(consts.ProtocolUDP))
 			o.Expect(cm.DynamicRanges[0].MinPort).To(o.Equal(30000))
 			o.Expect(cm.DynamicRanges[0].MaxPort).To(o.Equal(30100))
 			o.Expect(cm.DynamicRanges[0].Description).To(o.Equal("NodePort range"))
@@ -154,8 +155,8 @@ var _ = g.Describe("Butane and MachineConfig output formats", func() {
 	g.BeforeEach(func() {
 		mat = ComMatrix{
 			Ports: []ComDetails{
-				{Direction: "Ingress", Protocol: "TCP", Port: 443, Namespace: "ns1", Service: "svc1", Pod: "pod1", Container: "ctr1", NodeGroup: "master", Optional: false},
-				{Direction: "Ingress", Protocol: "UDP", Port: 53, Namespace: "ns2", Service: "svc2", Pod: "pod2", Container: "ctr2", NodeGroup: "master", Optional: false},
+				{Direction: "Ingress", Protocol: consts.ProtocolTCP, Port: 443, Namespace: "ns1", Service: "svc1", Pod: "pod1", Container: "ctr1", NodeGroup: "master", Optional: false},
+				{Direction: "Ingress", Protocol: consts.ProtocolUDP, Port: 53, Namespace: "ns2", Service: "svc2", Pod: "pod2", Container: "ctr2", NodeGroup: "master", Optional: false},
 			},
 		}
 	})
@@ -234,7 +235,7 @@ var _ = g.Describe("Butane and MachineConfig output formats", func() {
 	g.Describe("ToButane and ToMachineConfig with dynamic ranges", func() {
 		g.It("includes dynamic port ranges in the output", func() {
 			mat.DynamicRanges = DynamicRangeList{
-				{Direction: "Ingress", Protocol: "TCP", MinPort: 30000, MaxPort: 32767, Description: "NodePort range", Optional: true},
+				{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 32767, Description: "NodePort range", Optional: true},
 			}
 
 			butaneOut, err := mat.ToButane("master", fakeUtils{version: "4.17"})
@@ -373,13 +374,13 @@ var _ = g.Describe("SeparateMatrixByGroup", func() {
 	g.It("separates entries by node group and preserves dynamic ranges", func() {
 		mat := ComMatrix{
 			Ports: []ComDetails{
-				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
-				{Port: 80, Protocol: "TCP", NodeGroup: "worker"},
-				{Port: 53, Protocol: "UDP", NodeGroup: "master"},
-				{Port: 0, Protocol: "TCP", NodeGroup: ""},
+				{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
+				{Port: 80, Protocol: consts.ProtocolTCP, NodeGroup: "worker"},
+				{Port: 53, Protocol: consts.ProtocolUDP, NodeGroup: "master"},
+				{Port: 0, Protocol: consts.ProtocolTCP, NodeGroup: ""},
 			},
 			DynamicRanges: DynamicRangeList{
-				{Protocol: "TCP", MinPort: 30000, MaxPort: 32767},
+				{Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 32767},
 			},
 		}
 
@@ -396,32 +397,32 @@ var _ = g.Describe("Merge", func() {
 	g.It("merges two non-nil matrices with ports and ranges", func() {
 		m1 := &ComMatrix{
 			Ports: []ComDetails{
-				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
-				{Port: 80, Protocol: "TCP", NodeGroup: "worker"},
+				{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
+				{Port: 80, Protocol: consts.ProtocolTCP, NodeGroup: "worker"},
 			},
 			DynamicRanges: DynamicRangeList{
-				{Protocol: "TCP", MinPort: 30000, MaxPort: 32767},
+				{Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 32767},
 			},
 		}
 		m2 := &ComMatrix{
 			Ports: []ComDetails{
-				{Port: 53, Protocol: "UDP", NodeGroup: "master"},
+				{Port: 53, Protocol: consts.ProtocolUDP, NodeGroup: "master"},
 			},
 			DynamicRanges: DynamicRangeList{
-				{Protocol: "UDP", MinPort: 49152, MaxPort: 65535},
+				{Protocol: consts.ProtocolUDP, MinPort: 49152, MaxPort: 65535},
 			},
 		}
 
 		result := m1.Merge(m2)
 		o.Expect(result).ToNot(o.BeNil())
 		o.Expect(result.Ports).To(o.ContainElements(
-			ComDetails{Port: 443, Protocol: "TCP", NodeGroup: "master"},
-			ComDetails{Port: 80, Protocol: "TCP", NodeGroup: "worker"},
-			ComDetails{Port: 53, Protocol: "UDP", NodeGroup: "master"},
+			ComDetails{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
+			ComDetails{Port: 80, Protocol: consts.ProtocolTCP, NodeGroup: "worker"},
+			ComDetails{Port: 53, Protocol: consts.ProtocolUDP, NodeGroup: "master"},
 		))
 		o.Expect(result.DynamicRanges).To(o.ContainElements(
-			DynamicRange{Protocol: "TCP", MinPort: 30000, MaxPort: 32767},
-			DynamicRange{Protocol: "UDP", MinPort: 49152, MaxPort: 65535},
+			DynamicRange{Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 32767},
+			DynamicRange{Protocol: consts.ProtocolUDP, MinPort: 49152, MaxPort: 65535},
 		))
 	})
 
@@ -429,7 +430,7 @@ var _ = g.Describe("Merge", func() {
 		var m1 *ComMatrix
 		m2 := &ComMatrix{
 			Ports: []ComDetails{
-				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
 			},
 		}
 
@@ -440,7 +441,7 @@ var _ = g.Describe("Merge", func() {
 	g.It("returns m when other is nil", func() {
 		m1 := &ComMatrix{
 			Ports: []ComDetails{
-				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
 			},
 		}
 		var m2 *ComMatrix
@@ -466,35 +467,35 @@ var _ = g.Describe("Merge", func() {
 		}
 		m2 := &ComMatrix{
 			Ports: []ComDetails{
-				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
 			},
 		}
 
 		result := m1.Merge(m2)
 		o.Expect(result).ToNot(o.BeNil())
 		o.Expect(result.Ports).To(o.Equal([]ComDetails{
-			{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+			{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
 		}))
 	})
 
 	g.It("removes duplicates after merge", func() {
 		m1 := &ComMatrix{
 			Ports: []ComDetails{
-				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
 			},
 		}
 		m2 := &ComMatrix{
 			Ports: []ComDetails{
-				{Port: 443, Protocol: "TCP", NodeGroup: "master"},
-				{Port: 80, Protocol: "TCP", NodeGroup: "master"},
+				{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
+				{Port: 80, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
 			},
 		}
 
 		result := m1.Merge(m2)
 		o.Expect(result).ToNot(o.BeNil())
 		o.Expect(result.Ports).To(o.ConsistOf(
-			ComDetails{Port: 443, Protocol: "TCP", NodeGroup: "master"},
-			ComDetails{Port: 80, Protocol: "TCP", NodeGroup: "master"},
+			ComDetails{Port: 443, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
+			ComDetails{Port: 80, Protocol: consts.ProtocolTCP, NodeGroup: "master"},
 		))
 	})
 })
@@ -508,7 +509,7 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("does nothing with single range", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 30000, MaxPort: 32767},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 32767},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
@@ -518,34 +519,34 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("merges overlapping ranges with same Direction and Protocol", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 30000, MaxPort: 40000},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 35000, MaxPort: 50000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 40000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 35000, MaxPort: 50000},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
 		o.Expect(drl[0].Direction).To(o.Equal("Ingress"))
-		o.Expect(drl[0].Protocol).To(o.Equal("TCP"))
+		o.Expect(drl[0].Protocol).To(o.Equal(consts.ProtocolTCP))
 		o.Expect(drl[0].MinPort).To(o.Equal(30000))
 		o.Expect(drl[0].MaxPort).To(o.Equal(50000))
 	})
 
 	g.It("merges adjacent ranges with same Direction and Protocol", func() {
 		drl := DynamicRangeList{
-			{Direction: "Egress", Protocol: "UDP", MinPort: 10000, MaxPort: 20000},
-			{Direction: "Egress", Protocol: "UDP", MinPort: 20001, MaxPort: 30000},
+			{Direction: "Egress", Protocol: consts.ProtocolUDP, MinPort: 10000, MaxPort: 20000},
+			{Direction: "Egress", Protocol: consts.ProtocolUDP, MinPort: 20001, MaxPort: 30000},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
 		o.Expect(drl[0].Direction).To(o.Equal("Egress"))
-		o.Expect(drl[0].Protocol).To(o.Equal("UDP"))
+		o.Expect(drl[0].Protocol).To(o.Equal(consts.ProtocolUDP))
 		o.Expect(drl[0].MinPort).To(o.Equal(10000))
 		o.Expect(drl[0].MaxPort).To(o.Equal(30000))
 	})
 
 	g.It("keeps separate ranges with different Direction", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 30000, MaxPort: 40000},
-			{Direction: "Egress", Protocol: "TCP", MinPort: 30000, MaxPort: 40000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 40000},
+			{Direction: "Egress", Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 40000},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(2))
@@ -555,18 +556,18 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("keeps separate ranges with different Protocol", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 30000, MaxPort: 40000},
-			{Direction: "Ingress", Protocol: "UDP", MinPort: 30000, MaxPort: 40000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 40000},
+			{Direction: "Ingress", Protocol: consts.ProtocolUDP, MinPort: 30000, MaxPort: 40000},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(2))
-		o.Expect(drl[0].Protocol).To(o.Equal("TCP"))
-		o.Expect(drl[1].Protocol).To(o.Equal("UDP"))
+		o.Expect(drl[0].Protocol).To(o.Equal(consts.ProtocolTCP))
+		o.Expect(drl[1].Protocol).To(o.Equal(consts.ProtocolUDP))
 	})
 
 	g.It("keeps separate non-overlapping ranges with same Direction and Protocol", func() {
-		dra := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000}
-		drb := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 30000, MaxPort: 40000}
+		dra := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000}
+		drb := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 30000, MaxPort: 40000}
 		drl := DynamicRangeList{dra, drb}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(2))
@@ -576,9 +577,9 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("merges multiple overlapping ranges", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 15000, MaxPort: 25000},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 22000, MaxPort: 30000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 15000, MaxPort: 25000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 22000, MaxPort: 30000},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
@@ -588,41 +589,41 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("handles complex scenario with mixed ranges", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 25000, MaxPort: 30000},
-			{Direction: "Ingress", Protocol: "UDP", MinPort: 10000, MaxPort: 15000},
-			{Direction: "Ingress", Protocol: "UDP", MinPort: 14000, MaxPort: 20000},
-			{Direction: "Egress", Protocol: "TCP", MinPort: 10000, MaxPort: 15000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 25000, MaxPort: 30000},
+			{Direction: "Ingress", Protocol: consts.ProtocolUDP, MinPort: 10000, MaxPort: 15000},
+			{Direction: "Ingress", Protocol: consts.ProtocolUDP, MinPort: 14000, MaxPort: 20000},
+			{Direction: "Egress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 15000},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(4))
 		// Egress TCP
 		o.Expect(drl[0].Direction).To(o.Equal("Egress"))
-		o.Expect(drl[0].Protocol).To(o.Equal("TCP"))
+		o.Expect(drl[0].Protocol).To(o.Equal(consts.ProtocolTCP))
 		o.Expect(drl[0].MinPort).To(o.Equal(10000))
 		o.Expect(drl[0].MaxPort).To(o.Equal(15000))
 		// Ingress TCP - first range
 		o.Expect(drl[1].Direction).To(o.Equal("Ingress"))
-		o.Expect(drl[1].Protocol).To(o.Equal("TCP"))
+		o.Expect(drl[1].Protocol).To(o.Equal(consts.ProtocolTCP))
 		o.Expect(drl[1].MinPort).To(o.Equal(10000))
 		o.Expect(drl[1].MaxPort).To(o.Equal(20000))
 		// Ingress TCP - second range
 		o.Expect(drl[2].Direction).To(o.Equal("Ingress"))
-		o.Expect(drl[2].Protocol).To(o.Equal("TCP"))
+		o.Expect(drl[2].Protocol).To(o.Equal(consts.ProtocolTCP))
 		o.Expect(drl[2].MinPort).To(o.Equal(25000))
 		o.Expect(drl[2].MaxPort).To(o.Equal(30000))
 		// Ingress UDP - merged
 		o.Expect(drl[3].Direction).To(o.Equal("Ingress"))
-		o.Expect(drl[3].Protocol).To(o.Equal("UDP"))
+		o.Expect(drl[3].Protocol).To(o.Equal(consts.ProtocolUDP))
 		o.Expect(drl[3].MinPort).To(o.Equal(10000))
 		o.Expect(drl[3].MaxPort).To(o.Equal(20000))
 	})
 
 	g.It("sorts ranges before merging", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 25000, MaxPort: 30000},
-			{Direction: "Egress", Protocol: "TCP", MinPort: 10000, MaxPort: 15000},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 25000, MaxPort: 30000},
+			{Direction: "Egress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 15000},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(3))
@@ -633,8 +634,8 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("merges descriptions when combining ranges", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000, Description: "First range"},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 15000, MaxPort: 25000, Description: "Second range"},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000, Description: "First range"},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 15000, MaxPort: 25000, Description: "Second range"},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
@@ -645,9 +646,9 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("merges multiple descriptions when combining multiple ranges", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000, Description: "Range A"},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 18000, MaxPort: 28000, Description: "Range B"},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 25000, MaxPort: 35000, Description: "Range C"},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000, Description: "Range A"},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 18000, MaxPort: 28000, Description: "Range B"},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 25000, MaxPort: 35000, Description: "Range C"},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
@@ -656,8 +657,8 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("sets result as optional when merging two optional ranges", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000, Optional: true},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 15000, MaxPort: 25000, Optional: true},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000, Optional: true},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 15000, MaxPort: 25000, Optional: true},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
@@ -666,8 +667,8 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("sets result as mandatory when merging one optional and one mandatory range", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000, Optional: true},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 15000, MaxPort: 25000, Optional: false},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000, Optional: true},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 15000, MaxPort: 25000, Optional: false},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
@@ -676,8 +677,8 @@ var _ = g.Describe("Squash", func() {
 
 	g.It("sets result as mandatory when merging two mandatory ranges", func() {
 		drl := DynamicRangeList{
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 10000, MaxPort: 20000, Optional: false},
-			{Direction: "Ingress", Protocol: "TCP", MinPort: 15000, MaxPort: 25000, Optional: false},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 10000, MaxPort: 20000, Optional: false},
+			{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 15000, MaxPort: 25000, Optional: false},
 		}
 		drl.Squash()
 		o.Expect(drl).To(o.HaveLen(1))
@@ -687,8 +688,8 @@ var _ = g.Describe("Squash", func() {
 
 var _ = g.Describe("Merge", func() {
 	g.It("fails when ranges are out of order (next starts before dr)", func() {
-		dr := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 100, MaxPort: 200, Description: "First"}
-		next := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 50, MaxPort: 150, Description: "Second"}
+		dr := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 100, MaxPort: 200, Description: "First"}
+		next := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 50, MaxPort: 150, Description: "Second"}
 
 		result := dr.Merge(next)
 		o.Expect(result).To(o.BeFalse())
@@ -698,8 +699,8 @@ var _ = g.Describe("Merge", func() {
 	})
 
 	g.It("succeeds with valid overlap", func() {
-		dr := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 100, MaxPort: 200, Description: "First", Optional: true}
-		next := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 150, MaxPort: 250, Description: "Second", Optional: false}
+		dr := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 100, MaxPort: 200, Description: "First", Optional: true}
+		next := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 150, MaxPort: 250, Description: "Second", Optional: false}
 
 		result := dr.Merge(next)
 		o.Expect(result).To(o.BeTrue())
@@ -710,8 +711,8 @@ var _ = g.Describe("Merge", func() {
 	})
 
 	g.It("fails when ranges are apart (no overlap)", func() {
-		dr := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 100, MaxPort: 200, Description: "First"}
-		next := DynamicRange{Direction: "Ingress", Protocol: "TCP", MinPort: 300, MaxPort: 400, Description: "Second"}
+		dr := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 100, MaxPort: 200, Description: "First"}
+		next := DynamicRange{Direction: "Ingress", Protocol: consts.ProtocolTCP, MinPort: 300, MaxPort: 400, Description: "Second"}
 
 		result := dr.Merge(next)
 		o.Expect(result).To(o.BeFalse())

@@ -129,8 +129,8 @@ func (cc *ConnectionCheck) createSSOutputFromNode(debugPod *corev1.Pod, group st
 	ssOutFilteredTCP := filterEntries(splitByLines(ssOutTCP), loopbackIPs)
 	ssOutFilteredUDP := filterEntries(splitByLines(ssOutUDP), loopbackIPs)
 
-	tcpComDetails := cc.toComDetails(debugPod, ssOutFilteredTCP, "TCP", group)
-	udpComDetails := cc.toComDetails(debugPod, ssOutFilteredUDP, "UDP", group)
+	tcpComDetails := cc.toComDetails(debugPod, ssOutFilteredTCP, consts.ProtocolTCP, group)
+	udpComDetails := cc.toComDetails(debugPod, ssOutFilteredUDP, consts.ProtocolUDP, group)
 
 	res := []types.ComDetails{}
 	res = append(res, udpComDetails...)
